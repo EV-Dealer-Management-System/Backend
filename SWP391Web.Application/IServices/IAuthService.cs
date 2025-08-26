@@ -1,0 +1,13 @@
+﻿using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Domain.Entities;
+using System.Security.Claims;
+namespace SWP391Web.Application.IService
+{
+    public interface IAuthService
+    {
+        Task<ResponseDTO> RegisterCustomer(RegisterCustomerDTO registerCustomerDTO);
+        Task<ResponseDTO> ResendVerifyEmail(ClaimsPrincipal userClaim);
+        Task<ResponseDTO> VerifyEmil(string userId, string token);
+        Task<ResponseDTO> LoginUser(LoginUserDTO loginUserDTO);
+    }
+}
