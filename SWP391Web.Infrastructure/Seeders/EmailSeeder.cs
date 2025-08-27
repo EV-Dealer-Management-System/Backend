@@ -75,6 +75,71 @@ namespace SWP391Web.Infrastructure.Seeders
                    UpdatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
                    Status = EmailStatus.Active
                });
+
+            modelBuilder.Entity<EmailTemplate>().HasData(
+   new
+   {
+       Id = Guid.Parse("8f6d9d5d-2f91-4df8-9f70-ec5a09c4f111"),
+       TemplateName = "ResetPassword",
+       SenderName = "SWP391",
+       SenderEmail = "hoangtuzami@gmail.com",
+       Category = "Authentication",
+       SubjectLine = "Yêu cầu đặt lại mật khẩu",
+       PreHeaderText = "Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản SWP391",
+       PersonalizationTags = "{ResetLink}",
+       BodyContent = @"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+    <meta charset='UTF-8'>
+    <title>Đặt lại mật khẩu</title>
+</head>
+<body style='font-family: Segoe UI, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0;'>
+    <table width='100%' cellpadding='0' cellspacing='0' style='background-color: #f4f4f4; padding: 40px 0;'>
+        <tr>
+            <td align='center'>
+                <table width='600' cellpadding='0' cellspacing='0' style='background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'>
+                    <tr>
+                        <td style='background-color: #dc3545; padding: 20px; text-align: center; color: white;'>
+                            <h2 style='margin: 0;'>SWP391</h2>
+                            <p style='margin: 0;'>Đặt lại mật khẩu</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style='padding: 30px;'>
+                            <p style='font-size: 16px;'>Xin chào,</p>
+                            <p style='font-size: 16px;'>Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn tại <strong>SWP391</strong>.</p>
+                            <p style='font-size: 16px;'>Vui lòng nhấn vào nút bên dưới để đặt lại mật khẩu:</p>
+                            <div style='text-align: center; margin: 30px 0;'>
+                                <a href='{ResetLink}' style='background-color: #dc3545; color: white; padding: 14px 28px; text-decoration: none; font-size: 16px; border-radius: 6px; display: inline-block;'>Đặt lại mật khẩu</a>
+                            </div>
+                            <p style='font-size: 14px; color: #666;'>Nếu bạn không yêu cầu thao tác này, vui lòng bỏ qua email này. Tài khoản của bạn vẫn an toàn.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style='background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 13px; color: #999;'>
+                            <p style='margin: 0;'>Trân trọng,</p>
+                            <p style='margin: 0;'>Đội ngũ <strong>SWP391</strong></p>
+                            <p style='margin: 0;'>Mọi thắc mắc xin liên hệ: <a href='https://SWP391.vn' style='color: #dc3545; text-decoration: none;'>SWP391.vn</a></p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>",
+       FooterContent = "SWP391 Support Team",
+       CallToAction = "<a href=\"{ResetLink}\">Đặt lại mật khẩu</a>",
+       Language = "Vietnamese",
+       RecipientType = "Customer",
+       CreatedBy = "System",
+       CreatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+       UpdatedBy = "System",
+       UpdatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+       Status = EmailStatus.Active
+   });
+
         }
     }
 }

@@ -44,6 +44,11 @@ namespace SWP391Web.Infrastructure.Repository
             return await _userManager.GenerateEmailConfirmationTokenAsync(user);
         }
 
+        public async Task<string> GeneratePasswordResetTokenAsync(ApplicationUser user)
+        {
+            return await _userManager.GeneratePasswordResetTokenAsync(user);
+        }
+
         public async Task<ApplicationUser?> GetByEmailAsync(string email)
         {
             return await _userManager.FindByEmailAsync(email);

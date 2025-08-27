@@ -77,6 +77,14 @@ namespace SWP391Web.Application.Service
             }
         }
 
+        public async Task<bool> SendResetPassword(string email, string resetLink)
+        {
+            return await SendEmailFromTemplate(email, "ResetPassword", new Dictionary<string, string>
+            {
+                { "{ResetLink}", resetLink }
+            });
+        }
+
         public async Task<bool> SendVerifyEmail(string to, string verifyLink)
         {
             return await SendEmailFromTemplate(to, "SendVerifyEmail", new Dictionary<string, string>
