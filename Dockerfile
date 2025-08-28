@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # 1. Copy solution file
@@ -23,7 +23,7 @@ RUN dotnet publish -c Release -o /app/publish
 
 
 # Stage 2: Runtime
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
 # Copy publish from stage build
@@ -34,3 +34,4 @@ EXPOSE 8080
 
 # Run app
 ENTRYPOINT ["dotnet", "SWP391Web.API.dll"]
+
