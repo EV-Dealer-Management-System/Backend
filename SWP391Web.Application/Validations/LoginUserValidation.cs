@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWP391Web.Application.Validation
+namespace SWP391Web.Application.Validations
 {
     public class LoginUserValidation : AbstractValidator<LoginUserDTO>
     {
