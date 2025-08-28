@@ -1,0 +1,31 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /home/ec2-user/app
+
+hooks:
+  BeforeInstall:
+    - location: scripts/stop.sh
+      timeout: 120
+      runas: ec2-user
+
+  ApplicationStop:
+    - location: scripts/cleanup.sh
+      timeout: 120
+      runas: ec2-user
+
+  AfterInstall:
+    - location: scripts/pull_image.sh
+      timeout: 180
+      runas: ec2-user
+
+  ApplicationStart:
+    - location: scripts/start.sh
+      timeout: 180
+      runas: ec2-user
+
+  ValidateService:
+    - location: scripts/validate.sh
+      timeout: 120
+      runas: ec2-user
