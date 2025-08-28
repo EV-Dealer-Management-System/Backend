@@ -339,11 +339,11 @@ namespace SWP391Web.Application.Service
             }
         }
 
-        public async Task<ResponseDTO> ForgotPassword(string email)
+        public async Task<ResponseDTO> ForgotPassword(ForgotPasswordDTO forgotPasswordDTO)
         {
             try
             {
-                var user = await _unitOfWork.UserManagerRepository.GetByEmailAsync(email);
+                var user = await _unitOfWork.UserManagerRepository.GetByEmailAsync(forgotPasswordDTO.Email);
                 if (user is null)
                 {
                     return new ResponseDTO
@@ -382,6 +382,52 @@ namespace SWP391Web.Application.Service
                 return new ResponseDTO
                 {
                     Message = $"An error occurred at ForgotPassword in AuthService: {ex.Message}",
+                    IsSuccess = false,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> ResetPassword(ResetPasswordDTO resetPasswordDTO)
+        {
+            try
+            {
+                var user = await _unitOfWork.UserManagerRepository.GetByIdAsync(resetPasswordDTO.UserId);
+                if (user is null)
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "User not found",
+                        IsSuccess = false,
+                        StatusCode = 404
+                    };
+                }
+
+                var decodedToken = Uri.UnescapeDataString(resetPasswordDTO.Token);
+                var isSuccess = await _unitOfWork.UserManagerRepository.ResetPasswordAsync(user, decodedToken, resetPasswordDTO.Password);
+
+                if (!isSuccess.Succeeded)
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "Password reset failed",
+                        IsSuccess = false,
+                        StatusCode = 400
+                    };
+                }
+
+                return new ResponseDTO
+                {
+                    Message = "Password reset successfully",
+                    IsSuccess = true,
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    Message = $"An error occurred at ResetPassword in AuthService: {ex.Message}",
                     IsSuccess = false,
                     StatusCode = 500
                 };

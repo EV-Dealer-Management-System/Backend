@@ -9,6 +9,7 @@ namespace SWP391Web.Application.IService
         Task<ResponseDTO> ResendVerifyEmail(ClaimsPrincipal userClaim);
         Task<ResponseDTO> VerifyEmil(string userId, string token);
         Task<ResponseDTO> LoginUser(LoginUserDTO loginUserDTO);
-        Task<ResponseDTO> ForgotPassword(string email);
+        Task<ResponseDTO> ForgotPassword(ForgotPasswordDTO forgotPasswordDTO);
+        Task<ResponseDTO> ResetPassword(ResetPasswordDTO resetPasswordDTO);
     }
 }

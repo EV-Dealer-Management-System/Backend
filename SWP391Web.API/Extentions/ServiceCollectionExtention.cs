@@ -2,13 +2,13 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Identity;
-using StackExchange.Redis;
+using Microsoft.AspNetCore.Mvc;
 using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Mappings;
 using SWP391Web.Application.Service;
 using SWP391Web.Application.Services;
-using SWP391Web.Application.Validation;
+using SWP391Web.Application.Validations;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.IRepository;
@@ -37,6 +37,8 @@ namespace SWP391Web.API.Extentions
             // Register Fluent Validation
             services.AddValidatorsFromAssemblyContaining<RegisterCustomerValidation>();
             services.AddValidatorsFromAssemblyContaining<LoginUserValidation>();
+            services.AddValidatorsFromAssemblyContaining<ForgotPasswordValidation>();
+            services.AddValidatorsFromAssemblyContaining<ResetPasswordValidation>();
 
             services.AddFluentValidationAutoValidation();
 
@@ -47,6 +49,37 @@ namespace SWP391Web.API.Extentions
 
 
             services.AddAutoMapper(cfg => { }, typeof(AutoMappingProfile));
+
+            // Remove InvalidModelState, keep fluent validation
+            services.Configure<ApiBehaviorOptions>(options =>
+            {
+                options.InvalidModelStateResponseFactory = context =>
+                {
+                    var errors = context.ModelState
+                        .Where(x => x.Value.Errors.Count > 0)
+                        .ToDictionary(
+                            kvp => kvp.Key,
+                            kvp => kvp.Value.Errors
+                                .Where(e => !e.ErrorMessage.StartsWith("The ") || !e.ErrorMessage.EndsWith(" field is required."))
+                                .Select(e => e.ErrorMessage)
+                                .Where(msg => !string.IsNullOrEmpty(msg))
+                                .ToArray()
+                        )
+                        .Where(kvp => kvp.Value.Length > 0)
+                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+                    var result = new
+                    {
+                        type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+                        title = "One or more validation errors occurred.",
+                        status = 400,
+                        errors = errors,
+                        traceId = context.HttpContext.TraceIdentifier
+                    };
+
+                    return new BadRequestObjectResult(result);
+                };
+            });
 
             return services;
         }

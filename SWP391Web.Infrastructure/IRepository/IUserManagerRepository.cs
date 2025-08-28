@@ -17,5 +17,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<IdentityResult> AccessFailedAsync(ApplicationUser user);
         Task<IList<string>> GetRoleAsync(ApplicationUser user);
         Task<string> GeneratePasswordResetTokenAsync(ApplicationUser user);
+        Task<IdentityResult> ResetPasswordAsync(ApplicationUser user, string token, string newPassword);
     }
 }

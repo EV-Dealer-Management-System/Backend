@@ -22,7 +22,7 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
-        [HttpPost("send-verify-email")]
+        [HttpPost("resend-verify-email")]
         public async Task<ActionResult<ResponseDTO>> SendVerifyEmail()
         {
             var response = await _authService.ResendVerifyEmail(User);
@@ -40,6 +40,20 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult<ResponseDTO>> LoginUser([FromBody] LoginUserDTO loginUserDTO)
         {
             var response = await _authService.LoginUser(loginUserDTO);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<ActionResult<ResponseDTO>> ForgotPassword([FromBody] ForgotPasswordDTO forgotPasswordDTO)
+        {
+            var response = await _authService.ForgotPassword(forgotPasswordDTO);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<ActionResult<ResponseDTO>> ResetPassword([FromBody] ResetPasswordDTO resetPasswordDTO)
+        {
+            var response = await _authService.ResetPassword(resetPasswordDTO);
             return StatusCode(response.StatusCode, response);
         }
     }
