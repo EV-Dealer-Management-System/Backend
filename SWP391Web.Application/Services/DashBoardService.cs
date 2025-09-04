@@ -21,7 +21,7 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var totalCustomer = (await _unitOfWork.CustomerRepository.GetAllAsync(includeProperties: "ApplicationUser"))
+                var totalCustomer = (await _unitOfWork.CustomerRepository.GetAllAsync(includeProperties: "User"))
                     .Where(c => c.User.LockoutEnabled).Count();
                 return new ResponseDTO
                     {
