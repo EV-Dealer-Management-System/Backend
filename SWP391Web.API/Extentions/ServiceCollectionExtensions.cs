@@ -16,7 +16,7 @@ using SWP391Web.Infrastructure.Repository;
 
 namespace SWP391Web.API.Extentions
 {
-    public static class ServiceCollectionExtention
+    public static class ServiceCollectionExtensions
     {
         public static IServiceCollection RegisterService(this IServiceCollection services)
         {

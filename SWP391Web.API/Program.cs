@@ -16,13 +16,34 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+// Register SwaggerGen and config for Authorize
+// Base on Extensions.WebApplicationBuilderExtensions
+builder.AddSwaggerGen();
+
+// Register Authentication
+// Base on Extensions.WebApplicationBuilderExtensions
+builder.AddAuthenticationService();
+builder.Services.AddAuthorization();
 
 // Register services life cycle
 // Base on Extensions.ServiceCollectionExtensions
 builder.Services.RegisterService();
 
+// Register redis services
+// Base on Extensions.RedisServiceExtensions
 builder.AddRedisCacheService();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policyBuilder =>
+    {
+        policyBuilder
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
 
 var app = builder.Build();
 
@@ -40,8 +61,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("AllowAll");
+
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
