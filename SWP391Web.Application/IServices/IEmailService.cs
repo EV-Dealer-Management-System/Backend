@@ -11,5 +11,6 @@ namespace SWP391Web.Application.IService
         Task<bool> SendEmailAsync(string to, string subject, string body);
         Task<bool> SendEmailFromTemplate(string to, string templateName, Dictionary<string, string> placeholders);
         Task<bool> SendVerifyEmail(string to, string verifyLink);
+        Task<bool> SendResetPassword(string email, string resetLink);
     }
 }

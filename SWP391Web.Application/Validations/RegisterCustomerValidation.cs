@@ -6,7 +6,7 @@ using SWP391Web.Infrastructure.IRepository;
 using System.ComponentModel;
 using System.Xml.Linq;
 
-namespace SWP391Web.Application.Validation
+namespace SWP391Web.Application.Validations
 {
     public class RegisterCustomerValidation : AbstractValidator<RegisterCustomerDTO>
     {

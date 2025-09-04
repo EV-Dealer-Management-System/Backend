@@ -338,5 +338,100 @@ namespace SWP391Web.Application.Service
                 };
             }
         }
+
+        public async Task<ResponseDTO> ForgotPassword(ForgotPasswordDTO forgotPasswordDTO)
+        {
+            try
+            {
+                var user = await _unitOfWork.UserManagerRepository.GetByEmailAsync(forgotPasswordDTO.Email);
+                if (user is null)
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "Email is not exist",
+                        IsSuccess = false,
+                        StatusCode = 400
+                    };
+                }
+
+                var token = await _unitOfWork.UserManagerRepository.GeneratePasswordResetTokenAsync(user);
+
+                var encodedToken = Uri.EscapeDataString(token);
+                var resetLink = $"https://localhost:7280/api/reset-password?userId={user.Id}&token={encodedToken}";
+
+                var isSendSuccess = await _emailService.SendResetPassword(user.Email, resetLink);
+                if (!isSendSuccess)
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "Failed to send reset password email",
+                        IsSuccess = false,
+                        StatusCode = 500
+                    };
+                }
+
+                return new ResponseDTO
+                {
+                    Message = "Reset password email sent successfully",
+                    IsSuccess = true,
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    Message = $"An error occurred at ForgotPassword in AuthService: {ex.Message}",
+                    IsSuccess = false,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> ResetPassword(ResetPasswordDTO resetPasswordDTO)
+        {
+            try
+            {
+                var user = await _unitOfWork.UserManagerRepository.GetByIdAsync(resetPasswordDTO.UserId);
+                if (user is null)
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "User not found",
+                        IsSuccess = false,
+                        StatusCode = 404
+                    };
+                }
+
+                var decodedToken = Uri.UnescapeDataString(resetPasswordDTO.Token);
+                var isSuccess = await _unitOfWork.UserManagerRepository.ResetPasswordAsync(user, decodedToken, resetPasswordDTO.Password);
+
+                if (!isSuccess.Succeeded)
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "Password reset failed",
+                        IsSuccess = false,
+                        StatusCode = 400
+                    };
+                }
+
+                return new ResponseDTO
+                {
+                    Message = "Password reset successfully",
+                    IsSuccess = true,
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    Message = $"An error occurred at ResetPassword in AuthService: {ex.Message}",
+                    IsSuccess = false,
+                    StatusCode = 500
+                };
+            }
+        }
     }
 }

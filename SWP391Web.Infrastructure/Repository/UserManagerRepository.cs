@@ -44,6 +44,11 @@ namespace SWP391Web.Infrastructure.Repository
             return await _userManager.GenerateEmailConfirmationTokenAsync(user);
         }
 
+        public async Task<string> GeneratePasswordResetTokenAsync(ApplicationUser user)
+        {
+            return await _userManager.GeneratePasswordResetTokenAsync(user);
+        }
+
         public async Task<ApplicationUser?> GetByEmailAsync(string email)
         {
             return await _userManager.FindByEmailAsync(email);
@@ -67,6 +72,11 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<bool> IsPhoneNumber(string phoneNumber)
         {
             return await (_userManager.Users.AnyAsync(u => u.PhoneNumber == phoneNumber));
+        }
+
+        public async Task<IdentityResult> ResetPasswordAsync(ApplicationUser user, string token, string newPassword)
+        {
+            return await _userManager.ResetPasswordAsync(user, token, newPassword);
         }
     }
 }
