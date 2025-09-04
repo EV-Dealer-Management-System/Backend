@@ -25,7 +25,7 @@ namespace SWP391Web.API.Extentions
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IRedisService, RedisService>();
-
+            services.AddScoped<IDashBoardService, DashBoardService>();
             // Register Infrastructure Repositories
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
