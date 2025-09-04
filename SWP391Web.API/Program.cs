@@ -10,10 +10,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-// Register services life cycle
-// Base on Extensions.ServiceCollectionExtensions
-builder.Services.RegisterService();
-
 //// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 //builder.Services.AddOpenApi();
 
@@ -22,6 +18,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Register services
+// Base on Extensions.ServiceCollectionExtensions
+builder.Services.RegisterService();
 
 builder.AddRedisCacheService();
 

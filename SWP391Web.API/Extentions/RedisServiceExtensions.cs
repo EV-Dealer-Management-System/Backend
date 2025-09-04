@@ -2,7 +2,7 @@
 
 namespace SWP391Web.API.Extentions
 {
-    public static class RedisServiceExtentions
+    public static class RedisServiceExtensions
     {
         public static WebApplicationBuilder AddRedisCacheService(this WebApplicationBuilder builder)
         {
