@@ -126,22 +126,11 @@ namespace SWP391Web.Application.Service
 
 
         // Method to send verification email using ClaimsPrincipal to get current user, useful for resending verification email
-        public async Task<ResponseDTO> ResendVerifyEmail(ClaimsPrincipal userClaim)
+        public async Task<ResponseDTO> ResendVerifyEmail(string email)
         {
             try
             {
-                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (userId is null)
-                {
-                    return new ResponseDTO
-                    {
-                        Message = "User ID not found",
-                        IsSuccess = false,
-                        StatusCode = 404
-                    };
-                }
-
-                var user = await _unitOfWork.UserManagerRepository.GetByIdAsync(userId);
+                var user = await _unitOfWork.UserManagerRepository.GetByEmailAsync(email);
                 if (user is null)
                 {
                     return new ResponseDTO
@@ -164,7 +153,7 @@ namespace SWP391Web.Application.Service
                 }
 
                 var token = await _unitOfWork.UserManagerRepository.GenerateEmailConfirmationTokenAsync(user);
-                var verifyLink = $"https://localhost:7280/api/verify-email?userId={user.Id}&token={Uri.EscapeDataString(token)}";
+                var verifyLink = $"http://localhost:5173/email-verification?userId={user.Id}&token={Uri.EscapeDataString(token)}";
 
                 await _emailService.SendVerifyEmail(user.Email, verifyLink);
 
@@ -194,7 +183,7 @@ namespace SWP391Web.Application.Service
             {
                 var token = await _unitOfWork.UserManagerRepository.GenerateEmailConfirmationTokenAsync(user);
                 var encodedToken = Uri.EscapeDataString(token);
-                var verifyLink = $"https://localhost:7280/api/verify-email?userId={user.Id}&token={encodedToken}";
+                var verifyLink = $"http://localhost:5173/email-verification?userId={user.Id}&token={encodedToken}";
 
                 isSuccess = await _emailService.SendVerifyEmail(user.Email, verifyLink);
                 return isSuccess;
@@ -357,7 +346,7 @@ namespace SWP391Web.Application.Service
                 var token = await _unitOfWork.UserManagerRepository.GeneratePasswordResetTokenAsync(user);
 
                 var encodedToken = Uri.EscapeDataString(token);
-                var resetLink = $"https://localhost:7280/api/reset-password?userId={user.Id}&token={encodedToken}";
+                var resetLink = $"http://localhost:5173/api/reset-password?userId={user.Id}&token={encodedToken}";
 
                 var isSendSuccess = await _emailService.SendResetPassword(user.Email, resetLink);
                 if (!isSendSuccess)
