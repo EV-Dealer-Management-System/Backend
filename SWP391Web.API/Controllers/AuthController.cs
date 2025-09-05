@@ -23,9 +23,9 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPost("resend-verify-email")]
-        public async Task<ActionResult<ResponseDTO>> SendVerifyEmail()
+        public async Task<ActionResult<ResponseDTO>> SendVerifyEmail([FromBody] ResendVerifyEmailDTO resendVerifyEmailDTO)
         {
-            var response = await _authService.ResendVerifyEmail(User);
+            var response = await _authService.ResendVerifyEmail(resendVerifyEmailDTO.Email);
             return StatusCode(response.StatusCode, response);
         }
 
