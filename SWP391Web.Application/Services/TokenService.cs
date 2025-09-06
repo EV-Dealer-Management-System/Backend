@@ -81,7 +81,7 @@ namespace SWP391Web.Application.Service
 
         private TimeSpan GetRefreshTokenExpiration(bool rememberMe)
         {
-            var rememberMeExpiration = _configuration.GetValue<int>("JWT__RefreshTokenExpiration:RememberMe");
+            var rememberMeExpiration = _configuration.GetValue<int>("JWT:RefreshTokenExpiration:RememberMe");
             var normalExpiration = _configuration.GetValue<int>("JWT:RefreshTokenExpiration:Normal");
 
             return rememberMe ? TimeSpan.FromDays(rememberMeExpiration) : TimeSpan.FromHours(normalExpiration);
