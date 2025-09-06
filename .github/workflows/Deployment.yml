@@ -146,7 +146,9 @@ jobs:
             sudo rm -rf ${{ env.DEPLOYMENT_PATH }}/*
             sudo cp -r deploy_temp/* ${{ env.DEPLOYMENT_PATH }}/
             sudo chown -R ${{ env.EC2_USER }}:${{ env.EC2_USER }} ${{ env.DEPLOYMENT_PATH }}
-            echo '${{ secrets.APP_CONFIG_B64 }}' | base64 -d | sudo tee ${{ env.DEPLOYMENT_PATH }}/appsettings.Production.json > /dev/null
+            echo '${{ secrets.APP_CONFIG_B64 }}' | tr -d '\n' | base64 -d > /tmp/app.json
+            sudo tee ${{ env.DEPLOYMENT_PATH }}/appsettings.Production.json > /dev/null < /tmp/app.json
+            [ -s ${{ env.DEPLOYMENT_PATH }}/appsettings.Production.json ] || (echo 'Config file empty'; exit 1)
             sudo chmod +x ${{ env.DEPLOYMENT_PATH }}/SWP391Web.API || true
             sudo systemctl start kestrel-${{ env.PROJECT_NAME }}.service
             sleep 5
