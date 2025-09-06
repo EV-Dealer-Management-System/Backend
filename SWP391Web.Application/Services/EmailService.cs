@@ -20,11 +20,11 @@ namespace SWP391Web.Application.Service
             var isSuccess = false;
             try
             {
-                var fromEmail = _configuration["EmailSettings:FromEmail"];
-                var userName = _configuration["EmailSettings:UserName"];
-                var password = _configuration["EmailSettings:Password"];
-                var smtpHost = _configuration["EmailSettings:Host"];
-                var smtpPort = int.Parse(_configuration["EmailSettings:Port"]);
+                var fromEmail = _configuration["EmailSettings__FromEmail"];
+                var userName = _configuration["EmailSettings__UserName"];
+                var password = _configuration["EmailSettings__Password"];
+                var smtpHost = _configuration["EmailSettings__Host"];
+                var smtpPort = int.Parse(_configuration["EmailSettings__Port"]);
 
 
                 if (fromEmail is null || userName is null || password is null || smtpHost is null)
