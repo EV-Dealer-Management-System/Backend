@@ -153,22 +153,3 @@ jobs:
 
             rm -rf /tmp/deploy_temp /tmp/deploy-package.zip
           "
-
-      - name: Cleanup SSH
-        if: always()
-        run: rm -f ~/.ssh/id_rsa deploy-package.zip
-
-      - name: Delete deployment artifacts
-        if: always()
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: deployment-package-${{ github.sha }}
-
-      - name: Deployment summary
-        run: |
-          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Project:** ${{ env.PROJECT_NAME }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Target:** ${{ env.EC2_USER }}@${{ env.EC2_HOST }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status:** Success" >> $GITHUB_STEP_SUMMARY
