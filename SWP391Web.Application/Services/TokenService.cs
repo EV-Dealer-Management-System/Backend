@@ -36,13 +36,13 @@ namespace SWP391Web.Application.Service
                 authClaims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            var authSecret = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT__Secret"] ?? string.Empty));
+            var authSecret = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"] ?? string.Empty));
             var authSigningCredentials = new SigningCredentials(authSecret, SecurityAlgorithms.HmacSha256);
 
-            var expires = _configuration.GetValue<int>("JWT__AccessTokenExpiration");
+            var expires = _configuration.GetValue<int>("JWT:AccessTokenExpiration");
             var token = new JwtSecurityToken(
-                issuer: _configuration["JWT__ValidIssuer"],
-                audience: _configuration["JWT__ValidAudience"],
+                issuer: _configuration["JWT:ValidIssuer"],
+                audience: _configuration["JWT:ValidAudience"],
                 expires: DateTime.UtcNow.AddMinutes(expires),
                 claims: authClaims,
                 signingCredentials: authSigningCredentials
@@ -60,14 +60,14 @@ namespace SWP391Web.Application.Service
                 new Claim(ClaimTypes.NameIdentifier, user.Id)
             };
 
-            var authSecret = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT__Secret"] ?? string.Empty));
+            var authSecret = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Secret"] ?? string.Empty));
             var authSigningCredentials = new SigningCredentials(authSecret, SecurityAlgorithms.HmacSha256);
 
             var expiration = GetRefreshTokenExpiration(rememberMe);
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["JWT__ValidIssuer"],
-                audience: _configuration["JWT__ValidAudience"],
+                issuer: _configuration["JWT:ValidIssuer"],
+                audience: _configuration["JWT:ValidAudience"],
                 expires: DateTime.UtcNow.Add(expiration),
                 claims: authClaim,
                 signingCredentials: authSigningCredentials
@@ -81,8 +81,8 @@ namespace SWP391Web.Application.Service
 
         private TimeSpan GetRefreshTokenExpiration(bool rememberMe)
         {
-            var rememberMeExpiration = _configuration.GetValue<int>("JWT__RefreshTokenExpiration__RememberMe");
-            var normalExpiration = _configuration.GetValue<int>("JWT__RefreshTokenExpiration__Normal");
+            var rememberMeExpiration = _configuration.GetValue<int>("JWT__RefreshTokenExpiration:RememberMe");
+            var normalExpiration = _configuration.GetValue<int>("JWT:RefreshTokenExpiration:Normal");
 
             return rememberMe ? TimeSpan.FromDays(rememberMeExpiration) : TimeSpan.FromHours(normalExpiration);
         }
