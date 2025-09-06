@@ -3,8 +3,6 @@ name: Backend Deployment
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 env:
   PROJECT_NAME: SWP391_Project_BE
@@ -118,13 +116,14 @@ jobs:
           source: "deploy-package.zip"
           target: "/tmp"
 
-      - name: Deploy & restart service on EC2
+            - name: Deploy & restart service on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script_stop: true
+          command_timeout: 20m
           script: |
             set -euo pipefail
 
@@ -137,7 +136,7 @@ jobs:
             mkdir -p deploy_temp
             unzip -o deploy-package.zip -d deploy_temp/
 
-            # Dừng service cũ
+            # Dừng service cũ (nếu có)
             sudo systemctl stop "kestrel-${PROJECT_NAME}.service" || true
 
             # Backup nhanh nếu còn chỗ
@@ -149,7 +148,8 @@ jobs:
             # Copy bản mới
             sudo mkdir -p "${DEPLOYMENT_PATH}"
             sudo rm -rf "${DEPLOYMENT_PATH:?}"/*
-            sudo cp -r deploy_temp/* "${DEPLOYMENT_PATH}"/
+            sudo cp -r deploy_temp/* "${DEPLOYMENT_PATH}/"
+            # chown cho user đang SSH (thường là ec2-user)
             sudo chown -R "${USER}:${USER}" "${DEPLOYMENT_PATH}"
 
             # Đảm bảo aws cli có sẵn
@@ -158,6 +158,7 @@ jobs:
             fi
 
             # Kéo env từ SSM (SecureString) và ghi vào /etc/swp391.env
+            echo "Fetching /swp391/prod/env from SSM..."
             aws ssm get-parameter \
               --region "${AWS_REGION}" \
               --name "/swp391/prod/env" \
@@ -165,14 +166,25 @@ jobs:
               --query 'Parameter.Value' \
               --output text | sudo tee /etc/swp391.env >/dev/null
 
+            # Kiểm tra env có dữ liệu
+            if ! sudo test -s /etc/swp391.env; then
+              echo "ERROR: /etc/swp391.env is empty!"
+              exit 1
+            fi
             sudo chmod 600 /etc/swp391.env
 
-            # Start lại service
-            sudo systemctl start "kestrel-${PROJECT_NAME}.service"
+            # Reload unit rồi start/restart
+            sudo systemctl daemon-reload
+            sudo systemctl start "kestrel-${PROJECT_NAME}.service" || true
             sleep 5
-            sudo systemctl is-active --quiet "kestrel-${PROJECT_NAME}.service"
 
-            # Smoke test nội bộ
+            if ! sudo systemctl is-active --quiet "kestrel-${PROJECT_NAME}.service"; then
+              echo "Service is not active. Showing last logs:"
+              sudo journalctl -u "kestrel-${PROJECT_NAME}.service" -n 200 --no-pager
+              exit 1
+            fi
+
+            # Smoke test nội bộ (không fail pipeline nếu 200 không có)
             if command -v curl >/dev/null 2>&1; then
               curl -sf http://localhost:5000/health || curl -sf http://localhost:5000/swagger/index.html || true
             fi
