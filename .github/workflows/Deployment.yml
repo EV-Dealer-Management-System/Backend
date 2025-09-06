@@ -32,7 +32,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
@@ -97,25 +97,46 @@ jobs:
           rm -f deploy-package.zip
           dotnet nuget locals all --clear
 
-  - name: Deploy to EC2
-  run: |
-    # bind biến shell từ env/secrets để tránh chèn trực tiếp trong khối SSH
-    EC2_USER="${{ env.EC2_USER }}"
-    EC2_HOST="${{ env.EC2_HOST }}"
-    PROJECT_NAME="${{ env.PROJECT_NAME }}"
-    DEPLOYMENT_PATH="${{ env.DEPLOYMENT_PATH }}"
-    APP_CONFIG_B64='${{ secrets.APP_CONFIG_B64 }}'
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: SWP391
+      url: http://${{ env.EC2_HOST }}
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-package-${{ github.sha }}
 
-    # copy artifact lên EC2
-    scp -o ConnectTimeout=30 deploy-package.zip "${EC2_USER}@${EC2_HOST}:/tmp/"
+      - name: Setup SSH connection
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ env.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ env.EC2_HOST }}" >> ~/.ssh/known_hosts
 
-    # chạy script từ máy runner, pipe sang phiên SSH (tránh nhồi quote)
-    ssh -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_HOST}" 'bash -s' <<'EOSSH'
+      - name: Test SSH connection
+        run: ssh -o ConnectTimeout=10 "${{ env.EC2_USER }}@${{ env.EC2_HOST }}" "echo 'SSH connection successful'"
+
+      - name: Upload deployment package
+        run: scp -o ConnectTimeout=30 deploy-package.zip "${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/tmp/"
+
+      - name: Deploy to EC2
+        shell: bash
+        run: |
+          # Bind biến ở local shell để truyền vào phiên SSH
+          EC2_USER="${{ env.EC2_USER }}"
+          EC2_HOST="${{ env.EC2_HOST }}"
+          PROJECT_NAME="${{ env.PROJECT_NAME }}"
+          DEPLOYMENT_PATH="${{ env.DEPLOYMENT_PATH }}"
+          APP_CONFIG_B64='${{ secrets.APP_CONFIG_B64 }}'
+
+          # Chạy script trên EC2 qua here-doc, tránh lỗi YAML/quote
+          ssh -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_HOST}" "PROJECT_NAME='${PROJECT_NAME}' DEPLOYMENT_PATH='${DEPLOYMENT_PATH}' APP_CONFIG_B64='${APP_CONFIG_B64}' bash -s" <<'EOSSH'
 set -euo pipefail
-
-PROJECT_NAME="${PROJECT_NAME}"
-DEPLOYMENT_PATH="${DEPLOYMENT_PATH}"
-APP_CONFIG_B64="${APP_CONFIG_B64}"
 
 cd /tmp
 rm -rf deploy_temp
@@ -132,12 +153,12 @@ fi
 sudo mkdir -p "$DEPLOYMENT_PATH"
 sudo rm -rf "$DEPLOYMENT_PATH"/*
 sudo cp -r deploy_temp/* "$DEPLOYMENT_PATH"/
-sudo chown -R $(whoami):$(whoami) "$DEPLOYMENT_PATH"
+sudo chown -R "$(whoami)":"$(whoami)" "$DEPLOYMENT_PATH"
 
-# decode base64 -> /tmp/app.json (không thêm newline)
-printf %s "$APP_CONFIG_B64" | tr -d '\n' | base64 -d > /tmp/app.json
+# Giải mã base64 (không thêm newline)
+printf %s "$APP_CONFIG_B64" | tr -d '\n' | base64 -d > /tmp/app.json || { echo "Base64 decode failed"; exit 1; }
 
-# (tùy chọn) validate JSON nếu có python3
+# (Tuỳ chọn) Validate JSON nếu có python3
 if command -v python3 >/dev/null 2>&1; then
 python3 - <<'PY'
 import json
@@ -146,21 +167,18 @@ print("appsettings JSON OK")
 PY
 fi
 
-# ghi file config
+# Ghi file cấu hình
 sudo tee "$DEPLOYMENT_PATH/appsettings.Production.json" >/dev/null < /tmp/app.json
 
-# đảm bảo file không rỗng
+# Đảm bảo file không rỗng
 [ -s "$DEPLOYMENT_PATH/appsettings.Production.json" ] || { echo "Config file empty"; exit 1; }
 
-# đảm bảo binary có quyền thực thi
+# Cho phép thực thi binary (nếu cần)
 sudo chmod +x "$DEPLOYMENT_PATH/SWP391Web.API" || true
 
 sudo systemctl start "kestrel-${PROJECT_NAME}.service"
 sleep 5
 sudo systemctl is-active --quiet "kestrel-${PROJECT_NAME}.service" || exit 1
 
-rm -rf /tmp/deploy_temp /tmp/deploy-package.zip /tmp/app.json
+rm -rf /tmp/deploy_temp /tmp/app.json /tmp/deploy-package.zip
 EOSSH
-
-rm -rf /tmp/deploy_temp /tmp/deploy-package.zip /tmp/app.json
-'
