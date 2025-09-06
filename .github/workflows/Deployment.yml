@@ -12,6 +12,7 @@ env:
   EC2_HOST: ${{ secrets.EC2_HOST_PUBLIC }}
   EC2_USER: ${{ secrets.EC2_USER }}
   DEPLOYMENT_PATH: /var/www/SWP391_Project_BE
+  AWS_REGION: ap-southeast-1
 
 permissions:
   contents: read
@@ -129,52 +130,52 @@ jobs:
 
             PROJECT_NAME="${{ env.PROJECT_NAME }}"
             DEPLOYMENT_PATH="${{ env.DEPLOYMENT_PATH }}"
-            APP_CONFIG_B64='${{ secrets.APP_CONFIG_B64 }}'
+            AWS_REGION="${{ env.AWS_REGION }}"
 
             cd /tmp
             rm -rf deploy_temp
             mkdir -p deploy_temp
             unzip -o deploy-package.zip -d deploy_temp/
 
+            # Dừng service cũ
             sudo systemctl stop "kestrel-${PROJECT_NAME}.service" || true
 
+            # Backup nhanh nếu còn chỗ
             AVAILABLE_SPACE=$(df /var/www --output=avail | tail -1 || echo 0)
             if [ "${AVAILABLE_SPACE}" -gt 1048576 ]; then
               sudo cp -r "${DEPLOYMENT_PATH}" "${DEPLOYMENT_PATH}.backup.$(date +%Y%m%d_%H%M%S)" || true
             fi
 
+            # Copy bản mới
             sudo mkdir -p "${DEPLOYMENT_PATH}"
-            sudo rm -rf "${DEPLOYMENT_PATH}"/*
+            sudo rm -rf "${DEPLOYMENT_PATH:?}"/*
             sudo cp -r deploy_temp/* "${DEPLOYMENT_PATH}"/
             sudo chown -R "${USER}:${USER}" "${DEPLOYMENT_PATH}"
 
-            # Decode JSON config từ 1 secret base64 (không thêm newline)
-            printf %s "${APP_CONFIG_B64}" | tr -d '\n' | base64 -d > /tmp/app.json
-
-            # (Optional) Validate JSON nếu có python3
-            if command -v python3 >/dev/null 2>&1; then
-              python3 - <<'PY'
-              import json
-              json.load(open("/tmp/app.json","rb"))
-              print("appsettings JSON OK")
-              PY
+            # Đảm bảo aws cli có sẵn
+            if ! command -v aws >/dev/null 2>&1; then
+              (sudo dnf install -y awscli || sudo yum install -y awscli) >/dev/null 2>&1 || true
             fi
 
-            sudo tee "${DEPLOYMENT_PATH}/appsettings.Production.json" >/dev/null < /tmp/app.json
+            # Kéo env từ SSM (SecureString) và ghi vào /etc/swp391.env
+            aws ssm get-parameter \
+              --region "${AWS_REGION}" \
+              --name "/swp391/prod/env" \
+              --with-decryption \
+              --query 'Parameter.Value' \
+              --output text | sudo tee /etc/swp391.env >/dev/null
 
-            # Đảm bảo file không rỗng
-            [ -s "${DEPLOYMENT_PATH}/appsettings.Production.json" ] || { echo "Config file empty"; exit 1; }
+            sudo chmod 600 /etc/swp391.env
 
-            # Quyền thực thi cho binary (nếu cần)
-            sudo chmod +x "${DEPLOYMENT_PATH}/SWP391Web.API" || true
-
+            # Start lại service
             sudo systemctl start "kestrel-${PROJECT_NAME}.service"
             sleep 5
             sudo systemctl is-active --quiet "kestrel-${PROJECT_NAME}.service"
 
-            # (Optional) smoke test nội bộ
+            # Smoke test nội bộ
             if command -v curl >/dev/null 2>&1; then
               curl -sf http://localhost:5000/health || curl -sf http://localhost:5000/swagger/index.html || true
             fi
 
-            rm -rf /tmp/deploy_temp /tmp/deploy-package.zip /tmp/app.json
+            # Dọn tạm
+            rm -rf /tmp/deploy_temp /tmp/deploy-package.zip
