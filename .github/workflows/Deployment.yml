@@ -156,7 +156,7 @@ jobs:
             sudo mkdir -p ${{ env.DEPLOYMENT_PATH }}
             sudo rm -rf ${{ env.DEPLOYMENT_PATH }}/*
             sudo cp -r deploy_temp/* ${{ env.DEPLOYMENT_PATH }}/
-            sudo chown -R ec2-user:ec2-user ${{ env.DEPLOYMENT_PATH }}
+            sudo chown -R ${{ env.EC2_USER }}:${{ env.EC2_USER }} ${{ env.DEPLOYMENT_PATH }}
 
             sudo systemctl start kestrel-${{ env.PROJECT_NAME }}.service
             sleep 5
