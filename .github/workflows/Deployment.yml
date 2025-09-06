@@ -14,7 +14,7 @@ env:
   EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
   EC2_HOST: ${{ secrets.EC2_HOST_PUBLIC }}
   EC2_USER: ${{ secrets.EC2_USER }}
-  DEPLOYMENT_PATH: /var/www/${{ env.PROJECT_NAME || 'SWP391_Project_BE' }}
+  DEPLOYMENT_PATH: /var/www/SWP391_Project_BE
 
 permissions:
   contents: read
