@@ -4,11 +4,17 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 env:
   PROJECT_NAME: SWP391_Project_BE
   DOTNET_VERSION: 9.0.x
-  DEPLOYMENT_PATH: /var/www/SWP391_Project_BE
+  EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+  EC2_HOST: ${{ secrets.EC2_HOST_PUBLIC }}
+  EC2_USER: ${{ secrets.EC2_USER }}
+  DEPLOYMENT_PATH: /var/www/${{ env.PROJECT_NAME || 'SWP391_Project_BE' }}
 
 permissions:
   contents: read
@@ -17,11 +23,15 @@ permissions:
 
 jobs:
   build-and-test:
+    name: Build and Test
     runs-on: ubuntu-latest
-
+    environment: SWP391
+    
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Setup .NET ${{ env.DOTNET_VERSION }}
         uses: actions/setup-dotnet@v4
@@ -37,20 +47,20 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore dependencies
-        run: dotnet restore SWP391Web.sln
+        run: dotnet restore SWP391Web.sln --verbosity minimal
 
       - name: Build solution
-        run: dotnet build SWP391Web.sln --configuration Release --no-restore
+        run: dotnet build SWP391Web.sln --configuration Release --no-restore --verbosity minimal
 
-      - name: Run tests (if any)
+      - name: Run tests if any
         run: |
           if find . -name "*.Test*.csproj" -o -name "*Test.csproj" | grep -q .; then
-            dotnet test SWP391Web.sln --configuration Release --no-build
+            dotnet test SWP391Web.sln --configuration Release --no-build --verbosity minimal
           else
             echo "No test projects found, skipping tests"
           fi
 
-      - name: Publish project (self-contained Linux-x64)
+      - name: Publish project (self-contained Linux)
         run: |
           dotnet publish SWP391Web.API/SWP391Web.API.csproj \
             -c Release \
@@ -71,49 +81,59 @@ jobs:
       - name: Create deployment package
         run: |
           cd publish
-          zip -r9 ../deploy-package.zip .
+          zip -r9 ../deploy-package.zip . 
           cd ..
 
-      - name: Upload artifact
+      - name: Upload build artifacts (short retention)
         uses: actions/upload-artifact@v4
         with:
-          name: deployment-package
+          name: deployment-package-${{ github.sha }}
           path: deploy-package.zip
           retention-days: 1
 
+      - name: Local cleanup
+        if: always()
+        run: |
+          rm -rf ./publish
+          rm -f deploy-package.zip
+          dotnet nuget locals all --clear
+
   deploy:
+    name: Deploy to EC2
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: github.ref == 'refs/heads/main'
-
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: 
+      name: SWP391
+      url: http://${{ env.EC2_HOST }}
+    
     steps:
-      - name: Download artifact
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: deployment-package
+          name: deployment-package-${{ github.sha }}
 
-      - name: Setup SSH key
+      - name: Setup SSH connection
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ env.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "${{ secrets.EC2_HOST_PUBLIC }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "${{ env.EC2_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Test SSH connection
-        run: ssh -o ConnectTimeout=10 ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST_PUBLIC }} "echo 'SSH OK'"
+        run: ssh -o ConnectTimeout=10 ${{ env.EC2_USER }}@${{ env.EC2_HOST }} "echo 'SSH connection successful'"
 
       - name: Upload deployment package
-        run: scp -o ConnectTimeout=30 deploy-package.zip \
-          ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST_PUBLIC }}:/tmp/
+        run: scp -o ConnectTimeout=30 deploy-package.zip ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/tmp/
 
-      - name: Deploy on EC2
+      - name: Deploy to EC2
         run: |
-          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST_PUBLIC }} "
+          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} "
             set -e
             cd /tmp
             rm -rf deploy_temp
-            mkdir deploy_temp
-            unzip -o deploy-package.zip -d deploy_temp
+            mkdir -p deploy_temp
+            unzip -o deploy-package.zip -d deploy_temp/
 
             sudo systemctl stop kestrel-${{ env.PROJECT_NAME }}.service || true
 
@@ -125,7 +145,7 @@ jobs:
             sudo mkdir -p ${{ env.DEPLOYMENT_PATH }}
             sudo rm -rf ${{ env.DEPLOYMENT_PATH }}/*
             sudo cp -r deploy_temp/* ${{ env.DEPLOYMENT_PATH }}/
-            sudo chown -R ${{ secrets.EC2_USER }}:${{ secrets.EC2_USER }} ${{ env.DEPLOYMENT_PATH }}
+            sudo chown -R ${{ env.EC2_USER }}:${{ env.EC2_USER }} ${{ env.DEPLOYMENT_PATH }}
 
             sudo systemctl start kestrel-${{ env.PROJECT_NAME }}.service
             sleep 5
@@ -137,3 +157,18 @@ jobs:
       - name: Cleanup SSH
         if: always()
         run: rm -f ~/.ssh/id_rsa deploy-package.zip
+
+      - name: Delete deployment artifacts
+        if: always()
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: deployment-package-${{ github.sha }}
+
+      - name: Deployment summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project:** ${{ env.PROJECT_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target:** ${{ env.EC2_USER }}@${{ env.EC2_HOST }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** Success" >> $GITHUB_STEP_SUMMARY
