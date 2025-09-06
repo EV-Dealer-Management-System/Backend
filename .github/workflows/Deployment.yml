@@ -26,7 +26,6 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     environment: SWP391
-    
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -81,7 +80,7 @@ jobs:
       - name: Create deployment package
         run: |
           cd publish
-          zip -r9 ../deploy-package.zip . 
+          zip -r9 ../deploy-package.zip .
           cd ..
 
       - name: Upload build artifacts (short retention)
@@ -103,10 +102,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: 
+    environment:
       name: SWP391
       url: http://${{ env.EC2_HOST }}
-    
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -128,31 +126,50 @@ jobs:
 
       - name: Deploy to EC2
         run: |
-          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} "
-            set -e
-            cd /tmp
-            rm -rf deploy_temp
-            mkdir -p deploy_temp
-            unzip -o deploy-package.zip -d deploy_temp/
+          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} '
+set -euo pipefail
 
-            sudo systemctl stop kestrel-${{ env.PROJECT_NAME }}.service || true
+cd /tmp
+rm -rf deploy_temp
+mkdir -p deploy_temp
+unzip -o deploy-package.zip -d deploy_temp/
 
-            AVAILABLE_SPACE=\$(df /var/www --output=avail | tail -1)
-            if [ \$AVAILABLE_SPACE -gt 1048576 ]; then
-              sudo cp -r ${{ env.DEPLOYMENT_PATH }} ${{ env.DEPLOYMENT_PATH }}.backup.\$(date +%Y%m%d_%H%M%S) || true
-            fi
+sudo systemctl stop kestrel-'"${{ env.PROJECT_NAME }}"'.service || true
 
-            sudo mkdir -p ${{ env.DEPLOYMENT_PATH }}
-            sudo rm -rf ${{ env.DEPLOYMENT_PATH }}/*
-            sudo cp -r deploy_temp/* ${{ env.DEPLOYMENT_PATH }}/
-            sudo chown -R ${{ env.EC2_USER }}:${{ env.EC2_USER }} ${{ env.DEPLOYMENT_PATH }}
-            echo '${{ secrets.APP_CONFIG_B64 }}' | tr -d '\n' | base64 -d > /tmp/app.json
-            sudo tee ${{ env.DEPLOYMENT_PATH }}/appsettings.Production.json > /dev/null < /tmp/app.json
-            [ -s ${{ env.DEPLOYMENT_PATH }}/appsettings.Production.json ] || (echo 'Config file empty'; exit 1)
-            sudo chmod +x ${{ env.DEPLOYMENT_PATH }}/SWP391Web.API || true
-            sudo systemctl start kestrel-${{ env.PROJECT_NAME }}.service
-            sleep 5
-            sudo systemctl is-active --quiet kestrel-${{ env.PROJECT_NAME }}.service || exit 1
+AVAILABLE_SPACE=$(df /var/www --output=avail | tail -1)
+if [ $AVAILABLE_SPACE -gt 1048576 ]; then
+  sudo cp -r '"${{ env.DEPLOYMENT_PATH }}"' '"${{ env.DEPLOYMENT_PATH }}"'.backup.$(date +%Y%m%d_%H%M%S) || true
+fi
 
-            rm -rf /tmp/deploy_temp /tmp/deploy-package.zip
-          "
+sudo mkdir -p '"${{ env.DEPLOYMENT_PATH }}"'
+sudo rm -rf '"${{ env.DEPLOYMENT_PATH }}"'/*
+sudo cp -r deploy_temp/* '"${{ env.DEPLOYMENT_PATH }}"'/
+sudo chown -R '"${{ env.EC2_USER }}":"${{ env.EC2_USER }}"' '"${{ env.DEPLOYMENT_PATH }}"'
+
+# Decode base64 từ secret (không thêm newline)
+printf %s "'"${{ secrets.APP_CONFIG_B64 }}"'" | base64 -d > /tmp/app.json || { echo "Base64 decode failed"; exit 1; }
+
+# (Tuỳ chọn) Validate JSON nếu python3 có sẵn
+if command -v python3 >/dev/null 2>&1; then
+python3 - <<'"'"'PY'"'"'
+import json
+json.load(open("/tmp/app.json","rb"))
+print("appsettings JSON OK")
+PY
+fi
+
+# Ghi file cấu hình
+sudo tee '"${{ env.DEPLOYMENT_PATH }}"'/appsettings.Production.json >/dev/null < /tmp/app.json
+
+# Bảo đảm file không rỗng
+[ -s '"${{ env.DEPLOYMENT_PATH }}"'/appsettings.Production.json ] || { echo "Config file empty"; exit 1; }
+
+# Cho phép thực thi binary (nếu cần)
+sudo chmod +x '"${{ env.DEPLOYMENT_PATH }}"'/SWP391Web.API || true
+
+sudo systemctl start kestrel-'"${{ env.PROJECT_NAME }}"'.service
+sleep 5
+sudo systemctl is-active --quiet kestrel-'"${{ env.PROJECT_NAME }}"'.service || exit 1
+
+rm -rf /tmp/deploy_temp /tmp/deploy-package.zip /tmp/app.json
+'
