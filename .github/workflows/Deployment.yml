@@ -55,15 +55,12 @@ jobs:
             echo "No test projects found, skipping tests"
           fi
 
-      - name: Publish project (self-contained Linux)
+      - name: Publish project (Linux RID, framework-dependent)
         run: |
           dotnet publish SWP391Web.API/SWP391Web.API.csproj \
             -c Release \
-            -o ./publish \
             -r linux-x64 \
-            --self-contained true \
-            /p:PublishTrimmed=false \
-            /p:PublishSingleFile=false
+            -o ./publish
 
       - name: Optimize publish folder
         run: |
@@ -126,7 +123,6 @@ jobs:
           command_timeout: 20m
           script: |
             set -euo pipefail
-
             PROJECT_NAME="${{ env.PROJECT_NAME }}"
             DEPLOYMENT_PATH="${{ env.DEPLOYMENT_PATH }}"
             AWS_REGION="${{ env.AWS_REGION }}"
@@ -139,7 +135,7 @@ jobs:
             # Stop service cũ (nếu có)
             sudo systemctl stop "kestrel-${PROJECT_NAME}.service" || true
 
-            # Backup nhanh nếu còn chỗ
+            # Backup nhanh
             AVAILABLE_SPACE=$(df /var/www --output=avail | tail -1 || echo 0)
             if [ "${AVAILABLE_SPACE}" -gt 1048576 ]; then
               sudo cp -r "${DEPLOYMENT_PATH}" "${DEPLOYMENT_PATH}.backup.$(date +%Y%m%d_%H%M%S)" || true
@@ -149,7 +145,7 @@ jobs:
             sudo mkdir -p "${DEPLOYMENT_PATH}"
             sudo rm -rf "${DEPLOYMENT_PATH:?}"/*
             sudo cp -r deploy_temp/* "${DEPLOYMENT_PATH}/"
-            sudo chown -R "${USER}:${USER}" "${DEPLOYMENT_PATH}"
+            sudo chown -R ec2-user:ec2-user "${DEPLOYMENT_PATH}"
 
             # Đảm bảo aws cli
             if ! command -v aws >/dev/null 2>&1; then
@@ -165,28 +161,28 @@ jobs:
               --query 'Parameter.Value' \
               --output text | sudo tee /etc/swp391.env >/dev/null
 
-            # Kiểm tra env có dữ liệu
             if ! sudo test -s /etc/swp391.env; then
               echo "ERROR: /etc/swp391.env is empty!"
               exit 1
             fi
+
             sudo chmod 600 /etc/swp391.env
 
-            # Reload unit rồi start
+            # Restart service
             sudo systemctl daemon-reload
-            sudo systemctl start "kestrel-${PROJECT_NAME}.service" || true
-            sleep 5
+            sudo systemctl restart "kestrel-${PROJECT_NAME}.service"
 
+            sleep 5
             if ! sudo systemctl is-active --quiet "kestrel-${PROJECT_NAME}.service"; then
               echo "Service is not active. Showing last logs:"
               sudo journalctl -u "kestrel-${PROJECT_NAME}.service" -n 200 --no-pager
               exit 1
             fi
 
-            # Smoke test nội bộ
+            # Smoke test (swagger)
             if command -v curl >/dev/null 2>&1; then
-              curl -sf http://localhost:5000/health || curl -sf http://localhost:5000/swagger/index.html || true
+              curl -sf http://localhost:5000/swagger/index.html || true
             fi
 
-            # Dọn tạm
+            # Cleanup
             rm -rf /tmp/deploy_temp /tmp/deploy-package.zip
