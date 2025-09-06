@@ -2,16 +2,13 @@ name: Backend Deployment
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
 
 env:
   PROJECT_NAME: SWP391_Project_BE
   DOTNET_VERSION: 9.0.x
-  EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
   EC2_HOST: ${{ secrets.EC2_HOST_PUBLIC }}
   EC2_USER: ${{ secrets.EC2_USER }}
   DEPLOYMENT_PATH: /var/www/SWP391_Project_BE
@@ -111,74 +108,73 @@ jobs:
         with:
           name: deployment-package-${{ github.sha }}
 
-      - name: Setup SSH connection
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ env.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "${{ env.EC2_HOST }}" >> ~/.ssh/known_hosts
+      - name: Upload artifact to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          source: "deploy-package.zip"
+          target: "/tmp"
 
-      - name: Test SSH connection
-        run: ssh -o ConnectTimeout=10 "${{ env.EC2_USER }}@${{ env.EC2_HOST }}" "echo 'SSH connection successful'"
+      - name: Deploy & restart service on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
 
-      - name: Upload deployment package
-        run: scp -o ConnectTimeout=30 deploy-package.zip "${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/tmp/"
+            PROJECT_NAME="${{ env.PROJECT_NAME }}"
+            DEPLOYMENT_PATH="${{ env.DEPLOYMENT_PATH }}"
+            APP_CONFIG_B64='${{ secrets.APP_CONFIG_B64 }}'
 
-      - name: Deploy to EC2
-        shell: bash
-        run: |
-          # Bind biến ở local shell để truyền vào phiên SSH
-          EC2_USER="${{ env.EC2_USER }}"
-          EC2_HOST="${{ env.EC2_HOST }}"
-          PROJECT_NAME="${{ env.PROJECT_NAME }}"
-          DEPLOYMENT_PATH="${{ env.DEPLOYMENT_PATH }}"
-          APP_CONFIG_B64='${{ secrets.APP_CONFIG_B64 }}'
+            cd /tmp
+            rm -rf deploy_temp
+            mkdir -p deploy_temp
+            unzip -o deploy-package.zip -d deploy_temp/
 
-          # Chạy script trên EC2 qua here-doc, tránh lỗi YAML/quote
-          ssh -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_HOST}" "PROJECT_NAME='${PROJECT_NAME}' DEPLOYMENT_PATH='${DEPLOYMENT_PATH}' APP_CONFIG_B64='${APP_CONFIG_B64}' bash -s" <<'EOSSH'
-set -euo pipefail
+            sudo systemctl stop "kestrel-${PROJECT_NAME}.service" || true
 
-cd /tmp
-rm -rf deploy_temp
-mkdir -p deploy_temp
-unzip -o deploy-package.zip -d deploy_temp/
+            AVAILABLE_SPACE=$(df /var/www --output=avail | tail -1 || echo 0)
+            if [ "${AVAILABLE_SPACE}" -gt 1048576 ]; then
+              sudo cp -r "${DEPLOYMENT_PATH}" "${DEPLOYMENT_PATH}.backup.$(date +%Y%m%d_%H%M%S)" || true
+            fi
 
-sudo systemctl stop "kestrel-${PROJECT_NAME}.service" || true
+            sudo mkdir -p "${DEPLOYMENT_PATH}"
+            sudo rm -rf "${DEPLOYMENT_PATH}"/*
+            sudo cp -r deploy_temp/* "${DEPLOYMENT_PATH}"/
+            sudo chown -R "${USER}:${USER}" "${DEPLOYMENT_PATH}"
 
-AVAILABLE_SPACE=$(df /var/www --output=avail | tail -1)
-if [ "$AVAILABLE_SPACE" -gt 1048576 ]; then
-  sudo cp -r "$DEPLOYMENT_PATH" "${DEPLOYMENT_PATH}.backup.$(date +%Y%m%d_%H%M%S)" || true
-fi
+            # Decode JSON config từ 1 secret base64 (không thêm newline)
+            printf %s "${APP_CONFIG_B64}" | tr -d '\n' | base64 -d > /tmp/app.json
 
-sudo mkdir -p "$DEPLOYMENT_PATH"
-sudo rm -rf "$DEPLOYMENT_PATH"/*
-sudo cp -r deploy_temp/* "$DEPLOYMENT_PATH"/
-sudo chown -R "$(whoami)":"$(whoami)" "$DEPLOYMENT_PATH"
+            # (Optional) Validate JSON nếu có python3
+            if command -v python3 >/dev/null 2>&1; then
+              python3 - <<'PY'
+              import json
+              json.load(open("/tmp/app.json","rb"))
+              print("appsettings JSON OK")
+              PY
+            fi
 
-# Giải mã base64 (không thêm newline)
-printf %s "$APP_CONFIG_B64" | tr -d '\n' | base64 -d > /tmp/app.json || { echo "Base64 decode failed"; exit 1; }
+            sudo tee "${DEPLOYMENT_PATH}/appsettings.Production.json" >/dev/null < /tmp/app.json
 
-# (Tuỳ chọn) Validate JSON nếu có python3
-if command -v python3 >/dev/null 2>&1; then
-python3 - <<'PY'
-import json
-json.load(open("/tmp/app.json","rb"))
-print("appsettings JSON OK")
-PY
-fi
+            # Đảm bảo file không rỗng
+            [ -s "${DEPLOYMENT_PATH}/appsettings.Production.json" ] || { echo "Config file empty"; exit 1; }
 
-# Ghi file cấu hình
-sudo tee "$DEPLOYMENT_PATH/appsettings.Production.json" >/dev/null < /tmp/app.json
+            # Quyền thực thi cho binary (nếu cần)
+            sudo chmod +x "${DEPLOYMENT_PATH}/SWP391Web.API" || true
 
-# Đảm bảo file không rỗng
-[ -s "$DEPLOYMENT_PATH/appsettings.Production.json" ] || { echo "Config file empty"; exit 1; }
+            sudo systemctl start "kestrel-${PROJECT_NAME}.service"
+            sleep 5
+            sudo systemctl is-active --quiet "kestrel-${PROJECT_NAME}.service"
 
-# Cho phép thực thi binary (nếu cần)
-sudo chmod +x "$DEPLOYMENT_PATH/SWP391Web.API" || true
+            # (Optional) smoke test nội bộ
+            if command -v curl >/dev/null 2>&1; then
+              curl -sf http://localhost:5000/health || curl -sf http://localhost:5000/swagger/index.html || true
+            fi
 
-sudo systemctl start "kestrel-${PROJECT_NAME}.service"
-sleep 5
-sudo systemctl is-active --quiet "kestrel-${PROJECT_NAME}.service" || exit 1
-
-rm -rf /tmp/deploy_temp /tmp/app.json /tmp/deploy-package.zip
-EOSSH
+            rm -rf /tmp/deploy_temp /tmp/deploy-package.zip /tmp/app.json
