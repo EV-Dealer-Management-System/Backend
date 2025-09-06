@@ -67,8 +67,8 @@ jobs:
             -o ./publish \
             -r linux-x64 \
             --self-contained true \
-            /p:PublishTrimmed=true \
-            /p:PublishSingleFile=true
+            /p:PublishTrimmed=false \
+            /p:PublishSingleFile=false
 
       - name: Optimize publish folder
         run: |
