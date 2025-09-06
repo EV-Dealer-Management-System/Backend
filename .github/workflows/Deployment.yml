@@ -97,79 +97,70 @@ jobs:
           rm -f deploy-package.zip
           dotnet nuget locals all --clear
 
-  deploy:
-    name: Deploy to EC2
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment:
-      name: SWP391
-      url: http://${{ env.EC2_HOST }}
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: deployment-package-${{ github.sha }}
+  - name: Deploy to EC2
+  run: |
+    # bind biến shell từ env/secrets để tránh chèn trực tiếp trong khối SSH
+    EC2_USER="${{ env.EC2_USER }}"
+    EC2_HOST="${{ env.EC2_HOST }}"
+    PROJECT_NAME="${{ env.PROJECT_NAME }}"
+    DEPLOYMENT_PATH="${{ env.DEPLOYMENT_PATH }}"
+    APP_CONFIG_B64='${{ secrets.APP_CONFIG_B64 }}'
 
-      - name: Setup SSH connection
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ env.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "${{ env.EC2_HOST }}" >> ~/.ssh/known_hosts
+    # copy artifact lên EC2
+    scp -o ConnectTimeout=30 deploy-package.zip "${EC2_USER}@${EC2_HOST}:/tmp/"
 
-      - name: Test SSH connection
-        run: ssh -o ConnectTimeout=10 ${{ env.EC2_USER }}@${{ env.EC2_HOST }} "echo 'SSH connection successful'"
-
-      - name: Upload deployment package
-        run: scp -o ConnectTimeout=30 deploy-package.zip ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/tmp/
-
-      - name: Deploy to EC2
-        run: |
-          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} '
+    # chạy script từ máy runner, pipe sang phiên SSH (tránh nhồi quote)
+    ssh -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_HOST}" 'bash -s' <<'EOSSH'
 set -euo pipefail
+
+PROJECT_NAME="${PROJECT_NAME}"
+DEPLOYMENT_PATH="${DEPLOYMENT_PATH}"
+APP_CONFIG_B64="${APP_CONFIG_B64}"
 
 cd /tmp
 rm -rf deploy_temp
 mkdir -p deploy_temp
 unzip -o deploy-package.zip -d deploy_temp/
 
-sudo systemctl stop kestrel-'"${{ env.PROJECT_NAME }}"'.service || true
+sudo systemctl stop "kestrel-${PROJECT_NAME}.service" || true
 
 AVAILABLE_SPACE=$(df /var/www --output=avail | tail -1)
-if [ $AVAILABLE_SPACE -gt 1048576 ]; then
-  sudo cp -r '"${{ env.DEPLOYMENT_PATH }}"' '"${{ env.DEPLOYMENT_PATH }}"'.backup.$(date +%Y%m%d_%H%M%S) || true
+if [ "$AVAILABLE_SPACE" -gt 1048576 ]; then
+  sudo cp -r "$DEPLOYMENT_PATH" "${DEPLOYMENT_PATH}.backup.$(date +%Y%m%d_%H%M%S)" || true
 fi
 
-sudo mkdir -p '"${{ env.DEPLOYMENT_PATH }}"'
-sudo rm -rf '"${{ env.DEPLOYMENT_PATH }}"'/*
-sudo cp -r deploy_temp/* '"${{ env.DEPLOYMENT_PATH }}"'/
-sudo chown -R '"${{ env.EC2_USER }}":"${{ env.EC2_USER }}"' '"${{ env.DEPLOYMENT_PATH }}"'
+sudo mkdir -p "$DEPLOYMENT_PATH"
+sudo rm -rf "$DEPLOYMENT_PATH"/*
+sudo cp -r deploy_temp/* "$DEPLOYMENT_PATH"/
+sudo chown -R $(whoami):$(whoami) "$DEPLOYMENT_PATH"
 
-# Decode base64 từ secret (không thêm newline)
-printf %s "'"${{ secrets.APP_CONFIG_B64 }}"'" | base64 -d > /tmp/app.json || { echo "Base64 decode failed"; exit 1; }
+# decode base64 -> /tmp/app.json (không thêm newline)
+printf %s "$APP_CONFIG_B64" | tr -d '\n' | base64 -d > /tmp/app.json
 
-# (Tuỳ chọn) Validate JSON nếu python3 có sẵn
+# (tùy chọn) validate JSON nếu có python3
 if command -v python3 >/dev/null 2>&1; then
-python3 - <<'"'"'PY'"'"'
+python3 - <<'PY'
 import json
 json.load(open("/tmp/app.json","rb"))
 print("appsettings JSON OK")
 PY
 fi
 
-# Ghi file cấu hình
-sudo tee '"${{ env.DEPLOYMENT_PATH }}"'/appsettings.Production.json >/dev/null < /tmp/app.json
+# ghi file config
+sudo tee "$DEPLOYMENT_PATH/appsettings.Production.json" >/dev/null < /tmp/app.json
 
-# Bảo đảm file không rỗng
-[ -s '"${{ env.DEPLOYMENT_PATH }}"'/appsettings.Production.json ] || { echo "Config file empty"; exit 1; }
+# đảm bảo file không rỗng
+[ -s "$DEPLOYMENT_PATH/appsettings.Production.json" ] || { echo "Config file empty"; exit 1; }
 
-# Cho phép thực thi binary (nếu cần)
-sudo chmod +x '"${{ env.DEPLOYMENT_PATH }}"'/SWP391Web.API || true
+# đảm bảo binary có quyền thực thi
+sudo chmod +x "$DEPLOYMENT_PATH/SWP391Web.API" || true
 
-sudo systemctl start kestrel-'"${{ env.PROJECT_NAME }}"'.service
+sudo systemctl start "kestrel-${PROJECT_NAME}.service"
 sleep 5
-sudo systemctl is-active --quiet kestrel-'"${{ env.PROJECT_NAME }}"'.service || exit 1
+sudo systemctl is-active --quiet "kestrel-${PROJECT_NAME}.service" || exit 1
+
+rm -rf /tmp/deploy_temp /tmp/deploy-package.zip /tmp/app.json
+EOSSH
 
 rm -rf /tmp/deploy_temp /tmp/deploy-package.zip /tmp/app.json
 '
