@@ -115,7 +115,7 @@ jobs:
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: 
-      name: Ticket_Metro
+      name: SWP391
       url: http://${{ env.EC2_HOST }}
     
     steps:
