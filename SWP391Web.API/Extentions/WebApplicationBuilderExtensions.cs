@@ -1,21 +1,21 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Security.Claims;
 using System.Text;
 
-namespace SWP391Web.API.Extentions
+namespace SWP391Web.API.Extentions;
+public static class WebApplicationBuilderExtensions
 {
-    public static class WebApplicationBuilderExtensions
+    public static WebApplicationBuilder AddAuthenticationService(this WebApplicationBuilder builder)
     {
-        public static WebApplicationBuilder AddAuthenticationService(this WebApplicationBuilder builder)
+        builder.Services.AddAuthentication(options =>
         {
-            builder.Services.AddAuthentication(options =>
-            {
-                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options =>
-            {
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        }).AddJwtBearer(options =>
+          {
                 options.SaveToken = true;
                 options.RequireHttpsMetadata = false;
                 options.TokenValidationParameters = new TokenValidationParameters()
@@ -30,25 +30,25 @@ namespace SWP391Web.API.Extentions
                 };
             });
 
-            return builder;
-        }
+        return builder;
+    }
 
-        public static WebApplicationBuilder AddSwaggerGen(this WebApplicationBuilder builder)
+    public static WebApplicationBuilder AddSwaggerGen(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddSwaggerGen(options =>
         {
-            builder.Services.AddSwaggerGen(options =>
+            options.AddSecurityDefinition(name: "Bearer", securityScheme: new OpenApiSecurityScheme()
             {
-                options.AddSecurityDefinition(name: "Bearer", securityScheme: new OpenApiSecurityScheme()
-                {
-                    Name = "Authorization",
-                    In = ParameterLocation.Header,
-                    Type = SecuritySchemeType.ApiKey,
-                    BearerFormat = "JWT",
-                    Scheme = "Bearer",
-                    Description = "Please enter your token with format: \"Bearer YOUR_TOKEN\"",
-                });
+                Name = "Authorization",
+                In = ParameterLocation.Header,
+                Type = SecuritySchemeType.ApiKey,
+                Description = "Please enter your token with format: \"Bearer YOUR_TOKEN\"",
+                BearerFormat = "JWT",
+                Scheme = "bearer"
+            });
 
-                options.AddSecurityRequirement(new OpenApiSecurityRequirement()
-                {
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement()
+            {
                     {
                         new OpenApiSecurityScheme()
                         {
@@ -63,10 +63,9 @@ namespace SWP391Web.API.Extentions
                         },
                         new List<string>()
                     }
-                });
             });
+        });
 
-            return builder;
-        }
+        return builder;
     }
 }

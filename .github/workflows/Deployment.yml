@@ -1,0 +1,188 @@
+name: Backend Deployment
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  PROJECT_NAME: SWP391_Project_BE
+  DOTNET_VERSION: 9.0.x
+  EC2_HOST: ${{ secrets.EC2_HOST_PUBLIC }}
+  EC2_USER: ${{ secrets.EC2_USER }}
+  DEPLOYMENT_PATH: /var/www/SWP391_Project_BE
+  AWS_REGION: ap-southeast-1
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    environment: SWP391
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache .NET packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore SWP391Web.sln --verbosity minimal
+
+      - name: Build solution
+        run: dotnet build SWP391Web.sln --configuration Release --no-restore --verbosity minimal
+
+      - name: Run tests if any
+        run: |
+          if find . -name "*.Test*.csproj" -o -name "*Test.csproj" | grep -q .; then
+            dotnet test SWP391Web.sln --configuration Release --no-build --verbosity minimal
+          else
+            echo "No test projects found, skipping tests"
+          fi
+
+      - name: Publish project (Linux RID, framework-dependent)
+        run: |
+          dotnet publish SWP391Web.API/SWP391Web.API.csproj \
+            -c Release \
+            -r linux-x64 \
+            -o ./publish
+
+      - name: Optimize publish folder
+        run: |
+          cd publish
+          find . -name "*.pdb" -delete
+          find . -name "*.xml" -delete
+          rm -f appsettings.Development.json
+          echo "Publish folder size: $(du -sh . | cut -f1)"
+
+      - name: Create deployment package
+        run: |
+          cd publish
+          zip -r9 ../deploy-package.zip .
+          cd ..
+
+      - name: Upload build artifacts (short retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-package-${{ github.sha }}
+          path: deploy-package.zip
+          retention-days: 1
+
+      - name: Local cleanup
+        if: always()
+        run: |
+          rm -rf ./publish
+          rm -f deploy-package.zip
+          dotnet nuget locals all --clear
+
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: SWP391
+      url: http://${{ env.EC2_HOST }}
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-package-${{ github.sha }}
+
+      - name: Upload artifact to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          source: "deploy-package.zip"
+          target: "/tmp/"
+
+      - name: Deploy & restart service on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script_stop: true
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            PROJECT_NAME="${{ env.PROJECT_NAME }}"
+            DEPLOYMENT_PATH="${{ env.DEPLOYMENT_PATH }}"
+            AWS_REGION="${{ env.AWS_REGION }}"
+
+            cd /tmp
+            rm -rf deploy_temp
+            mkdir -p deploy_temp
+            unzip -o deploy-package.zip -d deploy_temp/
+
+            # Stop service cũ (nếu có)
+            sudo systemctl stop "kestrel-${PROJECT_NAME}.service" || true
+
+            # Backup nhanh
+            AVAILABLE_SPACE=$(df /var/www --output=avail | tail -1 || echo 0)
+            if [ "${AVAILABLE_SPACE}" -gt 1048576 ]; then
+              sudo cp -r "${DEPLOYMENT_PATH}" "${DEPLOYMENT_PATH}.backup.$(date +%Y%m%d_%H%M%S)" || true
+            fi
+
+            # Copy bản mới
+            sudo mkdir -p "${DEPLOYMENT_PATH}"
+            sudo rm -rf "${DEPLOYMENT_PATH:?}"/*
+            sudo cp -r deploy_temp/* "${DEPLOYMENT_PATH}/"
+            sudo chown -R ec2-user:ec2-user "${DEPLOYMENT_PATH}"
+
+            # Đảm bảo aws cli
+            if ! command -v aws >/dev/null 2>&1; then
+              (sudo dnf install -y awscli || sudo yum install -y awscli) >/dev/null 2>&1 || true
+            fi
+
+            # Kéo env từ SSM -> /etc/swp391.env
+            echo "Fetching /swp391/prod/env from SSM..."
+            aws ssm get-parameter \
+              --region "${AWS_REGION}" \
+              --name "/swp391/prod/env" \
+              --with-decryption \
+              --query 'Parameter.Value' \
+              --output text | sudo tee /etc/swp391.env >/dev/null
+
+            if ! sudo test -s /etc/swp391.env; then
+              echo "ERROR: /etc/swp391.env is empty!"
+              exit 1
+            fi
+
+            sudo chmod 600 /etc/swp391.env
+
+            # Restart service
+            sudo systemctl daemon-reload
+            sudo systemctl restart "kestrel-${PROJECT_NAME}.service"
+
+            sleep 5
+            if ! sudo systemctl is-active --quiet "kestrel-${PROJECT_NAME}.service"; then
+              echo "Service is not active. Showing last logs:"
+              sudo journalctl -u "kestrel-${PROJECT_NAME}.service" -n 200 --no-pager
+              exit 1
+            fi
+
+            # Smoke test (swagger)
+            if command -v curl >/dev/null 2>&1; then
+              curl -sf http://localhost:5000/swagger/index.html || true
+            fi
+
+            # Cleanup
+            rm -rf /tmp/deploy_temp /tmp/deploy-package.zip
