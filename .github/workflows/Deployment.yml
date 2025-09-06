@@ -4,17 +4,11 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 env:
   PROJECT_NAME: SWP391_Project_BE
   DOTNET_VERSION: 9.0.x
-  EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-  EC2_HOST: ${{ secrets.EC2_HOST_PUBLIC }}
-  EC2_USER: ${{ secrets.EC2_USER }}
-  DEPLOYMENT_PATH: /var/www/${{ vars.PROJECT_NAME || 'SWP391_Project_BE' }}
+  DEPLOYMENT_PATH: /var/www/SWP391_Project_BE
 
 permissions:
   contents: read
@@ -23,15 +17,11 @@ permissions:
 
 jobs:
   build-and-test:
-    name: Build and Test
     runs-on: ubuntu-latest
-    environment: SWP391
-    
+
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
       - name: Setup .NET ${{ env.DOTNET_VERSION }}
         uses: actions/setup-dotnet@v4
@@ -47,25 +37,24 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore dependencies
-        run: dotnet restore SWP391Web.sln --verbosity minimal
+        run: dotnet restore SWP391Web.sln
 
       - name: Build solution
-        run: dotnet build SWP391Web.sln --configuration Release --no-restore --verbosity minimal
+        run: dotnet build SWP391Web.sln --configuration Release --no-restore
 
-      - name: Run tests if any
+      - name: Run tests (if any)
         run: |
           if find . -name "*.Test*.csproj" -o -name "*Test.csproj" | grep -q .; then
-            dotnet test SWP391Web.sln --configuration Release --no-build --verbosity minimal
+            dotnet test SWP391Web.sln --configuration Release --no-build
           else
             echo "No test projects found, skipping tests"
           fi
 
-      - name: Publish project (self-contained Linux)
+      - name: Publish project (self-contained Linux-x64)
         run: |
           dotnet publish SWP391Web.API/SWP391Web.API.csproj \
             -c Release \
             -o ./publish \
-            --no-build \
             -r linux-x64 \
             --self-contained true \
             /p:PublishTrimmed=true \
@@ -82,59 +71,49 @@ jobs:
       - name: Create deployment package
         run: |
           cd publish
-          zip -r9 ../deploy-package.zip . 
+          zip -r9 ../deploy-package.zip .
           cd ..
 
-      - name: Upload build artifacts (short retention)
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: deployment-package-${{ github.sha }}
+          name: deployment-package
           path: deploy-package.zip
           retention-days: 1
 
-      - name: Local cleanup
-        if: always()
-        run: |
-          rm -rf ./publish
-          rm -f deploy-package.zip
-          dotnet nuget locals all --clear
-
   deploy:
-    name: Deploy to EC2
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: 
-      name: SWP391
-      url: http://${{ env.EC2_HOST }}
-    
+    if: github.ref == 'refs/heads/main'
+
     steps:
-      - name: Download build artifacts
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: deployment-package-${{ github.sha }}
+          name: deployment-package
 
-      - name: Setup SSH connection
+      - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ env.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "${{ env.EC2_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.EC2_HOST_PUBLIC }}" >> ~/.ssh/known_hosts
 
       - name: Test SSH connection
-        run: ssh -o ConnectTimeout=10 ${{ env.EC2_USER }}@${{ env.EC2_HOST }} "echo 'SSH connection successful'"
+        run: ssh -o ConnectTimeout=10 ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST_PUBLIC }} "echo 'SSH OK'"
 
       - name: Upload deployment package
-        run: scp -o ConnectTimeout=30 deploy-package.zip ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/tmp/
+        run: scp -o ConnectTimeout=30 deploy-package.zip \
+          ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST_PUBLIC }}:/tmp/
 
-      - name: Deploy to EC2
+      - name: Deploy on EC2
         run: |
-          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} "
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST_PUBLIC }} "
             set -e
             cd /tmp
             rm -rf deploy_temp
-            mkdir -p deploy_temp
-            unzip -o deploy-package.zip -d deploy_temp/
+            mkdir deploy_temp
+            unzip -o deploy-package.zip -d deploy_temp
 
             sudo systemctl stop kestrel-${{ env.PROJECT_NAME }}.service || true
 
@@ -146,7 +125,7 @@ jobs:
             sudo mkdir -p ${{ env.DEPLOYMENT_PATH }}
             sudo rm -rf ${{ env.DEPLOYMENT_PATH }}/*
             sudo cp -r deploy_temp/* ${{ env.DEPLOYMENT_PATH }}/
-            sudo chown -R ${{ env.EC2_USER }}:${{ env.EC2_USER }} ${{ env.DEPLOYMENT_PATH }}
+            sudo chown -R ${{ secrets.EC2_USER }}:${{ secrets.EC2_USER }} ${{ env.DEPLOYMENT_PATH }}
 
             sudo systemctl start kestrel-${{ env.PROJECT_NAME }}.service
             sleep 5
@@ -157,19 +136,4 @@ jobs:
 
       - name: Cleanup SSH
         if: always()
-        run: rm -f ~/.ssh/id_ed25519 deploy-package.zip
-
-      - name: Delete deployment artifacts
-        if: always()
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: deployment-package-${{ github.sha }}
-
-      - name: Deployment summary
-        run: |
-          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Project:** ${{ env.PROJECT_NAME }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Target:** ${{ env.EC2_USER }}@${{ env.EC2_HOST }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status:** Success" >> $GITHUB_STEP_SUMMARY
+        run: rm -f ~/.ssh/id_rsa deploy-package.zip
