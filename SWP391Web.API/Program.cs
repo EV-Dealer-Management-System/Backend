@@ -18,13 +18,17 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 
-// Register Swagger that has bearer services
-// Base on Extensions.ServiceCollectionExtensions
-builder.AddSwaggerGen();
-
 // Register services
 // Base on Extensions.ServiceCollectionExtensions
 builder.Services.RegisterService();
+
+// Register Authentication service
+// Base on Extensions.WebApplicationBuilderExtensions
+builder.AddAuthenticationService();
+
+// Register Swagger that has bearer services
+// Base on Extensions.ServiceCollectionExtensions
+builder.AddSwaggerGen();
 
 builder.AddRedisCacheService();
 
