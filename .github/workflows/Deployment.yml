@@ -114,9 +114,9 @@ jobs:
           username: ${{ env.EC2_USER }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           source: "deploy-package.zip"
-          target: "/tmp"
+          target: "/tmp/"
 
-            - name: Deploy & restart service on EC2
+      - name: Deploy & restart service on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.EC2_HOST }}
@@ -136,7 +136,7 @@ jobs:
             mkdir -p deploy_temp
             unzip -o deploy-package.zip -d deploy_temp/
 
-            # Dừng service cũ (nếu có)
+            # Stop service cũ (nếu có)
             sudo systemctl stop "kestrel-${PROJECT_NAME}.service" || true
 
             # Backup nhanh nếu còn chỗ
@@ -149,15 +149,14 @@ jobs:
             sudo mkdir -p "${DEPLOYMENT_PATH}"
             sudo rm -rf "${DEPLOYMENT_PATH:?}"/*
             sudo cp -r deploy_temp/* "${DEPLOYMENT_PATH}/"
-            # chown cho user đang SSH (thường là ec2-user)
             sudo chown -R "${USER}:${USER}" "${DEPLOYMENT_PATH}"
 
-            # Đảm bảo aws cli có sẵn
+            # Đảm bảo aws cli
             if ! command -v aws >/dev/null 2>&1; then
               (sudo dnf install -y awscli || sudo yum install -y awscli) >/dev/null 2>&1 || true
             fi
 
-            # Kéo env từ SSM (SecureString) và ghi vào /etc/swp391.env
+            # Kéo env từ SSM -> /etc/swp391.env
             echo "Fetching /swp391/prod/env from SSM..."
             aws ssm get-parameter \
               --region "${AWS_REGION}" \
@@ -173,7 +172,7 @@ jobs:
             fi
             sudo chmod 600 /etc/swp391.env
 
-            # Reload unit rồi start/restart
+            # Reload unit rồi start
             sudo systemctl daemon-reload
             sudo systemctl start "kestrel-${PROJECT_NAME}.service" || true
             sleep 5
@@ -184,7 +183,7 @@ jobs:
               exit 1
             fi
 
-            # Smoke test nội bộ (không fail pipeline nếu 200 không có)
+            # Smoke test nội bộ
             if command -v curl >/dev/null 2>&1; then
               curl -sf http://localhost:5000/health || curl -sf http://localhost:5000/swagger/index.html || true
             fi
