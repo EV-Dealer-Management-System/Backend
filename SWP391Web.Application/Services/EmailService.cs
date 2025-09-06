@@ -24,8 +24,7 @@ namespace SWP391Web.Application.Service
                 var userName = _configuration["EmailSettings:UserName"];
                 var password = _configuration["EmailSettings:Password"];
                 var smtpHost = _configuration["EmailSettings:Host"];
-                var smtpPort = int.Parse(_configuration["EmailSettings:Port"]);
-
+                var smtpPort = _configuration.GetValue<int>("EmailSettings:Port");
 
                 if (fromEmail is null || userName is null || password is null || smtpHost is null)
                 {
