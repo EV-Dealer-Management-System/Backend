@@ -11,6 +11,7 @@ namespace SWP391Web.Infrastructure.Repository
         public IUserManagerRepository UserManagerRepository { get; private set; }
         public ICustomerRepository CustomerRepository { get; private set; }
         public IEmailTemplateRepository EmailTemplateRepository { get; private set; }
+        public ICustomerOrderRepository CustomerOrderRepository { get; private set; }
 
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
@@ -19,6 +20,7 @@ namespace SWP391Web.Infrastructure.Repository
             UserManagerRepository = new UserManagerRepository(userManagerRepository);
             CustomerRepository = new CustomerRepository(_context);
             EmailTemplateRepository = new EmailTemplateRepository(_context);
+            CustomerOrderRepository = new CustomerOrderRepository(_context);
         }
         public async Task<int> SaveAsync()
         {
