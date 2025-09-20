@@ -9,7 +9,8 @@ namespace SWP391Web.Infrastructure.Seeders
         {
             string[] roleNames = {
                 StaticUserRole.Admin,
-                StaticUserRole.Customer
+                StaticUserRole.Customer,
+                StaticUserRole.Manager
             };
 
             foreach (var role in roleNames)

@@ -1,6 +1,9 @@
 ﻿using AutoMapper;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Customer;
+using SWP391Web.Application.DTO.DisCount;
+using SWP391Web.Application.DTO.Vehicle;
+using SWP391Web.Application.DTO.VehicleColorDTO;
 using SWP391Web.Domain.Entities;
 
 namespace SWP391Web.Application.Mappings
@@ -16,6 +19,9 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.User.Address))
                 .ForMember(dest => dest.Sex, opt => opt.MapFrom(src => src.User.Sex))
                 .ForMember(dest => dest.DateOfBirth, opt => opt.MapFrom(src => src.User.DateOfBirth)).ReverseMap();
+            CreateMap<Vehicle,GetVehicleDTO>().ReverseMap();
+            CreateMap<VehicleColor,GetVehicleColorDTO>().ReverseMap();
+            CreateMap<Discount,GetDiscountDTO>().ReverseMap();
         }
     }
 }
