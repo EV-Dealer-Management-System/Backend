@@ -37,6 +37,8 @@ builder.AddSwaggerGen();
 
 builder.AddRedisCacheService();
 
+builder.AddHttpSmartCA();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policyBuilder =>
@@ -65,6 +67,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
+
+app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
 

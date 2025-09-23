@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using SWP391Web.Application.IServices;
+using SWP391Web.Application.Services;
 using System.Security.Claims;
 using System.Text;
 
@@ -16,19 +18,19 @@ public static class WebApplicationBuilderExtensions
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
         }).AddJwtBearer(options =>
           {
-                options.SaveToken = true;
-                options.RequireHttpsMetadata = false;
-                options.TokenValidationParameters = new TokenValidationParameters()
-                {
-                    ValidAudience = builder.Configuration["JWT:ValidAudience"],
-                    ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"] ?? throw new InvalidOperationException("Canot find JWT secret"))),
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                };
-            });
+              options.SaveToken = true;
+              options.RequireHttpsMetadata = false;
+              options.TokenValidationParameters = new TokenValidationParameters()
+              {
+                  ValidAudience = builder.Configuration["JWT:ValidAudience"],
+                  ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
+                  IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"] ?? throw new InvalidOperationException("Canot find JWT secret"))),
+                  ValidateIssuer = true,
+                  ValidateAudience = true,
+                  ValidateLifetime = true,
+                  ValidateIssuerSigningKey = true,
+              };
+          });
 
         return builder;
     }
@@ -64,6 +66,18 @@ public static class WebApplicationBuilderExtensions
                         new List<string>()
                     }
             });
+        });
+
+        return builder;
+    }
+
+    public static WebApplicationBuilder AddHttpSmartCA(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddHttpClient<ISmartCAService, SmartCAService>(client =>
+        {
+            client.BaseAddress = new Uri(builder.Configuration["SmartCA:BaseUrl"] ?? throw new Exception("Cannot find base url in SmartCA"));
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
         });
 
         return builder;

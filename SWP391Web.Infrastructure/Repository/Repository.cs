@@ -19,9 +19,9 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
             dbSet = _context.Set<T>();
         }
-        public async Task<T> AddAsync(T entity)
+        public async Task<T> AddAsync(T entity, CancellationToken token)
         {
-            var enityEntry = await dbSet.AddAsync(entity);
+            var enityEntry = await dbSet.AddAsync(entity, token);
             return enityEntry.Entity;
         }
 

@@ -12,6 +12,7 @@ namespace SWP391Web.Infrastructure.IRepository
         public ICustomerRepository CustomerRepository { get; }
         public IEmailTemplateRepository EmailTemplateRepository { get; }
         public ICustomerOrderRepository CustomerOrderRepository { get; }
+        public IContractTemplateRepository ContractTemplateRepository { get; }
         Task<int> SaveAsync();
     }
 }
