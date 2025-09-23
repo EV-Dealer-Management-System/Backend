@@ -18,6 +18,8 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<EmailTemplate> EmailTemplates { get; set; }
         public DbSet<CustomerOrder> CustomerOrders { get; set; }
         public DbSet<ContractTemplate> ContractTemplates { get; set; }
+        public DbSet<Dealer> Dealers { get; set; }
+        public DbSet<DealerMember> DealerMember { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
