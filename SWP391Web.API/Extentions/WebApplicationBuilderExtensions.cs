@@ -73,7 +73,7 @@ public static class WebApplicationBuilderExtensions
 
     public static WebApplicationBuilder AddHttpSmartCA(this WebApplicationBuilder builder)
     {
-        builder.Services.AddHttpClient<ISmartCAService, SmartCAService>(client =>
+        builder.Services.AddHttpClient<IEContractService, EContractService>(client =>
         {
             client.BaseAddress = new Uri(builder.Configuration["SmartCA:BaseUrl"] ?? throw new Exception("Cannot find base url in SmartCA"));
             client.Timeout = TimeSpan.FromSeconds(30);
