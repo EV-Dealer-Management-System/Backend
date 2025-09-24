@@ -10,5 +10,6 @@ namespace SWP391Web.Domain.Constants
     {
         public const string Admin = "Admin";
         public const string Customer = "Customer";
+        public const string DealerManager = "DealerManager";
     }
 }

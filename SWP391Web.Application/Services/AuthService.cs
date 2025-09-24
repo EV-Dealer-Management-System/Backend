@@ -23,7 +23,7 @@ namespace SWP391Web.Application.Service
         }
 
         // Method to register a new customer
-        public async Task<ResponseDTO> RegisterCustomer(RegisterCustomerDTO registerCustomerDTO)
+        public async Task<ResponseDTO> RegisterCustomer(RegisterCustomerDTO registerCustomerDTO, CancellationToken token)
         {
             try
             {
@@ -72,7 +72,7 @@ namespace SWP391Web.Application.Service
                     };
                 }
 
-                var addCustomerResult = await _unitOfWork.CustomerRepository.AddAsync(newCustomer);
+                var addCustomerResult = await _unitOfWork.CustomerRepository.AddAsync(newCustomer, token);
                 if (addCustomerResult is null)
                 {
                     return new ResponseDTO

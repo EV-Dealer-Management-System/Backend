@@ -16,9 +16,9 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPost("register-customer")]
-        public async Task<ActionResult<ResponseDTO>> RegisterCustomer([FromBody] RegisterCustomerDTO registerCustomerDTO)
+        public async Task<ActionResult<ResponseDTO>> RegisterCustomer([FromBody] RegisterCustomerDTO registerCustomerDTO, CancellationToken token)
         {
-            var response = await _authService.RegisterCustomer(registerCustomerDTO);
+            var response = await _authService.RegisterCustomer(registerCustomerDTO, token);
             return StatusCode(response.StatusCode, response);
         }
 

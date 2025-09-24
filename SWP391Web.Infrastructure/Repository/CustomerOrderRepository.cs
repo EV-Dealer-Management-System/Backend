@@ -11,5 +11,10 @@ namespace SWP391Web.Infrastructure.Repository
         {
             _context = context;
         }
+
+        public async Task<CustomerOrder?> GetByIdAsync(Guid customerId)
+        {
+            return await _context.CustomerOrders.FindAsync(customerId);
+        }
     }
 }

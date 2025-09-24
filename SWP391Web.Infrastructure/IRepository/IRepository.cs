@@ -7,7 +7,7 @@ namespace SWP391Web.Infrastructure.IRepository
     {
         Task<IEnumerable<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null, string? includeProperties = null);
         Task<T?> GetAsync(Expression<Func<T, bool>> filter, string? includeProperties = null);
-        Task<T> AddAsync(T entity);
+        Task<T> AddAsync(T entity, CancellationToken token);
         Task AddRangeAsync(IEnumerable<T> entities);
         void Update(T entity);
         void UpdateRange(IEnumerable<T> entities);

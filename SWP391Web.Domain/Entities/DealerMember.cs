@@ -13,8 +13,7 @@ namespace SWP391Web.Domain.Entities
         public string UserId { get; set; }
         public DateTime CreatedAt { get; set; }
 
-        private readonly List<ApplicationUser> _users = new();
-        public IReadOnlyCollection<ApplicationUser> Users => _users.AsReadOnly();
+        public ApplicationUser User { get; set; } = null!;
         public Dealer Dealer { get; set; } = null!;
     }
 }
