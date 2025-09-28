@@ -56,9 +56,17 @@ namespace SWP391Web.Infrastructure.Repository
             return JsonConvert.DeserializeObject<GhnResult<List<GhnProvince>>>(json) ?? GhnResult<List<GhnProvince>>.Fail("Deserialize error");
         }
 
-        public Task<GhnResult<List<GhnWard>>> GetWardsAsync(int districtId, CancellationToken ct = default)
+        public async Task<GhnResult<List<GhnWard>>> GetWardsAsync(int districtId, CancellationToken ct = default)
         {
-            throw new NotImplementedException();
+            var request = JsonRequest(HttpMethod.Get, $"/ward?district_id={districtId}", ct);
+            var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+            var json = await response.Content.ReadAsStringAsync(ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                return GhnResult<List<GhnWard>>.Fail($"GHN API error: {response.StatusCode} - {json}");
+            }
+            return JsonConvert.DeserializeObject<GhnResult<List<GhnWard>>>(json) ?? GhnResult<List<GhnWard>>.Fail("Deserialize error");
         }
     }
 }

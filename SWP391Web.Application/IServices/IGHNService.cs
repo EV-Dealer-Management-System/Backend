@@ -11,5 +11,6 @@ namespace SWP391Web.Application.IServices
     {
         Task<ResponseDTO> GetProvincesAsync();
         Task<ResponseDTO> GetDistrictsAsync(int provinceId);
+        Task<ResponseDTO> GetWardsAsync(int districtId);
     }
 }

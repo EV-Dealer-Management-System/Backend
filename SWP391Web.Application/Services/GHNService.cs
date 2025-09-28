@@ -90,5 +90,42 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
+
+        public async Task<ResponseDTO> GetWardsAsync(int districtId)
+        {
+            try
+            {
+                var response = await _ghnClient.GetWardsAsync(districtId);
+
+                if (response.Success)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = true,
+                        StatusCode = 200,
+                        Message = "Success to get wards list",
+                        Result = response.Data
+                    };
+                }
+                else
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = response.Message ?? "Failed to get wards list",
+                        StatusCode = 400
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"An error occurred while processing your request. {ex.Message}",
+                    StatusCode = 500
+                };
+            }
+        }
     }
 }
