@@ -27,9 +27,11 @@ namespace SWP391Web.API.Extentions
             services.AddScoped<IRedisService, RedisService>();
             services.AddScoped<IDashBoardService, DashBoardService>();
             services.AddScoped<ICustomerService, CustomerService>();
+            services.AddScoped<IEContractService, EContractService>();
 
             // Register Infrastructure Repositories
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<IVnptEContractClient, VnptEContractClient>();
 
             // Register Identity
             services.AddIdentity<ApplicationUser, IdentityRole>()
