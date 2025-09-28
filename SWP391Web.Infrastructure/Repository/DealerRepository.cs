@@ -21,7 +21,7 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<Dealer?> GetByIdAsync(Guid dealerId, CancellationToken ct)
         {
             return await context.Dealers
-                .Where(dl => dl.DealerId == dealerId).FirstOrDefaultAsync();
+                .Where(dl => dl.Id == dealerId).FirstOrDefaultAsync();
         }
     }
 }

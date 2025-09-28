@@ -1,10 +1,11 @@
 ﻿using Microsoft.Extensions.Configuration;
 using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Application.DTO;
 using SWP391Web.Domain.ValueObjects;
 using SWP391Web.Infrastructure.IRepository;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json;
+using Newtonsoft.Json;
 
 namespace SWP391Web.Infrastructure.Repository
 {
@@ -12,91 +13,145 @@ namespace SWP391Web.Infrastructure.Repository
     {
         private readonly IConfiguration _cfg;
         private readonly HttpClient _http;
-        private readonly JsonSerializerOptions _jon = new(JsonSerializerDefaults.Web)
-        {
-            PropertyNameCaseInsensitive = true
-        };
+        private static string? _baseUrl;
 
         public VnptEContractClient(IConfiguration cfg, HttpClient http)
         {
             _cfg = cfg;
             _http = http;
+            _baseUrl = _cfg["SmartCA:BaseUrl"];
         }
 
-        private static HttpRequestMessage JsonReq(HttpMethod m, string url, object? payload = null)
-        => new HttpRequestMessage(m, url)
-        { Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json") };
-
-        private static void Bearer(HttpRequestMessage req, string token)
-            => req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        public async Task<VnptCreateDocResp> CreateDocumentAsync(string token, VnptCreateDocReq model, Stream pdf, string fileName, CancellationToken ct)
+        private static void Bearer(HttpRequestMessage request, string token)
+            => request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        public async Task<VnptResult<VnptDocumentDto>> CreateDocumentAsync(string token, CreateDocumentDTO createDocumentDTO)
         {
-            using var form = new MultipartFormDataContent();
-            form.Add(new StringContent(model.No), "no");
-            form.Add(new StringContent(model.Subject), "subject");
-            if (!string.IsNullOrWhiteSpace(model.Description))
-                form.Add(new StringContent(model.Description), "description");
-            form.Add(new StringContent(model.TypeId.ToString()), "typeId");
-            form.Add(new StringContent(model.DepartmentId.ToString()), "departmenId");
-
-            var fileContent = new StreamContent(pdf);
-            fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
-            form.Add(fileContent, "file", fileName);
-
-            var req = new HttpRequestMessage(HttpMethod.Post, $"{_cfg["SmartCA:BaseUrl"]}/api/documents/create")
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, _baseUrl + "/api/documents/create");
+            Bearer(httpRequest, token);
+            var content = new MultipartFormDataContent
             {
-                Content = form
+                {new StringContent(createDocumentDTO.No!), "No" },
+                {new StringContent(createDocumentDTO.Subject!), "Subject" },
+                {new StringContent(createDocumentDTO.Description ?? ""), "Description" },
+                {new StringContent(createDocumentDTO.TypeId.ToString()), "TypeId" },
+                {new StringContent(createDocumentDTO.DepartmentId.ToString()), "DepartmentId" }
             };
-            Bearer(req, token);
 
-            using var res = await _http.SendAsync(req, ct);
-            res.EnsureSuccessStatusCode();
-            var body = await res.Content.ReadAsStringAsync(ct);
+            if (!string.IsNullOrWhiteSpace(createDocumentDTO.FileInfo.FilePath))
+            {
+                await using var fileStream = File.OpenRead(createDocumentDTO.FileInfo.FilePath);
+                var streamContent = new StreamContent(fileStream);
+                streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+                content.Add(streamContent, "File", createDocumentDTO.FileInfo.FileName ?? Path.GetFileName(createDocumentDTO.FileInfo.FilePath));
+            }
+            else
+            {
+                if (createDocumentDTO.FileInfo.File is null || createDocumentDTO.FileInfo.File.Length == 0)
+                {
+                    throw new InvalidOperationException("File bytes is empty. Privide FileInfo.File pr FileInfo.FilePath.");
+                }
 
-            var result = JsonSerializer.Deserialize<VnptEnvelope<VnptCreateDocResp>>(body, _jon)!.Data;
+                var byteAC = new ByteArrayContent(createDocumentDTO.FileInfo.File);
+                byteAC.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+                content.Add(byteAC, "File", createDocumentDTO.FileInfo.FileName ?? $"EContract-{DateTime.UtcNow:ssmmHHddMMyyyy}");
+            }
 
-            return result;
+            httpRequest.Content = content;
+            return await SendAsync<VnptDocumentDto>(httpRequest);
         }
 
-        public async Task<List<VnptUserDto>> CreateOrUpdateUsersAsync(string token, IEnumerable<VnptUserUpsert> users, CancellationToken ct)
+        public async Task<VnptResult<List<VnptUserDto>>> CreateOrUpdateUsersAsync(string token, IEnumerable<VnptUserUpsert> users)
         {
-            var req = JsonReq(HttpMethod.Post, $"{_cfg["SmartCA:BaseUrl"]}//api/users/create-or-update", users);
-            Bearer(req, token);
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, _baseUrl + "/api/users/create-or-update");
+            Bearer(httpRequest, token);
 
-            using var res = _http.Send(req, ct);
-            res.EnsureSuccessStatusCode();
-            var body = await res.Content.ReadAsStringAsync(ct);
-            return JsonSerializer.Deserialize<VnptEnvelope<List<VnptUserDto>>>(body, _jon)!.Data;
+            var jsonPayload = JsonConvert.SerializeObject(users);
+            httpRequest.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            return await SendAsync<List<VnptUserDto>>(httpRequest);
         }
 
-        public async Task<byte[]> DownloadAsync(string url, CancellationToken ct)
+        //public async Task<byte[]> DownloadAsync(string url, CancellationToken ct)
+        //{
+        //    using var res = await _http.GetAsync(url, ct);
+        //    res.EnsureSuccessStatusCode();
+        //    return await res.Content.ReadAsByteArrayAsync(ct);
+        //}
+
+        private async Task<VnptResult<T>> SendAsync<T>(HttpRequestMessage httpRequest)
         {
-            using var res = await _http.GetAsync(url, ct);
-            res.EnsureSuccessStatusCode();
-            return await res.Content.ReadAsByteArrayAsync(ct);
+            var response = await _http.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new VnptResult<T>($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{response.RequestMessage?.Method} {response.RequestMessage?.RequestUri}\n{content}");
+            }
+
+            return JsonConvert.DeserializeObject<VnptResult<T>>(content) ?? new("Fail");
         }
 
-        public async Task<VnptDocDto> SendProcessAsync(string token, string documentId, CancellationToken ct)
+        private async Task<VnptResult<T>> PostAsync<T>(string token, string url, object? payload)
         {
-            var req = JsonReq(HttpMethod.Post, $"{_cfg["SmartCA:BaseUrl"]}/api/documents/send-process/{documentId}");
-            Bearer(req, token);
+            var jsonPayload = JsonConvert.SerializeObject(payload);
+            var httpContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            var request = new HttpRequestMessage(HttpMethod.Post, _baseUrl + url)
+            {
+                Content = httpContent
+            };
+            Bearer(request, token);
 
-            using var res = _http.Send(req, ct);
-            res.EnsureSuccessStatusCode();
-            var body = await res.Content.ReadAsStringAsync(ct);
-            return JsonSerializer.Deserialize<VnptEnvelope<VnptDocDto>>(body, _jon)!.Data;
+            var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new VnptResult<T>($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{request.Method} {request.RequestUri}\n{content}");
+            }
+
+            return JsonConvert.DeserializeObject<VnptResult<T>>(content) ?? new("Fail");
         }
 
-        public async Task<VnptDocDto> UpdateProcessAsync(string token, VnptUpdateProcessReq reqMedel, CancellationToken ct)
+        public async Task<VnptResult<VnptDocumentDto>> UpdateProcessAsync(string token, VnptUpdateProcessDTO processDTO)
+            => await PostAsync<VnptDocumentDto>(token, "/api/documents/update-process", processDTO);
+
+        public async Task<VnptResult<VnptDocumentDto>> SendProcessAsync(string token, string documentId)
+        => await PostAsync<VnptDocumentDto>(token, $"/api/documents/send-process/{documentId}", null);
+
+
+        public Task<byte[]> DownloadAsync(string url)
         {
-            var req = JsonReq(HttpMethod.Post, $"{_cfg["SmartCA:BaseUrl"]}/api/documents/update-process", reqMedel);
-            Bearer(req, token);
-
-            using var res = _http.Send(req, ct);
-            res.EnsureSuccessStatusCode();
-            var body = await res.Content.ReadAsStringAsync(ct);
-            return JsonSerializer.Deserialize<VnptEnvelope<VnptDocDto>>(body, _jon)!.Data;
+            throw new NotImplementedException();
         }
 
+        public async Task<VnptResult<ProcessRespone>> SignProcess(string token, VnptProcessDTO vnptProcessDTO)
+        {
+            var jsonPayload = JsonConvert.SerializeObject(vnptProcessDTO, new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            });
+            return await PostAsync<ProcessRespone>(token, "/api/documents/process", vnptProcessDTO);
+        }
+
+        //public async Task<VnptDocumentDto> UpdateProcessAsync(string token, VnptUpdateProcessReq reqMedel, CancellationToken ct)
+        //{
+        //    var req = JsonReq(HttpMethod.Post, $"{_cfg["SmartCA:BaseUrl"]}/api/documents/update-process", reqMedel);
+        //    Bearer(req, token);
+
+        //    using var res = await _http.SendAsync(req, ct);
+        //    return await ReadOrThrowAsync<VnptDocumentDto>(res, ct);
+        //}
+
+        //private async Task<T> ReadOrThrowAsync<T>(HttpResponseMessage res, CancellationToken ct)
+        //{
+        //    var body = await res.Content.ReadAsStringAsync(ct);
+        //    if (!res.IsSuccessStatusCode)
+        //        throw new HttpRequestException($"HTTP {(int)res.StatusCode} {res.ReasonPhrase}\n{res.RequestMessage?.Method} {res.RequestMessage?.RequestUri}\n{body}");
+
+        //    var env = Newtonsoft.Json.JsonSerializer.Deserialize<VnptEnvelope<T>>(body, _jon);
+        //    if (env is null || !env.Success || env.Data is null)
+        //        throw new HttpRequestException($"VNPT returned success=false or data=null\n{res.RequestMessage?.Method} {res.RequestMessage?.RequestUri}\n{body}");
+
+        //    return env.Data;
+        //}
     }
 }

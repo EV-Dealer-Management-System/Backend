@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Infrastructure;
 using SWP391Web.API.Extentions;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.Seeders;
 
 var builder = WebApplication.CreateBuilder(args);
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: true)

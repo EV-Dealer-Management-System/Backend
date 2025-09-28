@@ -9,6 +9,7 @@ namespace SWP391Web.Domain.ValueObjects
     public record VnptStatusDto
     {
         public int Value { get; init; }
-        public string Description { get; init; } = default!;
+        public string? Description { get; init; }
     }
+
 }
