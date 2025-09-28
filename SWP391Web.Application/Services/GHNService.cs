@@ -16,6 +16,44 @@ namespace SWP391Web.Application.Services
         {
             _ghnClient = ghnClient;
         }
+
+        public async Task<ResponseDTO> GetDistrictsAsync(int provinceId)
+        {
+            try
+            {
+                var response = await _ghnClient.GetDistrictsAsync(provinceId);
+
+                if (response.Success)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = true,
+                        StatusCode = 200,
+                        Message = "Success to get district list",
+                        Result = response.Data
+                    };
+                }
+                else
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = response.Message ?? "Failed to get district list",
+                        StatusCode = 400
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"An error occurred while processing your request. {ex.Message}",
+                    StatusCode = 500
+                };
+            }
+        }
+
         public async Task<ResponseDTO> GetProvincesAsync()
         {
             try

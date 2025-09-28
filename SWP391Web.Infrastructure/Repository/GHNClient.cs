@@ -30,9 +30,17 @@ namespace SWP391Web.Infrastructure.Repository
             return request;
         }
 
-        public Task<GhnResult<List<GhnDistrict>>> GetDistrictsAsync(CancellationToken ct = default)
+        public async Task<GhnResult<List<GhnDistrict>>> GetDistrictsAsync(int provinceId, CancellationToken ct = default)
         {
-            throw new NotImplementedException();
+            var request = JsonRequest(HttpMethod.Get, $"/district?province_id={provinceId}", ct);
+            var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+            var json = await response.Content.ReadAsStringAsync(ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                return GhnResult<List<GhnDistrict>>.Fail($"GHN API error: {response.StatusCode} - {json}");
+            }
+            return JsonConvert.DeserializeObject<GhnResult<List<GhnDistrict>>>(json) ?? GhnResult<List<GhnDistrict>>.Fail("Deserialize error");
         }
 
         public async Task<GhnResult<List<GhnProvince>>> GetProvincesAsync(CancellationToken ct = default)
