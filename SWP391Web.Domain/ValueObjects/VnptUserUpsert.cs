@@ -19,5 +19,6 @@ namespace SWP391Web.Domain.ValueObjects
         public bool SignConfirmationEnabled { get; set; }
         public bool GenerateSelfSignedCertEnabled { get; set; }
         public int Status { get; set; }
+        public int receiveInfoAccountMethod { get; set; } = -1;
     };
 }

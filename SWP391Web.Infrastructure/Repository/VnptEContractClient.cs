@@ -100,15 +100,15 @@ namespace SWP391Web.Infrastructure.Repository
             };
             Bearer(request, token);
 
-            var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-            var content = await response.Content.ReadAsStringAsync();
+            return  await SendAsync<T>(request);
+        }
 
-            if (!response.IsSuccessStatusCode)
-            {
-                return new VnptResult<T>($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n{request.Method} {request.RequestUri}\n{content}");
-            }
+        private async Task<VnptResult<T>> GetAsync<T>(string token, string url)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, _baseUrl + url);
+            Bearer(request, token);
 
-            return JsonConvert.DeserializeObject<VnptResult<T>>(content) ?? new("Fail");
+            return await SendAsync<T>(request);
         }
 
         public async Task<VnptResult<VnptDocumentDto>> UpdateProcessAsync(string token, VnptUpdateProcessDTO processDTO)
@@ -131,6 +131,30 @@ namespace SWP391Web.Infrastructure.Repository
             });
             return await PostAsync<ProcessRespone>(token, "/api/documents/process", vnptProcessDTO);
         }
+
+        public async Task<HttpResponseMessage> GetDownloadResponseAsync(string token, string? rangeHeader = null, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                throw new ArgumentException("downloadToken is required", nameof(token));
+
+            var url = $"{_baseUrl}/Api/Download?token={token}";
+            var req = new HttpRequestMessage(HttpMethod.Get, url);
+
+            if (!string.IsNullOrWhiteSpace(rangeHeader))
+            {
+                req.Headers.TryAddWithoutValidation("Range", rangeHeader);
+            }
+
+            var res = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+
+            return res;
+        }
+
+        public async Task<VnptResult<VnptSmartCAResponse>> AddSmartCA(string token, AddNewSmartCADTO addNewSmartCADTO)
+            => await PostAsync<VnptSmartCAResponse>(token, "/api/users/smart-ca/add", addNewSmartCADTO);
+
+        public async Task<VnptResult<VnptFullUserData>> GetSmartCAInformation(string token, int userId)
+            => await GetAsync<VnptFullUserData>(token, $"/api/users/{userId}");
 
         //public async Task<VnptDocumentDto> UpdateProcessAsync(string token, VnptUpdateProcessReq reqMedel, CancellationToken ct)
         //{

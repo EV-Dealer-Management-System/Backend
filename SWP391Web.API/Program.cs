@@ -1,11 +1,22 @@
+using Amazon.Extensions.NETCore.Setup;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Infrastructure;
 using SWP391Web.API.Extentions;
+using SWP391Web.Application.Options;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.Seeders;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5000); 
+});
+
+builder.Configuration.AddSystemsManager("/swp391/prod/", reloadAfter: TimeSpan.FromMinutes(5));
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("JWT"));
 
 QuestPDF.Settings.License = LicenseType.Community;
 

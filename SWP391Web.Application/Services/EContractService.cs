@@ -1,13 +1,13 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json.Linq;
 using SWP391Web.Application.DTO;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Pdf;
 using SWP391Web.Domain.Entities;
-using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
 using SWP391Web.Infrastructure.IRepository;
-using SWP391Web.Infrastructure.Repository;
+using System.ComponentModel.Design;
 using System.Text;
 using System.Text.Json;
 
@@ -150,68 +150,6 @@ namespace SWP391Web.Application.Services
 
                 var sent = await SendProcessAsync(token, documentId);
 
-                //    // 4) Ensure dealer manager exists in VNPT as a user
-                //    var userCode = $"dealer.{dealer.DealerId:N}.manager";
-                //    await _vnpt.CreateOrUpdateUsersAsync(token, new[]
-                //    {
-                //        new VnptUserUpsert(
-                //        Code: userCode,
-                //        UserName: manager.User.Email,
-                //        Name: manager.User.FullName,
-                //        Email: manager.User.Email,
-                //        Phone: manager.User.PhoneNumber,
-                //        ReceiveOtpMethod: 1, // email
-                //        ReceiveNotificationMethod: 0, // email
-                //        SignMethod: 2, // SmartCA (2) — tùy đổi 1 = draw
-                //        SignConfirmationEnabled: true,
-                //        GenerateSelfSignedCertEnabled: true,
-                //        Status: 1
-                //    )}, ct);
-
-
-                //    // 5) Create document on VNPT
-                //    var docNo = string.IsNullOrWhiteSpace(dto.DocumentNo) ? $"HDDL-{DateTime.UtcNow:yyyyMMddHHmmss}" : dto.DocumentNo!;
-                //    var subject = string.IsNullOrWhiteSpace(dto.Subject) ? $"HĐ Đại lý – {dealer.Name}" : dto.Subject!;
-                //    var typeId = dto.TypeId ?? int.Parse(_cfg["SmartCA:TypeId"] ?? "001");
-                //    var departmentId = dto.DepartmentId ?? int.Parse(_cfg["SmartCA:DepartmentId"] ?? "001");
-
-                //    var created = await _vnpt.CreateDocumentAsync(token,
-                //        new VnptCreateDocReq(
-                //            No: docNo,
-                //            Subject: subject,
-                //            Description: dto.Description,
-                //            TypeId: typeId,
-                //            DepartmentId: departmentId
-                //        ),
-                //        pdf, $"{docNo}.pdf", ct);
-
-                //    // 6) Update workflow: dealer manager first, company approver second
-                //    var approver = string.IsNullOrWhiteSpace(dto.CompanyApproverUserCode)
-                //        ? _cfg["SmartCA:CompanyApproverUserCode"] ?? "hoangtuzami"
-                //        : dto.CompanyApproverUserCode!;
-
-                //    var updated = await _vnpt.UpdateProcessAsync(token,
-                //        new VnptUpdateProcessReq(
-                //            Id: created.Id,
-                //            ProcessInOrder: true,
-                //            Processes: new List<VnptProcessItem>
-                //            {
-                //                new(OrderNo:1, ProcessedByUserCode:approver, AccessPermissionCode:"D"),
-                //                new(OrderNo:2, ProcessedByUserCode:userCode, AccessPermissionCode:dto.DealerPermissionCode)
-                //            }
-                //        ), ct);
-                //    // 7) Send process
-                //    var sent = await _vnpt.SendProcessAsync(token, updated.Id, ct);
-
-
-                //    return new ResponseDTO
-                //    {
-                //        IsSuccess = true,
-                //        StatusCode = 201,
-                //        Message = "Đã tạo PDF, khởi tạo quy trình ký và gửi cho DealerManager.",
-                //        Result = new { vnptDocumentId = sent.Id, vnptNo = sent.No, vnptStatus = sent.Status.Description }
-                //    };
-                //}
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -286,12 +224,10 @@ namespace SWP391Web.Application.Services
         public Task<byte[]> DownloadAsync(string url)
           => _vnpt.DownloadAsync(url);
 
-        public async Task<ResponseDTO> SignProcess(VnptProcessDTO vnptProcessDTO)
+        public async Task<ResponseDTO> SignProcess(string token, VnptProcessDTO vnptProcessDTO)
         {
             try
             {
-                var token = await GetAccessTokenAsync();
-
                 var request = new VnptProcessDTO
                 {
                     ProcessId = vnptProcessDTO.ProcessId,
@@ -337,6 +273,123 @@ namespace SWP391Web.Application.Services
                     StatusCode = 500,
                     Message = $"Lỗi ký số: {ex.Message}"
                 };
+            }
+        }
+
+        public async Task<HttpResponseMessage> GetPreviewResponseAsync(string token, string? rangeHeader = null, CancellationToken ct = default)
+            => await _vnpt.GetDownloadResponseAsync(token, rangeHeader, ct);
+
+        public async Task<ProcessLoginInfoDto> GetAccessTokenAsyncByCode(string processCode, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(processCode))
+                throw new ArgumentException("processCode is required", nameof(processCode));
+
+            var url = $"{_cfg["SmartCA:BaseUrl"]}/api/auth/process-code-login";
+            var payload = new { processCode };
+
+            using var req = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
+            };
+
+            using var res = await _http.SendAsync(req, ct);
+            var body = await res.Content.ReadAsStringAsync(ct);
+
+            if (!res.IsSuccessStatusCode)
+                throw new HttpRequestException($"HTTP {(int)res.StatusCode} {res.ReasonPhrase}\n{req.Method} {req.RequestUri}\n{body}");
+
+            using var doc = JsonDocument.Parse(body);
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("data", out var dataEl) ||
+                dataEl.ValueKind == JsonValueKind.Null ||
+                dataEl.ValueKind == JsonValueKind.Undefined)
+            {
+                if (root.TryGetProperty("messages", out var msgsEl) && msgsEl.ValueKind == JsonValueKind.Array)
+                {
+                    var msgs = string.Join("; ", msgsEl.EnumerateArray()
+                                                       .Select(m => m.ValueKind == JsonValueKind.String ? m.GetString() : m.ToString()));
+                    throw new HttpRequestException($"HTTP {(int)res.StatusCode} {res.ReasonPhrase}\n{req.Method} {req.RequestUri}\n{body}");
+                }
+            }
+
+            dataEl = root.GetProperty("data");
+            string? accessToken = null;
+            if (dataEl.TryGetProperty("token", out var tokenEl))
+            {
+                if (tokenEl.ValueKind == JsonValueKind.String)
+                {
+                    accessToken = tokenEl.GetString();
+                }
+                else if (tokenEl.ValueKind == JsonValueKind.Object &&
+                         tokenEl.TryGetProperty("accessToken", out var atEl) &&
+                         atEl.ValueKind == JsonValueKind.String)
+                {
+                    accessToken = atEl.GetString();
+                }
+            }
+
+            var docEl = dataEl.GetProperty("document");
+
+            string? waitingProcessId = null;
+            int? processedByUserId = null;
+            string? downloadUrl = null;
+
+            if (docEl.TryGetProperty("waitingProcess", out var waitingEl))
+            {
+                if (waitingEl.TryGetProperty("id", out var idPro) && idPro.ValueKind == JsonValueKind.String)
+                    waitingProcessId = idPro.GetString();
+
+                if (waitingEl.TryGetProperty("processedByUserId", out var pEl) && pEl.ValueKind == JsonValueKind.Number)
+                    processedByUserId = pEl.GetInt32();
+            }
+
+            if (docEl.TryGetProperty("downloadUrl", out var down) && down.ValueKind == JsonValueKind.String)
+                downloadUrl = down.GetString();
+
+            return new ProcessLoginInfoDto
+            {
+                ProcessId = waitingProcessId,
+                DownloadUrl = downloadUrl,
+                ProcessedByUserId = processedByUserId,
+                AccessToken = accessToken
+            };
+        }
+
+        public async Task<VnptResult<VnptSmartCAResponse>> AddSmartCA(AddNewSmartCADTO addNewSmartCADTO)
+        {
+            try
+            {
+                var token = await GetAccessTokenAsync();
+                var response = await _vnpt.AddSmartCA(token, addNewSmartCADTO);
+                if (!response.Success)
+                {
+                    var errors = string.Join(", ", response.Messages);
+                    throw new Exception($"Error to add SmartCA: {errors}");
+                }
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return new VnptResult<VnptSmartCAResponse>($"Exception when adding SmartCA: {ex.Message}");
+            }
+        }
+
+        public async Task<VnptResult<VnptFullUserData>> GetSmartCAInformation(int userId)
+        {
+            try
+            {
+                var token = await GetAccessTokenAsync();
+                var response = await _vnpt.GetSmartCAInformation(token, userId);
+                if (!response.Success)
+                {
+                    var errors = string.Join(", ", response.Messages);
+                    throw new Exception($"Error to get SmartCA information: {errors}");
+                }
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return new VnptResult<VnptFullUserData>($"Exception when getting SmartCA information: {ex.Message}");
             }
         }
     }

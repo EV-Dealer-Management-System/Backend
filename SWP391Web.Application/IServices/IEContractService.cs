@@ -8,11 +8,13 @@ namespace SWP391Web.Application.IServices
     public interface IEContractService
     {
         Task<string> GetAccessTokenAsync();
+        Task<ProcessLoginInfoDto> GetAccessTokenAsyncByCode(string processCode, CancellationToken ct = default);
         Task<byte[]> DownloadAsync(string url);
 
-        Task<ResponseDTO> SignProcess(VnptProcessDTO vnptProcessDTO);
-
-        // Orchestrator: render PDF + push to VNPT + send
+        Task<ResponseDTO> SignProcess(string token, VnptProcessDTO vnptProcessDTO);
+        Task<HttpResponseMessage> GetPreviewResponseAsync(string token, string? rangeHeader = null, CancellationToken ct = default);
         Task<ResponseDTO> CreateAndSendAsync(CreateDealerDTO createDealerDTO);
+        Task<VnptResult<VnptSmartCAResponse>> AddSmartCA(AddNewSmartCADTO addNewSmartCADTO);
+        Task<VnptResult<VnptFullUserData>> GetSmartCAInformation(int userId);
     }
 }

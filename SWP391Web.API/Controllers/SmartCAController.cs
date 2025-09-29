@@ -12,10 +12,20 @@ namespace SWP391Web.API.Controllers
     public class EContractController : ControllerBase
     {
         private readonly IEContractService _svc;
-        public EContractController(IEContractService svc) { _svc = svc; }
+        public EContractController(IEContractService svc) 
+        { 
+            _svc = svc;
+        }
 
 
-        [HttpGet("get-access-toke")]
+        [HttpGet("get-info-to-sign-process-by-code")]
+        public async Task<ActionResult<ResponseDTO>> GetInfoSignProcess([FromQuery] string processCode)
+        {
+            var r = await _svc.GetAccessTokenAsyncByCode(processCode);
+            return Ok(r);
+        }
+
+        [HttpGet("get-access-token-for-evc")]
         public async Task<ActionResult<ResponseDTO>> GetAccessToken()
         {
             var r = await _svc.GetAccessTokenAsync();
@@ -31,43 +41,68 @@ namespace SWP391Web.API.Controllers
 
         // Sign process
         [HttpPost("sign-process")]
-        public async Task<ActionResult<ResponseDTO>> SignProcess([FromBody] VnptProcessDTO dto)
+        public async Task<ActionResult<ResponseDTO>> SignProcess([FromQuery] string token, [FromBody] VnptProcessDTO dto)
         {
-            var r = await _svc.SignProcess(dto);
+            var r = await _svc.SignProcess(token, dto);
             return StatusCode(r.StatusCode, r);
         }
 
 
-        // Create document only (multipart)
-        //[HttpPost("documents")] // form: file + fields
-        //public async Task<ActionResult<ResponseDTO>> CreateDocument([FromForm] CreateDocumentForm form, CancellationToken ct)
-        //{
-        //    await using var stream = form.File.OpenReadStream();
-        //    var req = new VnptCreateDocReq(form.No, form.Subject, form.TypeId, form.DepartmentId, form.Description);
-        //    var r = await _svc.CreateDocumentAsync(req, stream, form.File.FileName, ct);
-        //    return StatusCode(r.StatusCode, r);
-        //}
+        [HttpGet]
+        [Route("preview")]
+        public async Task<IActionResult> Preview([FromQuery] string token, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return BadRequest("Missing token");
 
-        //[HttpGet("token")]
-        //public async Task<ActionResult<string>> GetAccessToken(CancellationToken ct)
-        //{
-        //    var token = await _svc.GetAccessTokenAsync(ct);
-        //    return Ok(token);
-        //}
+            Request.Headers.TryGetValue("Range", out var rangeHeader);
 
-        //[HttpPost("create-new-document-v2")]
-        //public async Task<IActionResult> CreateDocumentV2([FromQuery] Guid dealerId, CancellationToken ct)
-        //{
-        //    if (dealerId == Guid.Empty)
-        //        return BadRequest("dealerId is required");
+            var upstream = await _svc.GetPreviewResponseAsync(token, rangeHeader.ToString(), ct);
+            HttpContext.Response.RegisterForDispose(upstream);
 
-        //    var res = await _svc.CreateDocument(dealerId, ct);
+            if (!upstream.IsSuccessStatusCode)
+            {
+                var err = await upstream.Content.ReadAsStringAsync(ct);
+                return StatusCode((int)upstream.StatusCode, err);
+            }
 
-        //    // Nếu VNPT trả lỗi thì đẩy status code + payload ra để debug nhanh
-        //    if (!res.Success)
-        //        return StatusCode(res.Code == 0 ? 500 : 200, res);
+            var stream = await upstream.Content.ReadAsStreamAsync(ct);
+            var contentType = upstream.Content.Headers.ContentType?.ToString() ?? "application/pdf";
 
-        //    return Ok(res);
-        //}
+            Response.StatusCode = (int)upstream.StatusCode;
+
+            if (upstream.Headers.AcceptRanges is { Count: > 0 })
+                Response.Headers["Accept-Ranges"] = string.Join(",", upstream.Headers.AcceptRanges);
+
+            if (upstream.Content.Headers.ContentRange is not null)
+                Response.Headers["Content-Range"] = upstream.Content.Headers.ContentRange.ToString();
+
+            if (upstream.Content.Headers.ContentLength is long len)
+                Response.ContentLength = len;
+
+            var fileName = upstream.Content.Headers.ContentDisposition?.FileNameStar
+                           ?? upstream.Content.Headers.ContentDisposition?.FileName
+                           ?? "document.pdf";
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"{fileName}\"";
+            Response.ContentType = contentType;
+            Response.Headers["Cache-Control"] = "no-store";
+            return File(stream, contentType);
+        }
+
+        [HttpPost]
+        [Route("add-smartca")]
+        public async Task<ActionResult<ResponseDTO>> AddSmartCA([FromBody] AddNewSmartCADTO dto)
+        {
+            var r = await _svc.AddSmartCA(dto);
+            return Ok(r); 
+        }
+
+        [HttpGet]
+        [Route("smartca-info/{userId}")]
+        public async Task<ActionResult<ResponseDTO>> GetSmartCAInformation([FromRoute] int userId)
+        {
+            var r = await _svc.GetSmartCAInformation(userId);
+            return Ok(r);
+        }
     }
 }
