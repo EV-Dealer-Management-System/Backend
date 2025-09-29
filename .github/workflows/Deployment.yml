@@ -16,6 +16,7 @@ jobs:
   build-and-deploy:
     name: Build and Deploy ASP.NET Core
     runs-on: ubuntu-latest
+    environment: SWP391
 
     steps:
       - name: Checkout source
