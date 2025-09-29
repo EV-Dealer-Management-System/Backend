@@ -78,4 +78,3 @@ jobs:
 
             # Dọn dẹp
             rm -rf ~/deploy_temp ~/publish.zip
-SSH
