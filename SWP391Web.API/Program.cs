@@ -9,21 +9,17 @@ using SWP391Web.Infrastructure.Seeders;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.ListenAnyIP(5000); 
-});
+//builder.WebHost.ConfigureKestrel(options =>
+//{
+//    options.ListenAnyIP(5000);
+//});
 
-builder.Configuration.AddSystemsManager("/swp391/prod/", reloadAfter: TimeSpan.FromMinutes(5));
-builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
-builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("JWT"));
+//builder.Configuration.AddSystemsManager("/swp391/prod/", reloadAfter: TimeSpan.FromMinutes(5));
+//builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+//builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("JWT"));
 
 QuestPDF.Settings.License = LicenseType.Community;
 
-builder.Configuration
-    .AddJsonFile("appsettings.json", optional: true)
-    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
-    .AddEnvironmentVariables();
 
 // Add services to the container.
 
@@ -74,7 +70,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
