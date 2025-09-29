@@ -46,36 +46,40 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "${{ env.EC2_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Upload and deploy to EC2
+      - name: Upload & deploy to EC2
         run: |
-          scp publish.zip ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/home/${{ env.EC2_USER }}/
-          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} <<'SSH'
-            set -euo pipefail
-            PROJECT_NAME="EV_Dealer_Management_System"
-            DEPLOY_DIR="/var/www/${PROJECT_NAME}"
-            SERVICE="kestrel-${PROJECT_NAME}.service"
+          HOST="${{ secrets.EC2_HOST_PUBLIC }}"; USER="${{ secrets.EC2_USER }}"
+          [ -n "$HOST" ] && [ -n "$USER" ] || { echo "Thiếu EC2_HOST_PUBLIC/EC2_USER (ở Environment SWP391)"; exit 1; }
 
-            # Chuẩn bị
-            sudo mkdir -p "${DEPLOY_DIR}"
-            (sudo dnf -y install unzip >/dev/null 2>&1 || sudo yum -y install unzip >/dev/null 2>&1 || true)
+          scp publish.zip "$USER@$HOST:/home/$USER/"
+          ssh -o StrictHostKeyChecking=no "$USER@$HOST" "set -e
+          PROJECT='EV_Dealer_Management_System'
+          DEPLOY_DIR='/var/www/'\"\$PROJECT\"
+          SERVICE='kestrel-'\"\$PROJECT\"'.service'
 
-            # Đảm bảo .NET 9 runtime (vì publish framework-dependent)
-            if command -v dotnet >/dev/null 2>&1; then
-              dotnet --list-runtimes | grep -q "Microsoft.NETCore.App 9" || (sudo dnf -y install dotnet-runtime-9.0 || sudo yum -y install dotnet-runtime-9.0 || true)
-            else
-              (sudo dnf -y install dotnet-runtime-9.0 || sudo yum -y install dotnet-runtime-9.0 || true)
-            fi
+          # kiểm tra unit có tồn tại trên host này không
+          if ! sudo systemctl list-unit-files | grep -q \"\$SERVICE\"; then
+          echo 'Service '\$SERVICE' chưa tồn tại trên host này.'
+          echo '>> Kiểm tra lại: secrets EC2_HOST_PUBLIC có đúng IP của máy đã tạo service chưa?'
+          echo '>> Hoặc vào máy này tạo service 1 lần: /etc/systemd/system/'\$SERVICE
+          exit 5
+          fi
 
-            # Giải nén & deploy
-            rm -rf ~/deploy_temp && mkdir -p ~/deploy_temp
-            unzip -o ~/publish.zip -d ~/deploy_temp >/dev/null
+          sudo mkdir -p \"\$DEPLOY_DIR\"
+          (sudo dnf -y install unzip >/dev/null 2>&1 || sudo yum -y install unzip >/dev/null 2>&1 || true)
 
-            sudo systemctl stop "${SERVICE}" || true
-            sudo rm -rf "${DEPLOY_DIR:?}"/*
-            sudo cp -r ~/deploy_temp/* "${DEPLOY_DIR}/"
-            sudo chown -R ${USER}:${USER} "${DEPLOY_DIR}"
+          rm -rf ~/deploy_temp && mkdir -p ~/deploy_temp
+          unzip -o ~/publish.zip -d ~/deploy_temp >/dev/null
 
-            sudo systemctl start "${SERVICE}"
+          sudo systemctl stop \"\$SERVICE\" || true
+          sudo rm -rf \"\${DEPLOY_DIR:?}\"/*
+          sudo cp -r ~/deploy_temp/* \"\$DEPLOY_DIR\"/
+          sudo chown -R ec2-user:ec2-user \"\$DEPLOY_DIR\"
+          sudo systemctl daemon-reload
+          sudo systemctl start \"\$SERVICE\"
+
+          rm -rf ~/deploy_temp ~/publish.zip
+          "
 
             # Dọn dẹp
             rm -rf ~/deploy_temp ~/publish.zip
