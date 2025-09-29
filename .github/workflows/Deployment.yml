@@ -1,203 +1,81 @@
-name: Backend Deployment
+name: Backend CI/CD (No Artifact)
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 env:
-  PROJECT_NAME: SWP391_Project_BE
+  PROJECT_NAME: Summer2025SWD392_NET1703_Group2_BE
   DOTNET_VERSION: 9.0.x
+  EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
   EC2_HOST: ${{ secrets.EC2_HOST_PUBLIC }}
   EC2_USER: ${{ secrets.EC2_USER }}
-  DEPLOYMENT_PATH: /var/www/SWP391_Project_BE
-  AWS_REGION: ap-southeast-1
-
-permissions:
-  contents: read
-
-concurrency:
-  group: backend-deploy-main
-  cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build & Test
+  build-and-deploy:
+    name: Build and Deploy ASP.NET Core
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
-      - name: Setup .NET
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9 SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Cache NuGet
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+      - name: Restore dependencies
+        run: dotnet restore
 
-      - name: Restore
-        run: dotnet restore SWP391Web.sln --verbosity minimal
+      - name: Build project (Release)
+        run: dotnet build --configuration Release --no-restore
 
-      - name: Build
-        run: dotnet build SWP391Web.sln -c Release --no-restore --verbosity minimal
+      - name: Publish project (framework-dependent)
+        run: dotnet publish -c Release -o ./publish
 
-      - name: Test (if any)
+      - name: Zip publish folder
+        run: zip -r publish.zip ./publish
+
+      - name: Setup SSH
         run: |
-          if find . -name "*.Test*.csproj" -o -name "*Test.csproj" | grep -q .; then
-            dotnet test SWP391Web.sln -c Release --no-build --verbosity minimal
-          else
-            echo "No test projects found."
-          fi
+          mkdir -p ~/.ssh
+          echo "${{ env.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ env.EC2_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Publish (linux-x64, framework-dependent)
+      - name: Upload and deploy to EC2
         run: |
-          dotnet publish SWP391Web.API/SWP391Web.API.csproj \
-            -c Release -r linux-x64 -o ./publish
-
-      - name: Optimize publish folder
-        run: |
-          cd publish
-          find . -name "*.pdb" -delete
-          find . -name "*.xml" -delete
-          rm -f appsettings.Development.json
-          echo "Publish folder size: $(du -sh . | cut -f1)"
-
-      - name: Package artifact
-        run: |
-          cd publish
-          zip -r9 ../deploy-package.zip .
-          cd ..
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: deployment-package-${{ github.sha }}
-          path: deploy-package.zip
-          retention-days: 2
-
-  deploy:
-    name: Deploy to EC2
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    environment:
-      name: SWP391
-      url: http://${{ env.EC2_HOST }}
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: deployment-package-${{ github.sha }}
-
-      - name: Upload to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ env.EC2_HOST }}
-          username: ${{ env.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-          source: "deploy-package.zip"
-          target: "/tmp/"
-
-      - name: Deploy & restart service on EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ env.EC2_HOST }}
-          username: ${{ env.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-          script_stop: true
-          command_timeout: 20m
-          script: |
+          scp publish.zip ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:/home/${{ env.EC2_USER }}/
+          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} <<'SSH'
             set -euo pipefail
-            PROJECT_NAME="${{ env.PROJECT_NAME }}"
-            DEPLOYMENT_PATH="${{ env.DEPLOYMENT_PATH }}"
-            AWS_REGION="${{ env.AWS_REGION }}"
-            SERVICE_NAME="kestrel-${PROJECT_NAME}.service"
-            UNIT_FILE="/etc/systemd/system/${SERVICE_NAME}"
+            PROJECT_NAME="Summer2025SWD392_NET1703_Group2_BE"
+            DEPLOY_DIR="/var/www/${PROJECT_NAME}"
+            SERVICE="kestrel-${PROJECT_NAME}.service"
 
-            echo "==> Prepare temp folder"
-            cd /tmp
-            rm -rf deploy_temp
-            mkdir -p deploy_temp
-            unzip -o deploy-package.zip -d deploy_temp/
+            # Chuẩn bị
+            sudo mkdir -p "${DEPLOY_DIR}"
+            (sudo dnf -y install unzip >/dev/null 2>&1 || sudo yum -y install unzip >/dev/null 2>&1 || true)
 
-            echo "==> Stop old service (if any)"
-            sudo systemctl stop "${SERVICE_NAME}" || true
-
-            echo "==> Backup current deploy (if enough space)"
-            AVAILABLE_SPACE=$(df /var/www --output=avail | tail -1 || echo 0)
-            if [ "${AVAILABLE_SPACE}" -gt 1048576 ] && [ -d "${DEPLOYMENT_PATH}" ]; then
-              sudo cp -r "${DEPLOYMENT_PATH}" "${DEPLOYMENT_PATH}.backup.$(date +%Y%m%d_%H%M%S)" || true
+            # Đảm bảo .NET 9 runtime (vì publish framework-dependent)
+            if command -v dotnet >/dev/null 2>&1; then
+              dotnet --list-runtimes | grep -q "Microsoft.NETCore.App 9" || (sudo dnf -y install dotnet-runtime-9.0 || sudo yum -y install dotnet-runtime-9.0 || true)
+            else
+              (sudo dnf -y install dotnet-runtime-9.0 || sudo yum -y install dotnet-runtime-9.0 || true)
             fi
 
-            echo "==> Replace deploy folder"
-            sudo mkdir -p "${DEPLOYMENT_PATH}"
-            sudo rm -rf "${DEPLOYMENT_PATH:?}"/*
-            sudo cp -r deploy_temp/* "${DEPLOYMENT_PATH}/"
-            sudo chown -R ${USER}:${USER} "${DEPLOYMENT_PATH}"
+            # Giải nén & deploy
+            rm -rf ~/deploy_temp && mkdir -p ~/deploy_temp
+            unzip -o ~/publish.zip -d ~/deploy_temp >/dev/null
 
-            echo "==> Ensure AWS CLI"
-            if ! command -v aws >/dev/null 2>&1; then
-              (sudo dnf install -y awscli || sudo yum install -y awscli) >/dev/null 2>&1 || true
-            fi
+            sudo systemctl stop "${SERVICE}" || true
+            sudo rm -rf "${DEPLOY_DIR:?}"/*
+            sudo cp -r ~/deploy_temp/* "${DEPLOY_DIR}/"
+            sudo chown -R ${USER}:${USER} "${DEPLOY_DIR}"
 
-            echo "==> Fetch env from SSM → /etc/swp391.env"
-            aws ssm get-parameter \
-              --region "${AWS_REGION}" \
-              --name "/swp391/prod/env" \
-              --with-decryption \
-              --query 'Parameter.Value' \
-              --output text | sudo tee /etc/swp391.env >/dev/null
+            sudo systemctl start "${SERVICE}"
 
-            if ! sudo test -s /etc/swp391.env; then
-              echo "ERROR: /etc/swp391.env is empty!"
-              exit 1
-            fi
-            sudo chmod 600 /etc/swp391.env
-
-            echo "==> Ensure systemd unit exists & up-to-date"
-            sudo tee "${UNIT_FILE}" >/dev/null <<EOF
-            [Unit]
-            Description=${PROJECT_NAME} (Kestrel)
-            After=network.target
-
-            [Service]
-            WorkingDirectory=${DEPLOYMENT_PATH}
-            ExecStart=/usr/bin/dotnet ${DEPLOYMENT_PATH}/SWP391Web.API.dll
-            # App settings & secrets
-            EnvironmentFile=/etc/swp391.env
-            # Static envs (can be overridden by env file)
-            Environment=ASPNETCORE_URLS=http://0.0.0.0:5000
-            # Environment=ASPNETCORE_ENVIRONMENT=Production
-            User=${USER}
-            Restart=always
-            RestartSec=5
-
-            [Install]
-            WantedBy=multi-user.target
-            EOF
-
-            echo "==> Reload daemon & start service"
-            sudo systemctl daemon-reload
-            sudo systemctl enable "${SERVICE_NAME}"
-            sudo systemctl restart "${SERVICE_NAME}"
-
-            echo "==> Health check"
-            sleep 5
-            if ! sudo systemctl is-active --quiet "${SERVICE_NAME}"; then
-              echo "Service failed to start. Recent logs:"
-              sudo journalctl -u "${SERVICE_NAME}" -n 200 --no-pager || true
-              exit 1
-            fi
-
-            if command -v curl >/dev/null 2>&1; then
-              curl -sf http://localhost:5000/swagger/index.html || true
-            fi
-
-            echo "==> Cleanup temp"
-            rm -rf /tmp/deploy_temp /tmp/deploy-package.zip
+            # Dọn dẹp
+            rm -rf ~/deploy_temp ~/publish.zip
+SSH
