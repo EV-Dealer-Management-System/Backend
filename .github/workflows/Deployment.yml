@@ -14,16 +14,17 @@ env:
 
 permissions:
   contents: read
-  pull-requests: write
-  checks: write
+
+concurrency:
+  group: backend-deploy-main
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
-    name: Build and Test
+    name: Build & Test
     runs-on: ubuntu-latest
-    environment: SWP391
     steps:
-      - name: Checkout source code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
@@ -33,7 +34,7 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Cache .NET packages
+      - name: Cache NuGet
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
@@ -41,26 +42,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Restore dependencies
+      - name: Restore
         run: dotnet restore SWP391Web.sln --verbosity minimal
 
-      - name: Build solution
-        run: dotnet build SWP391Web.sln --configuration Release --no-restore --verbosity minimal
+      - name: Build
+        run: dotnet build SWP391Web.sln -c Release --no-restore --verbosity minimal
 
-      - name: Run tests if any
+      - name: Test (if any)
         run: |
           if find . -name "*.Test*.csproj" -o -name "*Test.csproj" | grep -q .; then
-            dotnet test SWP391Web.sln --configuration Release --no-build --verbosity minimal
+            dotnet test SWP391Web.sln -c Release --no-build --verbosity minimal
           else
-            echo "No test projects found, skipping tests"
+            echo "No test projects found."
           fi
 
-      - name: Publish project (Linux RID, framework-dependent)
+      - name: Publish (linux-x64, framework-dependent)
         run: |
           dotnet publish SWP391Web.API/SWP391Web.API.csproj \
-            -c Release \
-            -r linux-x64 \
-            -o ./publish
+            -c Release -r linux-x64 -o ./publish
 
       - name: Optimize publish folder
         run: |
@@ -70,41 +69,33 @@ jobs:
           rm -f appsettings.Development.json
           echo "Publish folder size: $(du -sh . | cut -f1)"
 
-      - name: Create deployment package
+      - name: Package artifact
         run: |
           cd publish
           zip -r9 ../deploy-package.zip .
           cd ..
 
-      - name: Upload build artifacts (short retention)
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: deployment-package-${{ github.sha }}
           path: deploy-package.zip
-          retention-days: 1
-
-      - name: Local cleanup
-        if: always()
-        run: |
-          rm -rf ./publish
-          rm -f deploy-package.zip
-          dotnet nuget locals all --clear
+          retention-days: 2
 
   deploy:
     name: Deploy to EC2
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment:
       name: SWP391
       url: http://${{ env.EC2_HOST }}
     steps:
-      - name: Download build artifacts
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: deployment-package-${{ github.sha }}
 
-      - name: Upload artifact to EC2
+      - name: Upload to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ env.EC2_HOST }}
@@ -126,34 +117,36 @@ jobs:
             PROJECT_NAME="${{ env.PROJECT_NAME }}"
             DEPLOYMENT_PATH="${{ env.DEPLOYMENT_PATH }}"
             AWS_REGION="${{ env.AWS_REGION }}"
+            SERVICE_NAME="kestrel-${PROJECT_NAME}.service"
+            UNIT_FILE="/etc/systemd/system/${SERVICE_NAME}"
 
+            echo "==> Prepare temp folder"
             cd /tmp
             rm -rf deploy_temp
             mkdir -p deploy_temp
             unzip -o deploy-package.zip -d deploy_temp/
 
-            # Stop service cũ (nếu có)
-            sudo systemctl stop "kestrel-${PROJECT_NAME}.service" || true
+            echo "==> Stop old service (if any)"
+            sudo systemctl stop "${SERVICE_NAME}" || true
 
-            # Backup nhanh
+            echo "==> Backup current deploy (if enough space)"
             AVAILABLE_SPACE=$(df /var/www --output=avail | tail -1 || echo 0)
-            if [ "${AVAILABLE_SPACE}" -gt 1048576 ]; then
+            if [ "${AVAILABLE_SPACE}" -gt 1048576 ] && [ -d "${DEPLOYMENT_PATH}" ]; then
               sudo cp -r "${DEPLOYMENT_PATH}" "${DEPLOYMENT_PATH}.backup.$(date +%Y%m%d_%H%M%S)" || true
             fi
 
-            # Copy bản mới
+            echo "==> Replace deploy folder"
             sudo mkdir -p "${DEPLOYMENT_PATH}"
             sudo rm -rf "${DEPLOYMENT_PATH:?}"/*
             sudo cp -r deploy_temp/* "${DEPLOYMENT_PATH}/"
-            sudo chown -R ec2-user:ec2-user "${DEPLOYMENT_PATH}"
+            sudo chown -R ${USER}:${USER} "${DEPLOYMENT_PATH}"
 
-            # Đảm bảo aws cli
+            echo "==> Ensure AWS CLI"
             if ! command -v aws >/dev/null 2>&1; then
               (sudo dnf install -y awscli || sudo yum install -y awscli) >/dev/null 2>&1 || true
             fi
 
-            # Kéo env từ SSM -> /etc/swp391.env
-            echo "Fetching /swp391/prod/env from SSM..."
+            echo "==> Fetch env from SSM → /etc/swp391.env"
             aws ssm get-parameter \
               --region "${AWS_REGION}" \
               --name "/swp391/prod/env" \
@@ -165,24 +158,46 @@ jobs:
               echo "ERROR: /etc/swp391.env is empty!"
               exit 1
             fi
-
             sudo chmod 600 /etc/swp391.env
 
-            # Restart service
-            sudo systemctl daemon-reload
-            sudo systemctl restart "kestrel-${PROJECT_NAME}.service"
+            echo "==> Ensure systemd unit exists & up-to-date"
+            sudo tee "${UNIT_FILE}" >/dev/null <<EOF
+            [Unit]
+            Description=${PROJECT_NAME} (Kestrel)
+            After=network.target
 
+            [Service]
+            WorkingDirectory=${DEPLOYMENT_PATH}
+            ExecStart=/usr/bin/dotnet ${DEPLOYMENT_PATH}/SWP391Web.API.dll
+            # App settings & secrets
+            EnvironmentFile=/etc/swp391.env
+            # Static envs (can be overridden by env file)
+            Environment=ASPNETCORE_URLS=http://0.0.0.0:5000
+            # Environment=ASPNETCORE_ENVIRONMENT=Production
+            User=${USER}
+            Restart=always
+            RestartSec=5
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+
+            echo "==> Reload daemon & start service"
+            sudo systemctl daemon-reload
+            sudo systemctl enable "${SERVICE_NAME}"
+            sudo systemctl restart "${SERVICE_NAME}"
+
+            echo "==> Health check"
             sleep 5
-            if ! sudo systemctl is-active --quiet "kestrel-${PROJECT_NAME}.service"; then
-              echo "Service is not active. Showing last logs:"
-              sudo journalctl -u "kestrel-${PROJECT_NAME}.service" -n 200 --no-pager
+            if ! sudo systemctl is-active --quiet "${SERVICE_NAME}"; then
+              echo "Service failed to start. Recent logs:"
+              sudo journalctl -u "${SERVICE_NAME}" -n 200 --no-pager || true
               exit 1
             fi
 
-            # Smoke test (swagger)
             if command -v curl >/dev/null 2>&1; then
               curl -sf http://localhost:5000/swagger/index.html || true
             fi
 
-            # Cleanup
+            echo "==> Cleanup temp"
             rm -rf /tmp/deploy_temp /tmp/deploy-package.zip
