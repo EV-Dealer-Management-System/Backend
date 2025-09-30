@@ -80,7 +80,7 @@ app.UseCors("AllowAll");
 
 app.UseForwardedHeaders();
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();

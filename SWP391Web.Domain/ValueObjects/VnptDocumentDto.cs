@@ -27,5 +27,7 @@ namespace SWP391Web.Application.DTO.Auth
         public VnptStatusDto? Status { get; set; }
         public VnptProcessItem? WaitingProcess { get; set; }
         public List<VnptProcess>? Processes { get; set; }
+        public string? PositionA { get; set; }
+        public string? PositionB { get; set; }
     }
 }
