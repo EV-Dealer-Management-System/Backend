@@ -20,5 +20,7 @@ namespace SWP391Web.Domain.ValueObjects
         public bool GenerateSelfSignedCertEnabled { get; set; }
         public int Status { get; set; }
         public int receiveInfoAccountMethod { get; set; } = -1;
+        public List<int>? DepartmentIds { get; set; } 
+        public List<Guid>? RoleIds { get; set; }
     };
 }

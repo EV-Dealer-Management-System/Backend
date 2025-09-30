@@ -10,6 +10,7 @@ using SWP391Web.Infrastructure.IRepository;
 using System.ComponentModel.Design;
 using System.Text;
 using System.Text.Json;
+using UglyToad.PdfPig;
 
 namespace SWP391Web.Application.Services
 {
@@ -127,7 +128,10 @@ namespace SWP391Web.Application.Services
                     SignMethod = 2,
                     SignConfirmationEnabled = true,
                     GenerateSelfSignedCertEnabled = false,
-                    Status = 1
+                    Status = 1,
+                    DepartmentIds = [4106],
+                    RoleIds = [Guid.Parse("0aa2afc9-39c5-4652-baec-08ddc28cdda2")]
+
                 };
 
                 var vnptUserList = new[] { vnptUser };
@@ -146,7 +150,7 @@ namespace SWP391Web.Application.Services
                         StatusCode = 500,
                         Message = "VNPT did not return document ID."
                     };
-                var uProcess = await UpdateProcessAsync(token, documentId, companyApproverUserCode, vnptUserCode);
+                var uProcess = await UpdateProcessAsync(token, documentId, companyApproverUserCode, vnptUserCode, created.Data.PositionA, created.Data.PositionB);
 
                 var sent = await SendProcessAsync(token, documentId);
 
@@ -177,6 +181,23 @@ namespace SWP391Web.Application.Services
             using var pdf = DealerContractPdf.Render(companyName, dealer.Name, dealer.Address, manager.User.Email + ", " + manager.User.PhoneNumber, DateTime.Now);
             var documentTypeId = 3059;
             var departmentId = 3110;
+            var bytes = pdf.ToArray();
+            var pageA = DealerContractPdf.FindAnchorBox(bytes, "ĐẠI_DIỆN_BÊN_A");
+            var pageB = DealerContractPdf.FindAnchorBox(bytes, "ĐẠI_DIỆN_BÊN_B");
+
+            double weight = 170, hight = 90, offsetY = 36, margin = 18;
+            using var ms = new MemoryStream(bytes);
+            using var doc = PdfDocument.Open(ms);
+            var page = doc.GetPage(pageA.Page);
+            double pw = page.Width;
+
+            double llxA = Math.Clamp(pageA.Left, margin, pw - margin - weight);
+            double llyA = Math.Max(pageA.Bottom - offsetY - hight, margin);
+            string posA = $"{(int)llxA - 28},{(int)llyA},{(int)(llxA + weight - 28)},{(int)(llyA + hight)}";
+
+            double llxB = Math.Clamp(pageB.Left, margin, pw - margin - weight);
+            double llyB = Math.Max(pageB.Bottom - offsetY - hight, margin);
+            string posB = $"{(int)llxB},{(int)llyB},{(int)(llxB + weight)},{(int)(llyB + hight)}";
 
             var randomText = Guid.NewGuid().ToString()[..5].ToUpper();
             var request = new CreateDocumentDTO
@@ -192,11 +213,13 @@ namespace SWP391Web.Application.Services
             request.FileInfo.FileName = $"EContract-{randomText}.pdf";
 
             var createResult = await _vnpt.CreateDocumentAsync(token, request);
+            createResult.Data!.PositionA = posA;
+            createResult.Data.PositionB = posB;
             Console.WriteLine($"CreateDocument: {createResult.Messages[0]}");
             return createResult;
         }
 
-        private async Task<VnptResult<VnptDocumentDto>> UpdateProcessAsync(string token, string documentId, string userCodeFirst, string userCodeSeccond)
+        private async Task<VnptResult<VnptDocumentDto>> UpdateProcessAsync(string token, string documentId, string userCodeFirst, string userCodeSeccond, string positionA, string positionB )
         {
             var request = new VnptUpdateProcessDTO
             {
@@ -204,8 +227,8 @@ namespace SWP391Web.Application.Services
                 ProcessInOrder = true,
                 Processes =
                 [
-                    new (orderNo:1, processedByUserCode:userCodeFirst, accessPermissionCode:"D", position: "14,478,206,568", pageSign: 1),
-                    new (orderNo:2, processedByUserCode:userCodeSeccond, accessPermissionCode:"D", position: "14,678,206,768", pageSign: 1)
+                    new (orderNo:1, processedByUserCode:userCodeFirst, accessPermissionCode:"D", position: positionA, pageSign: 1),
+                    new (orderNo:2, processedByUserCode:userCodeSeccond, accessPermissionCode:"D", position: positionB, pageSign: 1)
                 ]
             };
 
