@@ -52,7 +52,7 @@ builder.AddHttpSmartCA();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFE", p =>
-        p.WithOrigins("https://metrohcmc.xyz") // FE CloudFront
+        p.WithOrigins("https://metrohcmc.xyz", "http://localhost:5173") // FE CloudFront
          .AllowAnyHeader()
          .AllowAnyMethod()
          .AllowCredentials());
