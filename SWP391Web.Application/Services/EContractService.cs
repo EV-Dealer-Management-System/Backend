@@ -188,12 +188,7 @@ namespace SWP391Web.Application.Services
                     IsSuccess = true,
                     StatusCode = 201,
                     Message = "PDF is created",
-                    Result = new
-                    {
-                        DataResponse = sent,
-                        Dealer = dealer,
-                        ApplicationUser = user
-                    }
+                    Result = sent
                 };
             }
             catch (Exception ex)
