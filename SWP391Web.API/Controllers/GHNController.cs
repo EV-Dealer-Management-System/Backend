@@ -24,5 +24,21 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        [HttpGet]
+        [Route("provinces-open-get-province")]
+        public async Task<ActionResult<ResponseDTO>> ProvincesOpenGetProvinceResponse(CancellationToken ct)
+        {
+            var response = await _ghn.ProvincesOpenGetProvinceResponse(ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpGet]
+        [Route("provinces-open-get-ward")]
+        public async Task<ActionResult<ResponseDTO>> ProvincesOpenGetWardResponse([FromQuery] string provinceCode, CancellationToken ct)
+        {
+            var response = await _ghn.ProvincesOpenGetWardResponse(provinceCode, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
     }
 }

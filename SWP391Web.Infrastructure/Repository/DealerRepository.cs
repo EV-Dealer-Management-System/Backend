@@ -21,7 +21,13 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<Dealer?> GetByIdAsync(Guid dealerId, CancellationToken ct)
         {
             return await context.Dealers
-                .Where(dl => dl.Id == dealerId).FirstOrDefaultAsync();
+                .Where(dl => dl.Id == dealerId).FirstOrDefaultAsync(ct);
+        }
+
+        public async Task<bool> IsExistByNameAsync(string name, CancellationToken ct)
+        {
+            return await context.Dealers
+                .AnyAsync(dl => dl.Name == name, ct);
         }
     }
 }

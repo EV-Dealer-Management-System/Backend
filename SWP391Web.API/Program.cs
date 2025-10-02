@@ -9,10 +9,10 @@ using SWP391Web.Infrastructure.Seeders;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//builder.WebHost.ConfigureKestrel(options =>
-//{
-//    options.ListenAnyIP(5000);
-//});
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5000);
+});
 
 //builder.Configuration.AddSystemsManager("/swp391/prod/", reloadAfter: TimeSpan.FromMinutes(5));
 //builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
@@ -51,14 +51,13 @@ builder.AddHttpSmartCA();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policyBuilder =>
-    {
-        policyBuilder
-            .AllowAnyOrigin()
-            .AllowAnyMethod()
-            .AllowAnyHeader();
-    });
+    options.AddPolicy("AllowFE", p =>
+        p.WithOrigins("https://metrohcmc.xyz") // FE CloudFront
+         .AllowAnyHeader()
+         .AllowAnyMethod()
+         .AllowCredentials());
 });
+
 
 var app = builder.Build();
 
@@ -76,7 +75,7 @@ if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDev
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowAll");
+app.UseCors("AllowFE");
 
 app.UseForwardedHeaders();
 

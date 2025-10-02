@@ -10,5 +10,7 @@ namespace SWP391Web.Application.IServices
     public interface IGHNService
     {
         Task<ResponseDTO> GetProvincesAsync();
+        Task<ResponseDTO> ProvincesOpenGetProvinceResponse(CancellationToken ct);
+        Task<ResponseDTO> ProvincesOpenGetWardResponse(string provinceCode, CancellationToken ct);
     }
 }

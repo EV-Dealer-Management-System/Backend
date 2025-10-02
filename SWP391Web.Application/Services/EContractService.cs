@@ -19,10 +19,6 @@ namespace SWP391Web.Application.Services
         private readonly IConfiguration _cfg;
         private readonly HttpClient _http;
         private readonly IVnptEContractClient _vnpt;
-        private readonly JsonSerializerOptions _jon = new(JsonSerializerDefaults.Web)
-        {
-            PropertyNameCaseInsensitive = true
-        };
         private readonly IUnitOfWork _unitOfWork;
         public EContractService(IConfiguration cfg, HttpClient http, IUnitOfWork unitOfWork, IVnptEContractClient vnpt)
         {
@@ -71,7 +67,7 @@ namespace SWP391Web.Application.Services
             return accessToken!;
         }
 
-        public async Task<ResponseDTO> CreateAndSendAsync(CreateDealerDTO createDealerDTO)
+        public async Task<ResponseDTO> CreateEContractAsync(CreateDealerDTO createDealerDTO, CancellationToken ct)
         {
             try
             {
@@ -87,6 +83,27 @@ namespace SWP391Web.Application.Services
                 //    var companyName = "EV Manufacturer Sample"; // sample
                 //    using var pdf = DealerContractPdf.Render(companyName, dealer.Name, dealer.Address, dealer.Email + ", " + dealer.PhoneNumber, DateTime.Now);
                 // 1) Load dealer + manager
+
+                var isExistDealer = await _unitOfWork.DealerRepository.IsExistByNameAsync(createDealerDTO.DealerName, ct);
+                if (isExistDealer)
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 409,
+                        Message = "Dealer name is exist"
+                    };
+
+                var isEmailExist = await _unitOfWork.UserManagerRepository.IsEmailExist(createDealerDTO.EmailManager);
+                if (isEmailExist)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 409,
+                        Message = "Email is exist"
+                    };
+                }
+
                 var dealer = new Dealer
                 {
                     Id = Guid.NewGuid(),
@@ -100,9 +117,6 @@ namespace SWP391Web.Application.Services
                     Email = createDealerDTO.EmailManager,
                     PhoneNumber = createDealerDTO.PhoneNumberManager
                 };
-
-                var randomPassword = "Dealer@" + Guid.NewGuid().ToString()[..5];
-                await _unitOfWork.UserManagerRepository.CreateAsync(user, randomPassword);
 
                 var manager = new DealerMember
                 {
@@ -150,16 +164,36 @@ namespace SWP391Web.Application.Services
                         StatusCode = 500,
                         Message = "VNPT did not return document ID."
                     };
+
+                if (created.Data?.PositionA is null || created.Data.PositionB is null)
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 500,
+                        Message = "VNPT did not return signature positions."
+                    };
+
                 var uProcess = await UpdateProcessAsync(token, documentId, companyApproverUserCode, vnptUserCode, created.Data.PositionA, created.Data.PositionB);
 
                 var sent = await SendProcessAsync(token, documentId);
+
+                await _unitOfWork.DealerRepository.AddAsync(dealer, ct);
+                await _unitOfWork.DealerMemberRepository.AddAsync(manager, ct);
+                var randomPassword = "Dealer@" + Guid.NewGuid().ToString()[..5];
+                await _unitOfWork.UserManagerRepository.CreateAsync(user, randomPassword);
+                await _unitOfWork.SaveAsync();
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     StatusCode = 201,
-                    Message = "Đã tạo PDF, khởi tạo quy trình ký và gửi cho DealerManager.",
-                    Result = sent
+                    Message = "PDF is created",
+                    Result = new
+                    {
+                        DataResponse = sent,
+                        Dealer = dealer,
+                        ApplicationUser = user
+                    }
                 };
             }
             catch (Exception ex)
@@ -168,7 +202,7 @@ namespace SWP391Web.Application.Services
                 {
                     IsSuccess = false,
                     StatusCode = 500,
-                    Message = $"Lỗi gửi HĐ đại lý: {ex.Message}"
+                    Message = $"Error to create EContract: {ex.Message}"
                 };
             }
         }
@@ -264,9 +298,9 @@ namespace SWP391Web.Application.Services
                     SignatureText = vnptProcessDTO.SignatureText,
                     FontSize = vnptProcessDTO.FontSize,
                     ShowReason = vnptProcessDTO.ShowReason,
-                    ConfirmTermsConditions = vnptProcessDTO.ConfirmTermsConditions
+                    ConfirmTermsConditions = vnptProcessDTO.ConfirmTermsConditions,
                 };
-
+                
                 var signResult = await _vnpt.SignProcess(token, request);
 
                 if (!signResult.Success)
