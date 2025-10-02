@@ -10,5 +10,6 @@ namespace SWP391Web.Infrastructure.IRepository
     public interface IDealerRepository : IRepository<Dealer>
     {
         Task<Dealer?> GetByIdAsync(Guid dealerId, CancellationToken ct);
+        Task<bool> IsExistByNameAsync(string name, CancellationToken ct);
     }
 }

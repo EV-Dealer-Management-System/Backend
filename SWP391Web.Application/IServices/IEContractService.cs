@@ -13,7 +13,7 @@ namespace SWP391Web.Application.IServices
 
         Task<ResponseDTO> SignProcess(string token, VnptProcessDTO vnptProcessDTO);
         Task<HttpResponseMessage> GetPreviewResponseAsync(string token, string? rangeHeader = null, CancellationToken ct = default);
-        Task<ResponseDTO> CreateAndSendAsync(CreateDealerDTO createDealerDTO);
+        Task<ResponseDTO> CreateEContractAsync(CreateDealerDTO createDealerDTO, CancellationToken ct);
         Task<VnptResult<VnptSmartCAResponse>> AddSmartCA(AddNewSmartCADTO addNewSmartCADTO);
         Task<VnptResult<VnptFullUserData>> GetSmartCAInformation(int userId);
     }

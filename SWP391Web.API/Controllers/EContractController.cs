@@ -33,9 +33,9 @@ namespace SWP391Web.API.Controllers
         }
         // Orchestrator: create PDF + push + send
         [HttpPost("dealer-contracts")]
-        public async Task<ActionResult<ResponseDTO>> CreateDealerContract([FromBody] CreateDealerDTO dto)
+        public async Task<ActionResult<ResponseDTO>> CreateDealerContract([FromBody] CreateDealerDTO dto, CancellationToken ct)
         {
-            var r = await _svc.CreateAndSendAsync(dto);
+            var r = await _svc.CreateEContractAsync(dto, ct);
             return StatusCode(r.StatusCode, r);
         }
 
