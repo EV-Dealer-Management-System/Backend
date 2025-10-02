@@ -49,13 +49,19 @@ builder.AddRedisCacheService();
 
 builder.AddHttpSmartCA();
 
-builder.Services.AddCors(options =>
+var allowedOrigins = new[] {
+    "http://localhost:5173",
+    "https://metrohcmc.xyz"
+};
+
+builder.Services.AddCors(opt =>
 {
-    options.AddPolicy("AllowFE", p =>
-        p.WithOrigins("https://metrohcmc.xyz", "http://localhost:5173") // FE CloudFront
+    opt.AddPolicy("Frontend", p =>
+        p.WithOrigins(allowedOrigins)
          .AllowAnyHeader()
          .AllowAnyMethod()
-         .AllowCredentials());
+         .AllowCredentials()
+    );
 });
 
 
@@ -75,11 +81,13 @@ if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDev
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowFE");
+app.UseRouting();
+
+app.UseCors("Frontend");
 
 app.UseForwardedHeaders();
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
