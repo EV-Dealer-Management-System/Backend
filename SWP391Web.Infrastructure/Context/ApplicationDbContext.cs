@@ -19,7 +19,6 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<CustomerOrder> CustomerOrders { get; set; }
         public DbSet<ContractTemplate> ContractTemplates { get; set; }
         public DbSet<Dealer> Dealers { get; set; }
-        public DbSet<DealerMember> DealerMember { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -46,6 +45,30 @@ namespace SWP391Web.Infrastructure.Context
 
             modelBuilder.Entity<IdentityUserToken<string>>(b =>
                 b.ToTable("UserTokens"));
+
+
+            modelBuilder.Entity<Dealer>()
+                .HasMany(dl => dl.ApplicationUsers)
+                .WithMany(au => au.Dealers)
+                .UsingEntity<Dictionary<string, string>>(
+                    "DealerMembers",
+                    j => j
+                        .HasOne<ApplicationUser>()
+                        .WithMany()
+                        .HasForeignKey("ApplicationUserId")
+                        .HasConstraintName("FK_DealerMember_ApplicationUsers_ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Restrict),
+                    j => j
+                        .HasOne<Dealer>()
+                        .WithMany()
+                        .HasForeignKey("DealerId")
+                        .HasConstraintName("FK_DealerMember_Dealers_DealerId")
+                        .OnDelete(DeleteBehavior.Restrict),
+                    j =>
+                    {
+                        j.HasKey("DealerId", "ApplicationUserId");
+                        j.ToTable("DealerMembers");
+                    });
         }
     }
 }
