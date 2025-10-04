@@ -7,7 +7,7 @@ namespace SWP391Web.Application.Pdf
 {
     public class DealerContractPdf
     {
-        public static MemoryStream Render(string companyName, string dealerName, string dealerAddress, string contact, DateTime date)
+        public static MemoryStream Render(string companyName, string dealerName, string dealerAddress, string contact, string taxNo, DateTime date)
         {
             var ms = new MemoryStream();
             Document.Create(c =>
@@ -22,8 +22,21 @@ namespace SWP391Web.Application.Pdf
                         col.Item().Text($"Bên A (Hãng): {companyName}");
                         col.Item().Text($"Bên B (Đại lý): {dealerName}");
                         col.Item().Text($"Địa chỉ ĐL: {dealerAddress}");
+                        col.Item().Text($"Mã số thuế: {taxNo}");
                         col.Item().Text($"Liên hệ: {contact}");
-                        col.Item().Text($"Ngày lập: {date:dd/MM/yyyy}");
+                        col.Item().Text($"Ngày lập: {date:hh:mm dd/MM/yyyy}");
+                        col.Item().PaddingTop(10).Text("Điều 1: Phạm vi…");
+                        col.Item().Text("Điều 2: Giá cả, chiết khấu…");
+                        col.Item().Text("Điều 3: Thanh toán, giao nhận…");
+                        col.Item().Text("Điều 4: Cam kết…");
+                        col.Item().PaddingTop(10).Text("Điều 1: Phạm vi…");
+                        col.Item().Text("Điều 2: Giá cả, chiết khấu…");
+                        col.Item().Text("Điều 3: Thanh toán, giao nhận…");
+                        col.Item().Text("Điều 4: Cam kết…");
+                        col.Item().PaddingTop(10).Text("Điều 1: Phạm vi…");
+                        col.Item().Text("Điều 2: Giá cả, chiết khấu…");
+                        col.Item().Text("Điều 3: Thanh toán, giao nhận…");
+                        col.Item().Text("Điều 4: Cam kết…");
                         col.Item().PaddingTop(10).Text("Điều 1: Phạm vi…");
                         col.Item().Text("Điều 2: Giá cả, chiết khấu…");
                         col.Item().Text("Điều 3: Thanh toán, giao nhận…");
