@@ -1,11 +1,10 @@
-﻿using SWP391Web.Domain.ValueObjects;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWP391Web.Domain.Entities
+namespace SWP391Web.Domain.ValueObjects
 {
     public class VnptProcess
     {

@@ -1,5 +1,4 @@
-﻿using SWP391Web.Domain.Entities;
-using SWP391Web.Domain.ValueObjects;
+﻿using SWP391Web.Domain.ValueObjects;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -12,9 +12,9 @@ namespace SWP391Web.Domain.Entities
         public Guid Id { get; set; }
         public string Name { get; set; } = null!;
         public string Address { get; set; } = null!;
+        public string TaxNo { get; set; } = null!;
         public DealerStatus DealerStatus { get; set; } = DealerStatus.Inactive;
 
-        private readonly List<DealerMember> _dealerMembers = new();
-        public IReadOnlyCollection<DealerMember> DealerMembers => _dealerMembers.AsReadOnly();
+        public ICollection<ApplicationUser> ApplicationUsers { get; set; } = new List<ApplicationUser>();
     }
 }
