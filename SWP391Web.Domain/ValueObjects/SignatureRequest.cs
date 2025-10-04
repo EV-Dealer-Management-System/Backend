@@ -1,7 +1,6 @@
 ﻿using SWP391Web.Domain.Enums;
-using SWP391Web.Domain.ValueObjects;
 
-namespace SWP391Web.Domain.Entities
+namespace SWP391Web.Domain.ValueObjects
 {
     public class SignatureRequest
     {

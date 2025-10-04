@@ -9,5 +9,7 @@ namespace SWP391Web.Domain.Entities
         public DateOnly? DateOfBirth { get; set; }
 
         public ICollection<Dealer> Dealers { get; set; } = new List<Dealer>();
+        public ICollection<Dealer> ManagingDealers { get; set; } = new List<Dealer>();
+
     }
 }

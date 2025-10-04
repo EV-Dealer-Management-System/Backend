@@ -118,13 +118,6 @@ namespace SWP391Web.Application.Services
                     PhoneNumber = createDealerDTO.PhoneNumberManager
                 };
 
-                var manager = new DealerMember
-                {
-                    UserId = user.Id,
-                    DealerId = dealer.Id,
-                    User = user
-                };
-
 
                 // 3) Auth VNPT
                 var token = await GetAccessTokenAsync();
@@ -133,10 +126,10 @@ namespace SWP391Web.Application.Services
                 var vnptUser = new VnptUserUpsert
                 {
                     Code = vnptUserCode,
-                    UserName = manager.User.Email,
-                    Name = manager.User.FullName,
-                    Email = manager.User.Email,
-                    Phone = manager.User.PhoneNumber,
+                    UserName = user.Email,
+                    Name = user.FullName,
+                    Email = user.Email,
+                    Phone = user.PhoneNumber,
                     ReceiveOtpMethod = 1,
                     ReceiveNotificationMethod = 0,
                     SignMethod = 2,
@@ -152,7 +145,7 @@ namespace SWP391Web.Application.Services
 
                 var upsert = await CreateOrUpdateUsersAsync(token, vnptUserList);
 
-                var created = await CreateDocumentAsync(token, dealer, manager);
+                var created = await CreateDocumentAsync(token, dealer, user);
 
                 var companyApproverUserCode = _cfg["SmartCA:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
 
@@ -178,7 +171,6 @@ namespace SWP391Web.Application.Services
                 var sent = await SendProcessAsync(token, documentId);
 
                 await _unitOfWork.DealerRepository.AddAsync(dealer, ct);
-                await _unitOfWork.DealerMemberRepository.AddAsync(manager, ct);
                 var randomPassword = "Dealer@" + Guid.NewGuid().ToString()[..5];
                 await _unitOfWork.UserManagerRepository.CreateAsync(user, randomPassword);
                 await _unitOfWork.SaveAsync();
@@ -202,12 +194,12 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        private async Task<VnptResult<VnptDocumentDto>> CreateDocumentAsync(string token, Dealer dealer, DealerMember manager)
+        private async Task<VnptResult<VnptDocumentDto>> CreateDocumentAsync(string token, Dealer dealer, ApplicationUser user)
         {
 
             // 2) Render PDF (QuestPDF) — mock company info
             var companyName = "EV Manufacturer Sample"; // sample
-            using var pdf = DealerContractPdf.Render(companyName, dealer.Name, dealer.Address, manager.User.Email + ", " + manager.User.PhoneNumber, DateTime.Now);
+            using var pdf = DealerContractPdf.Render(companyName, dealer.Name, dealer.Address, user.Email + ", " + user.PhoneNumber, DateTime.Now);
             var documentTypeId = 3059;
             var departmentId = 3110;
             var bytes = pdf.ToArray();
