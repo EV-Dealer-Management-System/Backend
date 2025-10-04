@@ -1,4 +1,5 @@
-﻿using SWP391Web.Domain.Entities;
+﻿using Microsoft.AspNetCore.Identity;
+using SWP391Web.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,5 +12,6 @@ namespace SWP391Web.Infrastructure.IRepository
     {
         Task<Dealer?> GetByIdAsync(Guid dealerId, CancellationToken ct);
         Task<bool> IsExistByNameAsync(string name, CancellationToken ct);
+        Task<ApplicationUser?> GetManagerByDealerId(Guid dealerId, CancellationToken ct);
     }
 }

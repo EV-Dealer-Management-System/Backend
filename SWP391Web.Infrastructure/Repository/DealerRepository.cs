@@ -24,6 +24,15 @@ namespace SWP391Web.Infrastructure.Repository
                 .Where(dl => dl.Id == dealerId).FirstOrDefaultAsync(ct);
         }
 
+        public Task<ApplicationUser?> GetManagerByDealerId(Guid dealerId, CancellationToken ct)
+        {
+            return context.Dealers
+                .AsNoTracking()
+                .Where(dl => dl.Id == dealerId)
+                .Select(dl => dl.Manager)
+                .SingleOrDefaultAsync(ct);
+        }
+
         public async Task<bool> IsExistByNameAsync(string name, CancellationToken ct)
         {
             return await context.Dealers
