@@ -1,6 +1,6 @@
 ﻿using QuestPDF.Fluent;
 using QuestPDF.Helpers;
-using SWP391Web.Application.DTO;
+using SWP391Web.Application.DTO.EContract;
 using UglyToad.PdfPig;
 
 namespace SWP391Web.Application.Pdf

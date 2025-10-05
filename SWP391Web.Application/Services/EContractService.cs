@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using SWP391Web.Application.DTO;
 using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Pdf;
 using SWP391Web.Domain.Entities;
@@ -204,7 +205,7 @@ namespace SWP391Web.Application.Services
 
             // 2) Render PDF (QuestPDF) — mock company info
             var companyName = "EV Manufacturer Sample"; // sample
-            using var pdf = DealerContractPdf.Render(companyName, dealer.Name, dealer.Address, user.Email + ", " + user.PhoneNumber, dealer.TaxNo, DateTime.Now);
+            using var pdf = DealerContractPdf.RenderDealerEContract(companyName, dealer.Name, dealer.Address, user.Email + ", " + user.PhoneNumber, dealer.TaxNo, DateTime.Now);
             var documentTypeId = 3059;
             var departmentId = 3110;
             var bytes = pdf.ToArray();

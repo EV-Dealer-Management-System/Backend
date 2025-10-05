@@ -34,7 +34,7 @@ namespace SWP391Web.Domain.Entities
         public IReadOnlyCollection<EContractAmendment> Amendments => _amendments.AsReadOnly();
 
         private EContract() { } 
-        public EContract(ContractTemplate contractTemplate, ContractTemplateVersion templateVersion, string baseHtmlKey, string manifestKey, string baseHtmlSha256, string manifestSha256, string? baseHtmlTag, string? manifestTag, string createdBy)
+        public EContract(EContractTemplate contractTemplate, EContractTemplateVersion templateVersion, string baseHtmlKey, string manifestKey, string baseHtmlSha256, string manifestSha256, string? baseHtmlTag, string? manifestTag, string createdBy)
         {
             if (!templateVersion.IsActive)
                 throw new InvalidOperationException("Only active template version can be used to create contract.");
@@ -53,12 +53,12 @@ namespace SWP391Web.Domain.Entities
             CreatedBy = createdBy;
         }
 
-        public EContractAmendment AddAmendment(string title, string s3HtmlKey, string htmlSha256, string? htmlTag, string? notes, string createdBy)
+        public EContractAmendment AddAmendment(Guid eContractId, string title, string s3HtmlKey, string htmlSha256, string? htmlTag, string? notes, string createdBy)
         {
             if (Status is not (EContractStatus.Draft or EContractStatus.Sent))
                 throw new InvalidOperationException("Only draft or sent contract can be amended.");
 
-            var amendment = new EContractAmendment(title, s3HtmlKey, htmlSha256, htmlTag, notes, createdBy);
+            var amendment = new EContractAmendment(eContractId, title, s3HtmlKey, htmlSha256, htmlTag, notes, createdBy);
             _amendments.Add(amendment);
             return amendment;
         }

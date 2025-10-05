@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Domain.Entities
 {
-    public class ContractTemplateVersion
+    public class EContractTemplateVersion
     {
         public Guid Id { get; set; }
         public int VersionNo { get; set; }
@@ -19,9 +19,9 @@ namespace SWP391Web.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public TemplateVersionStatus Status { set; get; } = TemplateVersionStatus.Draft;
 
-        private ContractTemplateVersion() { }
+        private EContractTemplateVersion() { }
 
-        internal ContractTemplateVersion(int versionNo, string html, string? css, string createdBy, string? notes)
+        internal EContractTemplateVersion(int versionNo, string html, string? css, string createdBy, string? notes)
         {
             VersionNo = versionNo;
             ContentHtml = html;

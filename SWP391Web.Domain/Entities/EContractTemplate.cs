@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Domain.Entities
 {
-    public class ContractTemplate
+    public class EContractTemplate
     {
         public Guid Id { get; set; }
         public string Code { get; set; } = null!;
@@ -15,23 +15,23 @@ namespace SWP391Web.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public bool IsDeleted { get; set; }
 
-        private readonly List<ContractTemplateVersion> _versions = new();
-        public IReadOnlyCollection<ContractTemplateVersion> Versions => _versions.AsReadOnly();
+        private readonly List<EContractTemplateVersion> _versions = new();
+        public IReadOnlyCollection<EContractTemplateVersion> Versions => _versions.AsReadOnly();
 
-        private ContractTemplate() { }
-        public ContractTemplate(string code, string name)
+        private EContractTemplate() { }
+        public EContractTemplate(string code, string name)
         {
             Code = code;
             Name = name;
         }
 
-        public ContractTemplateVersion PublishNewVersion(string contentHtml, string? styleCss, string createdBy, string? notes = null)
+        public EContractTemplateVersion PublishNewVersion(string contentHtml, string? styleCss, string createdBy, string? notes = null)
         {
             if (string.IsNullOrWhiteSpace(contentHtml)) throw new ArgumentException("contentHtml is required", nameof(contentHtml));
             if (string.IsNullOrWhiteSpace(createdBy)) throw new ArgumentException("createdBy is required", nameof(createdBy));
 
             var newVersionNo = _versions.Any() ? _versions.Max(v => v.VersionNo) + 1 : 1;
-            var v = new ContractTemplateVersion(newVersionNo, contentHtml, styleCss, createdBy, notes);
+            var v = new EContractTemplateVersion(newVersionNo, contentHtml, styleCss, createdBy, notes);
             _versions.Add(v);
 
             v.Publish();    
@@ -39,7 +39,7 @@ namespace SWP391Web.Domain.Entities
             return v;
         }
 
-        public ContractTemplateVersion? GetActive() => _versions.Where(v => v.IsActive).OrderByDescending(v => v.VersionNo).FirstOrDefault();
+        public EContractTemplateVersion? GetActive() => _versions.Where(v => v.IsActive).OrderByDescending(v => v.VersionNo).FirstOrDefault();
 
         public void Active(int versionNo)
         {

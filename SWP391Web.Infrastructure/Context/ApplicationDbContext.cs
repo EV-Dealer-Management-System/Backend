@@ -22,6 +22,10 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<ElectricVehicleModel> ElectricVehicleModels { get; set; }
         public DbSet<ElectricVehicleVersion> ElectricVehicleVersions { get; set; }
         public DbSet<ElectricVehicle> ElectricVehicles { get; set; }
+        public DbSet<EContract> EContracts { get; set; }
+        public DbSet<EContractTemplate> EContractTemplates { get; set; }
+        public DbSet<EContractTemplateVersion> EContractTemplateVersions { get; set; }
+        public DbSet<EContractAmendment> EContractAmendments { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -116,6 +120,13 @@ namespace SWP391Web.Infrastructure.Context
                 .HasIndex(d => d.ManagerId);
 
             /******************************************************************************/
+            // Configure EContractAmendment entity
+
+            modelBuilder.Entity<EContractAmendment>()
+                .HasOne(ea => ea.EContract)
+                .WithMany(e => e.Amendments)
+                .HasForeignKey(ea => ea.EContractId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
