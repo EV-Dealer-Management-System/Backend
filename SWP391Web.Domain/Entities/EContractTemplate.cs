@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SWP391Web.Domain.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -24,22 +25,36 @@ namespace SWP391Web.Domain.Entities
             Name = name;
         }
 
-        public ContractTemplateVersion PublistNewVersion(string contentHtml, string? styleCss, string createdBy, string? notes = null)
+        public ContractTemplateVersion PublishNewVersion(string contentHtml, string? styleCss, string createdBy, string? notes = null)
         {
+            if (string.IsNullOrWhiteSpace(contentHtml)) throw new ArgumentException("contentHtml is required", nameof(contentHtml));
+            if (string.IsNullOrWhiteSpace(createdBy)) throw new ArgumentException("createdBy is required", nameof(createdBy));
+
             var newVersionNo = _versions.Any() ? _versions.Max(v => v.VersionNo) + 1 : 1;
-            var newVersion = new ContractTemplateVersion(newVersionNo, contentHtml, styleCss, createdBy, notes);
-            _versions.Add(newVersion);
-            return newVersion;
+            var v = new ContractTemplateVersion(newVersionNo, contentHtml, styleCss, createdBy, notes);
+            _versions.Add(v);
+
+            v.Publish();    
+            Active(v.VersionNo);
+            return v;
         }
 
         public ContractTemplateVersion? GetActive() => _versions.Where(v => v.IsActive).OrderByDescending(v => v.VersionNo).FirstOrDefault();
 
         public void Active(int versionNo)
         {
-            foreach(var v in _versions)
+            var target = _versions.SingleOrDefault(v => v.VersionNo == versionNo)
+                         ?? throw new InvalidOperationException($"Version {versionNo} not found.");
+
+            if (target.Status != TemplateVersionStatus.Published)
+                throw new InvalidOperationException("Only published version can be activated.");
+
+            foreach (var v in _versions)
             {
                 v.SetActive(v.VersionNo == versionNo);
             }
         }
+
+        public void SoftDelete() => IsDeleted = true;
     }
 }

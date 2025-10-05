@@ -16,8 +16,9 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<Customer> Customers { get; set; }
         public DbSet<EmailTemplate> EmailTemplates { get; set; }
         public DbSet<CustomerOrder> CustomerOrders { get; set; }
-        public DbSet<ContractTemplate> ContractTemplates { get; set; }
+        public DbSet<EContractTemplate> ContractTemplates { get; set; }
         public DbSet<Dealer> Dealers { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -111,6 +112,8 @@ namespace SWP391Web.Infrastructure.Context
             // Index on ManagerId in Dealer for performance
             modelBuilder.Entity<Dealer>()
                 .HasIndex(d => d.ManagerId);
+
+            /******************************************************************************/
         }
     }
 }

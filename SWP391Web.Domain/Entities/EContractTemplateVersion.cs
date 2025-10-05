@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SWP391Web.Domain.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,6 +17,7 @@ namespace SWP391Web.Domain.Entities
         public string CreatedBy { get; set; } = null!;
         public string? Notes { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public TemplateVersionStatus Status { set; get; } = TemplateVersionStatus.Draft;
 
         private ContractTemplateVersion() { }
 
@@ -25,10 +27,21 @@ namespace SWP391Web.Domain.Entities
             ContentHtml = html;
             StyleCss = css;
             CreatedBy = createdBy;
-            IsActive = false;
             Notes = notes;
         }
 
-        internal void SetActive(bool active) => IsActive = active;
+        internal void Publish()
+        {
+            if (Status != TemplateVersionStatus.Draft)
+                throw new InvalidOperationException("Only draft version can be published.");
+            Status = TemplateVersionStatus.Published;
+        }
+
+        internal void SetActive(bool active)
+        {
+            if (Status != TemplateVersionStatus.Published && active)
+                throw new InvalidOperationException("Only published version can be activated.");
+            IsActive = active;
+        }
     }
 }
