@@ -8,9 +8,11 @@ namespace SWP391Web.Domain.Entities
 {
     public class ElectricVehicleColor
     {
-        public Guid? ColorId { get; set; }
-        public string ColorName { get; set; }
-        public string ColorCode { get; set; }
+        public Guid Id { get; set; }
+        public string? ColorName { get; set; }
+        public string? ColorCode { get; set; }
         public decimal ExtraCost { get; set; }
+
+        public ICollection<ElectricVehicle> ElectricVehicles { get; set; } = new List<ElectricVehicle>();
     }
 }

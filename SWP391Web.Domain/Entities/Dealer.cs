@@ -13,5 +13,6 @@ namespace SWP391Web.Domain.Entities
 
         public ICollection<ApplicationUser> ApplicationUsers { get; set; } = new List<ApplicationUser>();
         public ApplicationUser? Manager { get; set; }
+        public ICollection<ElectricVehicle> ElectricVehicles { get; set; } = new List<ElectricVehicle>();
     }
 }

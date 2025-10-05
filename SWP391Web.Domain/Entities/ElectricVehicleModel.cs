@@ -8,10 +8,12 @@ namespace SWP391Web.Domain.Entities
 {
     public class ElectricVehicleModel
     {
-        public Guid? ModelId { get; set; }
-        public string ModelName { get; set; }
-        public string Description { get; set; }
+        public Guid? Id { get; set; }
+        public string? ModelName { get; set; }
+        public string? Description { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; }
+
+        public ICollection<ElectricVehicleVersion> Versions { get; set; } = new List<ElectricVehicleVersion>();
     }
 }

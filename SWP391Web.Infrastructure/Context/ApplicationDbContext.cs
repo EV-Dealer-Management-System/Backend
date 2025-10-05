@@ -18,6 +18,10 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<CustomerOrder> CustomerOrders { get; set; }
         public DbSet<ContractTemplate> ContractTemplates { get; set; }
         public DbSet<Dealer> Dealers { get; set; }
+        public DbSet<ElectricVehicle> ElectricVehicles { get; set; }
+        public DbSet<ElectricVehicleColor> ElectricVehicleColors { get; set; }
+        public DbSet<ElectricVehicleModel> ElectricVehicleModels { get; set; }
+        public DbSet<ElectricVehicleVersion> ElectricVehicleVersions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -111,6 +115,36 @@ namespace SWP391Web.Infrastructure.Context
             // Index on ManagerId in Dealer for performance
             modelBuilder.Entity<Dealer>()
                 .HasIndex(d => d.ManagerId);
+
+            /******************************************************************************/
+            // Configure ElectricVehicle entity
+
+            modelBuilder.Entity<ElectricVehicle>()
+                .HasOne(ev => ev.Version)
+                .WithMany(vs => vs.ElectricVehicles)
+                .HasForeignKey(ev => ev.VersionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ElectricVehicle>()
+                .HasOne(ev => ev.Color)
+                .WithMany(c => c.ElectricVehicles)
+                .HasForeignKey(ev => ev.ColorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ElectricVehicle>()
+                .HasOne(ev => ev.Dealer)
+                .WithMany(d => d.ElectricVehicles)
+                .HasForeignKey(ev => ev.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure ElectricVehicleVersion entity
+
+            modelBuilder.Entity<ElectricVehicleVersion>()
+                .HasOne(vs => vs.Model)
+                .WithMany(ev => ev.Versions)
+                .HasForeignKey(ev => ev.ModelId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
