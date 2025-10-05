@@ -14,9 +14,9 @@ namespace SWP391Web.Domain.Entities
         public string VersionName { get; set; }
         public decimal MotorPower { get; set; }
         public decimal BatteryCapacity { get; set; }
-        public int RangePerCharge { get; set; }
-        public FormStatus SupplyStatus { get; set; }
-        public int TopSpeed { get; set; }
+        public decimal RangePerCharge { get; set; }
+        public SupplyStatus SupplyStatus { get; set; }
+        public decimal TopSpeed { get; set; }
         public decimal Weight { get; set; }
         public decimal Height { get; set; }
         public int ProductionYear { get; set; }

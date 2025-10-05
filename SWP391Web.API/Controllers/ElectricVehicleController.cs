@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.ElectricVehicle;
+using SWP391Web.Application.IServices;
 using SWP391Web.Application.Services;
 
 namespace SWP391Web.API.Controllers
@@ -10,8 +11,8 @@ namespace SWP391Web.API.Controllers
     [ApiController]
     public class ElectricVehicleController : ControllerBase
     {
-        public readonly ElectricVehicleService _electricVehicleService;
-        public ElectricVehicleController(ElectricVehicleService electricVehicleService)
+        public readonly IElectricVehicleService _electricVehicleService;
+        public ElectricVehicleController(IElectricVehicleService electricVehicleService)
         {
             _electricVehicleService = electricVehicleService ?? throw new ArgumentNullException(nameof(electricVehicleService));
         }
@@ -33,7 +34,7 @@ namespace SWP391Web.API.Controllers
             var response = await _electricVehicleService.GetVehicleByIdAsync(vehicleId);
             return StatusCode(response.StatusCode, response);
         }
-        [HttpGet("get-vehicle-by-name/{vehicleName}")]
+        [HttpGet("get-vehicle-by-vin/{vehicleVIN}")]
         public async Task<ActionResult> GetVehicleByVINAsync([FromRoute] string vehicleName)
         {
             var response = await _electricVehicleService.GetVehicleByVinAsync(vehicleName);

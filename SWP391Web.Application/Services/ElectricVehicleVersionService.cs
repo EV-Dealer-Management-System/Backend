@@ -40,6 +40,7 @@ namespace SWP391Web.Application.Services
 
                 ElectricVehicleVersion electricVehicleVersion = new ElectricVehicleVersion
                 {
+                    ModelId = createElectricVehicleVersionDTO.ModelId,
                     VersionName = createElectricVehicleVersionDTO.VersionName,
                     MotorPower = createElectricVehicleVersionDTO.MotorPower,
                     BatteryCapacity = createElectricVehicleVersionDTO.BatteryCapacity,
@@ -175,15 +176,31 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                version.VersionName = updateElectricVehicleVersionDTO.VersionName;
-                version.MotorPower = updateElectricVehicleVersionDTO.MotorPower;
-                version.BatteryCapacity = updateElectricVehicleVersionDTO.BatteryCapacity;
-                version.RangePerCharge = updateElectricVehicleVersionDTO.RangePerCharge;
-                version.SupplyStatus = updateElectricVehicleVersionDTO.SupplyStatus;
-                version.TopSpeed = updateElectricVehicleVersionDTO.TopSpeed;
-                version.Weight = updateElectricVehicleVersionDTO.Weight;
-                version.Height = updateElectricVehicleVersionDTO.Height;
-                version.Description = updateElectricVehicleVersionDTO.Description;
+                if (!string.IsNullOrWhiteSpace(updateElectricVehicleVersionDTO.VersionName))
+                    version.VersionName = updateElectricVehicleVersionDTO.VersionName;
+                if (updateElectricVehicleVersionDTO.MotorPower.HasValue && updateElectricVehicleVersionDTO.MotorPower.Value > 0)
+                    version.MotorPower = updateElectricVehicleVersionDTO.MotorPower.Value;
+
+                if (updateElectricVehicleVersionDTO.BatteryCapacity.HasValue && updateElectricVehicleVersionDTO.BatteryCapacity.Value > 0)
+                    version.BatteryCapacity = updateElectricVehicleVersionDTO.BatteryCapacity.Value;
+
+                if (updateElectricVehicleVersionDTO.RangePerCharge.HasValue && updateElectricVehicleVersionDTO.RangePerCharge.Value > 0)
+                    version.RangePerCharge = updateElectricVehicleVersionDTO.RangePerCharge.Value;
+
+                if (updateElectricVehicleVersionDTO.SupplyStatus.HasValue)
+                    version.SupplyStatus = updateElectricVehicleVersionDTO.SupplyStatus.Value;
+
+                if (updateElectricVehicleVersionDTO.TopSpeed.HasValue && updateElectricVehicleVersionDTO.TopSpeed.Value >= 0)
+                    version.TopSpeed = updateElectricVehicleVersionDTO.TopSpeed.Value;
+
+                if (updateElectricVehicleVersionDTO.Weight.HasValue && updateElectricVehicleVersionDTO.Weight.Value >= 0)
+                    version.Weight = updateElectricVehicleVersionDTO.Weight.Value;
+
+                if (updateElectricVehicleVersionDTO.Height.HasValue && updateElectricVehicleVersionDTO.Height.Value >= 0)
+                    version.Height = updateElectricVehicleVersionDTO.Height.Value;
+
+                if (!string.IsNullOrWhiteSpace(updateElectricVehicleVersionDTO.Description))
+                    version.Description = updateElectricVehicleVersionDTO.Description;
 
                 _unitOfWork.ElectricVehicleVersionRepository.Update(version);
                 await _unitOfWork.SaveAsync();

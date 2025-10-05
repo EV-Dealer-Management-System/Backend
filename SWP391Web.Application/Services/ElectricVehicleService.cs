@@ -40,6 +40,9 @@ namespace SWP391Web.Application.Services
 
                 ElectricVehicle electricVehicle = new ElectricVehicle
                 {
+                    DealerId = createElectricVehicleDTO.DealerId,
+                    VersionId = createElectricVehicleDTO.VersionId,
+                    ColorId = createElectricVehicleDTO.ColorId,
                     VIN = createElectricVehicleDTO.VIN,
                     Status = createElectricVehicleDTO.Status,
                     ManufactureDate = createElectricVehicleDTO.ManufactureDate,
@@ -157,53 +160,41 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> UpdateVehicleAsync(Guid vehicleId, UpdateElectricVehicleDTO updateElectricVehicleDTO)
+        public async Task<ResponseDTO> UpdateVehicleAsync(Guid vehicleId, UpdateElectricVehicleDTO dto)
         {
             try
             {
                 var vehicle = await _unitOfWork.ElectricVehicleRepository.GetByIdsAsync(vehicleId);
-                if (vehicle is null)
-                {
-                    return new ResponseDTO()
-                    {
-                        IsSuccess = false,
-                        Message = "Vehicle not found.",
-                        StatusCode = 404
-                    };
-                }
+                if (vehicle == null)
+                    return new ResponseDTO { 
+                        IsSuccess = false, 
+                        Message = "Vehicle not found.", 
+                        StatusCode = 404 };
 
-                vehicle.VIN = updateElectricVehicleDTO.VIN;
-                vehicle.Status = updateElectricVehicleDTO.Status;
-                vehicle.ManufactureDate = updateElectricVehicleDTO.ManufactureDate;
-                vehicle.ImportDate = updateElectricVehicleDTO.ImportDate;
-                vehicle.WarrantyExpiryDate = updateElectricVehicleDTO.WarrantyExpiryDate;
-                vehicle.CurrentLocation = updateElectricVehicleDTO.CurrentLocation;
-                vehicle.CostPrice = updateElectricVehicleDTO.CostPrice;
-                vehicle.ImageUrl = updateElectricVehicleDTO.ImageUrl;
+                // Chỉ update các trường thông tin, không động đến khóa ngoại
+                vehicle.VIN = dto.VIN;
+                vehicle.Status = dto.Status;
+                vehicle.ManufactureDate = dto.ManufactureDate;
+                vehicle.ImportDate = dto.ImportDate;
+                vehicle.WarrantyExpiryDate = dto.WarrantyExpiryDate;
+                vehicle.CurrentLocation = dto.CurrentLocation;
+                vehicle.CostPrice = dto.CostPrice;
+                vehicle.ImageUrl = dto.ImageUrl;
 
-                if (vehicle is null)
-                {
-                    return new ResponseDTO()
-                    {
-                        IsSuccess = false,
-                        Message = "Vehicle is null.",
-                        StatusCode = 400
-                    };
-                }
-
+                // Không set: DealerId, ColorId, VersionId
                 _unitOfWork.ElectricVehicleRepository.Update(vehicle);
                 await _unitOfWork.SaveAsync();
 
-                return new ResponseDTO()
+                return new ResponseDTO
                 {
                     IsSuccess = true,
-                    Message = "Update vehicle successfully.",
+                    Message = "Vehicle updated successfully.",
                     StatusCode = 200
                 };
             }
             catch (Exception ex)
             {
-                return new ResponseDTO()
+                return new ResponseDTO
                 {
                     IsSuccess = false,
                     Message = ex.Message,

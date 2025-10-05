@@ -15,7 +15,8 @@ namespace SWP391Web.Application.DTO.ElectricVehicleColor
 
     public class UpdateElectricVehicleColor
     {
-        public Guid Id { get; set; }
+        public string ColorName { get; set; }
+        public string ColorCode { get; set; }
         public decimal? ExtraCost { get; set; }
     }
 }

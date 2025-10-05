@@ -203,9 +203,12 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                model.ModelName = updateElectricVehicleModelDTO.ModelName;
-                model.Description = updateElectricVehicleModelDTO.Description;
-                model.CreatedAt = DateTime.UtcNow;
+                if (!string.IsNullOrWhiteSpace(updateElectricVehicleModelDTO.ModelName))
+                    model.ModelName = updateElectricVehicleModelDTO.ModelName;
+
+                if (!string.IsNullOrWhiteSpace(updateElectricVehicleModelDTO.Description))
+                    model.Description = updateElectricVehicleModelDTO.Description;
+
 
                 _unitOfWork.ElectricVehicleModelRepository.Update(model);
                 await _unitOfWork.SaveAsync();

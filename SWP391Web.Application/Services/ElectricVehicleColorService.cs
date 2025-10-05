@@ -204,8 +204,28 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                color.ExtraCost = (decimal)updateElectricVehicleColor.ExtraCost;
-                 _unitOfWork.ElectricVehicleColorRepository.Update(color);
+
+                if (!string.IsNullOrWhiteSpace(updateElectricVehicleColor.ColorName))
+                    color.ColorName = updateElectricVehicleColor.ColorName;
+
+                if (!string.IsNullOrWhiteSpace(updateElectricVehicleColor.ColorCode))
+                {
+                    if (!updateElectricVehicleColor.ColorCode.StartsWith("#") || updateElectricVehicleColor.ColorCode.Length != 7)
+                    {
+                        return new ResponseDTO()
+                        {
+                            IsSuccess = false,
+                            Message = "Color code must be in hex format (e.g., #FFFFFF).",
+                            StatusCode = 400
+                        };
+                    }
+                    color.ColorCode = updateElectricVehicleColor.ColorCode;
+                }
+
+                if (updateElectricVehicleColor.ExtraCost.HasValue && updateElectricVehicleColor.ExtraCost.Value >= 0)
+                    color.ExtraCost = updateElectricVehicleColor.ExtraCost.Value;
+
+                _unitOfWork.ElectricVehicleColorRepository.Update(color);
                 await _unitOfWork.SaveAsync();
                 return new ResponseDTO()
                 {
