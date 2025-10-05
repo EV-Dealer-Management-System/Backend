@@ -19,7 +19,7 @@ namespace SWP391Web.Infrastructure.Repository
         }
 
         public async Task<EContractTemplate?> GetbyCodeAsync(string code, CancellationToken token)
-            => await _context.ContractTemplates.Include("_versions").FirstOrDefaultAsync(v => v.Code == code, token);
+            => await _context.EContractTemplates.Include("_versions").FirstOrDefaultAsync(v => v.Code == code, token);
 
         
     

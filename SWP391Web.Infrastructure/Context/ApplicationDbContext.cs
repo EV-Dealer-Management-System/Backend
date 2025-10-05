@@ -16,7 +16,6 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<Customer> Customers { get; set; }
         public DbSet<EmailTemplate> EmailTemplates { get; set; }
         public DbSet<CustomerOrder> CustomerOrders { get; set; }
-        public DbSet<EContractTemplate> ContractTemplates { get; set; }
         public DbSet<Dealer> Dealers { get; set; }
         public DbSet<ElectricVehicleColor> ElectricVehicleColors { get; set; }
         public DbSet<ElectricVehicleModel> ElectricVehicleModels { get; set; }
@@ -26,11 +25,18 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<EContractTemplate> EContractTemplates { get; set; }
         public DbSet<EContractTemplateVersion> EContractTemplateVersions { get; set; }
         public DbSet<EContractAmendment> EContractAmendments { get; set; }
+        public DbSet<EContractTerm> EContractTerms { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            EmailSeeder.SeedEmailTemplate(modelBuilder);
 
+            //Seed initial data
+            EmailSeeder.SeedEmailTemplate(modelBuilder);
+            EContractSeeder.EContractTemplateSeeder.SeedDealerEContract(modelBuilder);
+            EContractTermSeeder.SeedTerm(modelBuilder);
+
+            // Customize ASP.NET Identity table names
             modelBuilder.Entity<ApplicationUser>(b =>
                 b.ToTable("ApplicationUsers"));
 
@@ -156,6 +162,15 @@ namespace SWP391Web.Infrastructure.Context
                 .HasOne(ea => ea.EContract)
                 .WithMany(e => e.Amendments)
                 .HasForeignKey(ea => ea.EContractId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure EContractTemplate entity
+
+            modelBuilder.Entity<EContractTemplate>()
+                .HasMany(et => et.Versions)
+                .WithOne()
+                .HasForeignKey("ContractTemplateId")  
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }
