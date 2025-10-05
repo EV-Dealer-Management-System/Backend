@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using SWP391Web.Application.DTO;
 using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Pdf;
 using SWP391Web.Domain.Entities;
@@ -104,19 +105,24 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var dealer = new Dealer
-                {
-                    Id = Guid.NewGuid(),
-                    Name = createDealerDTO.DealerName,
-                    Address = createDealerDTO.DealerAddress,
-                };
-
                 var user = new ApplicationUser
                 {
                     FullName = createDealerDTO.FullNameManager,
                     Email = createDealerDTO.EmailManager,
                     PhoneNumber = createDealerDTO.PhoneNumberManager
                 };
+
+                var dealer = new Dealer
+                {
+                    Id = Guid.NewGuid(),
+                    ManagerId = user.Id,
+                    Name = createDealerDTO.DealerName,
+                    Address = createDealerDTO.DealerAddress,
+                    TaxNo = createDealerDTO.TaxNo,
+                    Manager = user
+                };
+
+                dealer.ApplicationUsers.Add(user);
 
 
                 // 3) Auth VNPT
@@ -199,7 +205,7 @@ namespace SWP391Web.Application.Services
 
             // 2) Render PDF (QuestPDF) — mock company info
             var companyName = "EV Manufacturer Sample"; // sample
-            using var pdf = DealerContractPdf.Render(companyName, dealer.Name, dealer.Address, user.Email + ", " + user.PhoneNumber, DateTime.Now);
+            using var pdf = DealerContractPdf.RenderDealerEContract(companyName, dealer.Name, dealer.Address, user.Email + ", " + user.PhoneNumber, dealer.TaxNo, DateTime.Now);
             var documentTypeId = 3059;
             var departmentId = 3110;
             var bytes = pdf.ToArray();
