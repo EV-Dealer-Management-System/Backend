@@ -9,10 +9,10 @@ using SWP391Web.Infrastructure.Seeders;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.ListenAnyIP(5000);
-});
+//builder.WebHost.ConfigureKestrel(options =>
+//{
+//    options.ListenAnyIP(5000);
+//});
 
 //builder.Configuration.AddSystemsManager("/swp391/prod/", reloadAfter: TimeSpan.FromMinutes(5));
 //builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
@@ -56,7 +56,7 @@ var allowedOrigins = new[] {
 
 builder.Services.AddCors(opt =>
 {
-    opt.AddPolicy("Frontend", p =>
+    opt.AddPolicy("FrontEnd", p =>
         p.WithOrigins(allowedOrigins)
          .AllowAnyHeader()
          .AllowAnyMethod()
@@ -83,7 +83,7 @@ if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDev
 
 app.UseRouting();
 
-app.UseCors("Frontend");
+app.UseCors("FrontEnd");
 
 app.UseForwardedHeaders();
 

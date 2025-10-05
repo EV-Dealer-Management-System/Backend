@@ -18,7 +18,10 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<CustomerOrder> CustomerOrders { get; set; }
         public DbSet<ContractTemplate> ContractTemplates { get; set; }
         public DbSet<Dealer> Dealers { get; set; }
-
+        public DbSet<ElectricVehicleColor> ElectricVehicleColors { get; set; }
+        public DbSet<ElectricVehicleModel> ElectricVehicleModels { get; set; }
+        public DbSet<ElectricVehicleVersion> ElectricVehicleVersions { get; set; }
+        public DbSet<ElectricVehicle> ElectricVehicles { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
