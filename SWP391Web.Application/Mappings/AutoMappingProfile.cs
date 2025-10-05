@@ -1,6 +1,10 @@
 ﻿using AutoMapper;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Customer;
+using SWP391Web.Application.DTO.ElectricVehicle;
+using SWP391Web.Application.DTO.ElectricVehicleColor;
+using SWP391Web.Application.DTO.ElectricVehicleModel;
+using SWP391Web.Application.DTO.ElectricVehicleVersion;
 using SWP391Web.Domain.Entities;
 
 namespace SWP391Web.Application.Mappings
@@ -15,6 +19,10 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.User.FullName))
                 .ForMember(dest => dest.Sex, opt => opt.MapFrom(src => src.User.Sex))
                 .ForMember(dest => dest.DateOfBirth, opt => opt.MapFrom(src => src.User.DateOfBirth)).ReverseMap();
+            CreateMap<ElectricVehicleColor, GetElectricVehicleColorDTO>().ReverseMap();
+            CreateMap<ElectricVehicleModel, GetElectricVehicleModelDTO>().ReverseMap();
+            CreateMap<ElectricVehicleVersion, GetElectricVehicleVersionDTO>().ReverseMap();
+            CreateMap<ElectricVehicle, GetElecticVehicleDTO>().ReverseMap();
         }
     }
 }

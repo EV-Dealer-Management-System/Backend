@@ -4,14 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWP391Web.Domain.Entities
+namespace SWP391Web.Application.DTO.ElectricVehicleModel
 {
-    public class ElectricVehicleModel
+    public class UpdateElectricVehicleModelDTO
     {
-        public Guid Id { get; set; }
         public string? ModelName { get; set; }
         public string? Description { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public bool IsActive { get; set; } = true;
+        
+        
     }
 }
