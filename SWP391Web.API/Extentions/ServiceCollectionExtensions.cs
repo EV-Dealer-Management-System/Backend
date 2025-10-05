@@ -29,7 +29,10 @@ namespace SWP391Web.API.Extentions
             services.AddScoped<ICustomerService, CustomerService>();
             services.AddScoped<IEContractService, EContractService>();
             services.AddScoped<IGHNService, GHNService>();
-
+            services.AddScoped<IElectricVehicleColorService, ElectricVehicleColorService>();
+            services.AddScoped<IElectricVehicleModelService, ElectricVehicleModelService>();
+            services.AddScoped<IElectricVehicleVersionService, ElectricVehicleVersionService>();
+            services.AddScoped<IElectricVehicleService, ElectricVehicleService>();
             // Register Infrastructure Repositories
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IVnptEContractClient, VnptEContractClient>();

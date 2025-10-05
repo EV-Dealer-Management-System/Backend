@@ -5,12 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWP391Web.Domain.Entities
+namespace SWP391Web.Application.DTO.ElectricVehicleVersion
 {
-    public class ElectricVehicleVersion
+    public class GetElectricVehicleVersionDTO
     {
         public Guid? Id { get; set; }
-        public Guid? ModelId { get; set; }
         public string VersionName { get; set; }
         public decimal MotorPower { get; set; }
         public decimal BatteryCapacity { get; set; }

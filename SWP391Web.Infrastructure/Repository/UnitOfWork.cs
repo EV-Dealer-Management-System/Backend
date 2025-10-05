@@ -14,6 +14,10 @@ namespace SWP391Web.Infrastructure.Repository
         public ICustomerOrderRepository CustomerOrderRepository { get; private set; }
         public IContractTemplateRepository ContractTemplateRepository { get; private set; }
         public IDealerRepository DealerRepository { get; private set; }
+        public IElectricVehicleColorRepository ElectricVehicleColorRepository { get; private set; }
+        public IElectricVehicleModelRepository ElectricVehicleModelRepository { get; private set; }
+        public IElectricVehicleVersionRepository ElectricVehicleVersionRepository { get; private set; }
+        public IElectricVehicleRepository ElectricVehicleRepository { get; private set; }
 
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
@@ -25,6 +29,10 @@ namespace SWP391Web.Infrastructure.Repository
             CustomerOrderRepository = new CustomerOrderRepository(_context);
             ContractTemplateRepository = new ContractTemplateRepository(_context);
             DealerRepository = new DealerRepository(_context);
+            ElectricVehicleColorRepository = new ElectricVehicleColorRepository(_context);
+            ElectricVehicleModelRepository = new ElectricVehicleModelRepository(_context);
+            ElectricVehicleVersionRepository = new ElectricVehicleVersionRepository(_context);
+            ElectricVehicleRepository = new ElectricVehicleRepository(_context);
         }
         public async Task<int> SaveAsync()
         {
