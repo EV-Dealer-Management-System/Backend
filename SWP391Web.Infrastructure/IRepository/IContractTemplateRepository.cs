@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Infrastructure.IRepository
 {
-    public interface IContractTemplateRepository: IRepository<ContractTemplate>
+    public interface IContractTemplateRepository: IRepository<EContractTemplate>
     {
-        Task<ContractTemplate?> GetbyCodeAsync(string code, CancellationToken token);
+        Task<EContractTemplate?> GetbyCodeAsync(string code, CancellationToken token);
     }
 }

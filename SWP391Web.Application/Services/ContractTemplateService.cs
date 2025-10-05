@@ -32,7 +32,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                ContractTemplate newTemplate = new ContractTemplate(code, name);
+                EContractTemplate newTemplate = new EContractTemplate(code, name);
                 await _unitOfWork.ContractTemplateRepository.AddAsync(newTemplate, token);
                 await _unitOfWork.SaveAsync();
 

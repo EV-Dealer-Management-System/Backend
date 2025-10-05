@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using SWP391Web.Application.DTO;
 using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.ValueObjects;
 

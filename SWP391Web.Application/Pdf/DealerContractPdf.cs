@@ -1,13 +1,13 @@
 ﻿using QuestPDF.Fluent;
 using QuestPDF.Helpers;
-using SWP391Web.Application.DTO;
+using SWP391Web.Application.DTO.EContract;
 using UglyToad.PdfPig;
 
 namespace SWP391Web.Application.Pdf
 {
     public class DealerContractPdf
     {
-        public static MemoryStream Render(string companyName, string dealerName, string dealerAddress, string contact, string taxNo, DateTime date)
+        public static MemoryStream RenderDealerEContract(string companyName, string dealerName, string dealerAddress, string contact, string taxNo, DateTime date)
         {
             var ms = new MemoryStream();
             Document.Create(c =>
@@ -16,6 +16,8 @@ namespace SWP391Web.Application.Pdf
                 {
                     p.Margin(40);
                     p.Size(PageSizes.A4);
+                    p.Header().Text($"CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM").SemiBold().FontSize(18).AlignCenter();
+                    p.Header().Text($"Độc lập - Tự do - Hạnh phúc").SemiBold().FontSize(18).AlignCenter();
                     p.Header().Text($"HỢP ĐỒNG ĐẠI LÝ – {companyName}").SemiBold().FontSize(18).AlignCenter();
                     p.Content().PaddingVertical(10).Column(col =>
                     {

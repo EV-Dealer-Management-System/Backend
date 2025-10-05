@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Infrastructure.Repository
 {
-    public class ContractTemplateRepository : Repository<ContractTemplate>, IContractTemplateRepository
+    public class ContractTemplateRepository : Repository<EContractTemplate>, IContractTemplateRepository
     {
         private readonly ApplicationDbContext _context;
         public ContractTemplateRepository(ApplicationDbContext context) : base(context)
@@ -18,7 +18,7 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context;
         }
 
-        public async Task<ContractTemplate?> GetbyCodeAsync(string code, CancellationToken token)
+        public async Task<EContractTemplate?> GetbyCodeAsync(string code, CancellationToken token)
             => await _context.ContractTemplates.Include("_versions").FirstOrDefaultAsync(v => v.Code == code, token);
 
         

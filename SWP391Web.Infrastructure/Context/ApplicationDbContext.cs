@@ -16,12 +16,16 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<Customer> Customers { get; set; }
         public DbSet<EmailTemplate> EmailTemplates { get; set; }
         public DbSet<CustomerOrder> CustomerOrders { get; set; }
-        public DbSet<ContractTemplate> ContractTemplates { get; set; }
+        public DbSet<EContractTemplate> ContractTemplates { get; set; }
         public DbSet<Dealer> Dealers { get; set; }
         public DbSet<ElectricVehicleColor> ElectricVehicleColors { get; set; }
         public DbSet<ElectricVehicleModel> ElectricVehicleModels { get; set; }
         public DbSet<ElectricVehicleVersion> ElectricVehicleVersions { get; set; }
         public DbSet<ElectricVehicle> ElectricVehicles { get; set; }
+        public DbSet<EContract> EContracts { get; set; }
+        public DbSet<EContractTemplate> EContractTemplates { get; set; }
+        public DbSet<EContractTemplateVersion> EContractTemplateVersions { get; set; }
+        public DbSet<EContractAmendment> EContractAmendments { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -114,6 +118,15 @@ namespace SWP391Web.Infrastructure.Context
             // Index on ManagerId in Dealer for performance
             modelBuilder.Entity<Dealer>()
                 .HasIndex(d => d.ManagerId);
+
+            /******************************************************************************/
+            // Configure EContractAmendment entity
+
+            modelBuilder.Entity<EContractAmendment>()
+                .HasOne(ea => ea.EContract)
+                .WithMany(e => e.Amendments)
+                .HasForeignKey(ea => ea.EContractId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
