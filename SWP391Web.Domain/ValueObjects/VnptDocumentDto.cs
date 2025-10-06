@@ -28,5 +28,6 @@ namespace SWP391Web.Application.DTO.Auth
         public List<VnptProcess>? Processes { get; set; }
         public string? PositionA { get; set; }
         public string? PositionB { get; set; }
+        public int PageSign { get; set; }
     }
 }

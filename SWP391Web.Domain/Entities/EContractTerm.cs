@@ -28,6 +28,7 @@ namespace SWP391Web.Domain.Entities
         public string? ClaimDays { get; private set; } // deadline for reporting errors/returns
         public string? TerminationNoticeDays { get; private set; } // time to cure before termination
         public string? DisputeLocation { get; private set; } // location for dispute resolution
+        public string? AdditionalTerms { get; private set; } // any additional terms
         public bool IsActive { get; private set; }
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
         public string CreatedBy { get; private set; } =  null!;

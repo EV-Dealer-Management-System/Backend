@@ -8,7 +8,6 @@ using SWP391Web.Application.Pdf;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.ValueObjects;
 using SWP391Web.Infrastructure.IRepository;
-using System.ComponentModel.Design;
 using System.Text;
 using System.Text.Json;
 using UglyToad.PdfPig;
@@ -115,15 +114,16 @@ namespace SWP391Web.Application.Services
                 var dealer = new Dealer
                 {
                     Id = Guid.NewGuid(),
+                    DealerLevel = createDealerDTO.DealerLevel,
                     ManagerId = user.Id,
                     Name = createDealerDTO.DealerName,
                     Address = createDealerDTO.DealerAddress,
                     TaxNo = createDealerDTO.TaxNo,
+                    
                     Manager = user
                 };
 
                 dealer.ApplicationUsers.Add(user);
-
 
                 // 3) Auth VNPT
                 var token = await GetAccessTokenAsync();
@@ -151,7 +151,7 @@ namespace SWP391Web.Application.Services
 
                 var upsert = await CreateOrUpdateUsersAsync(token, vnptUserList);
 
-                var created = await CreateDocumentAsync(token, dealer, user);
+                var created = await CreateDocumentPlusAsync(token, dealer, user, createDealerDTO.AdditionalTerm, createDealerDTO.RegionDealer, ct);
 
                 var companyApproverUserCode = _cfg["SmartCA:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
 
@@ -172,7 +172,7 @@ namespace SWP391Web.Application.Services
                         Message = "VNPT did not return signature positions."
                     };
 
-                var uProcess = await UpdateProcessAsync(token, documentId, companyApproverUserCode, vnptUserCode, created.Data.PositionA, created.Data.PositionB);
+                var uProcess = await UpdateProcessAsync(token, documentId, companyApproverUserCode, vnptUserCode, created.Data.PositionA, created.Data.PositionB, created.Data.PageSign);
 
                 var sent = await SendProcessAsync(token, documentId);
 
@@ -205,12 +205,12 @@ namespace SWP391Web.Application.Services
 
             // 2) Render PDF (QuestPDF) — mock company info
             var companyName = "EV Manufacturer Sample"; // sample
-            using var pdf = DealerContractPdf.RenderDealerEContract(companyName, dealer.Name, dealer.Address, user.Email + ", " + user.PhoneNumber, dealer.TaxNo, DateTime.Now);
+            using var pdf = EContractPdf.RenderDealerEContract(companyName, dealer.Name, dealer.Address, user.Email + ", " + user.PhoneNumber, dealer.TaxNo, DateTime.Now);
             var documentTypeId = 3059;
             var departmentId = 3110;
             var bytes = pdf.ToArray();
-            var pageA = DealerContractPdf.FindAnchorBox(bytes, "ĐẠI_DIỆN_BÊN_A");
-            var pageB = DealerContractPdf.FindAnchorBox(bytes, "ĐẠI_DIỆN_BÊN_B");
+            var pageA = EContractPdf.FindAnchorBox(bytes, "ĐẠI_DIỆN_BÊN_A");
+            var pageB = EContractPdf.FindAnchorBox(bytes, "ĐẠI_DIỆN_BÊN_B");
 
             double weight = 170, hight = 90, offsetY = 36, margin = 18;
             using var ms = new MemoryStream(bytes);
@@ -246,7 +246,107 @@ namespace SWP391Web.Application.Services
             return createResult;
         }
 
-        private async Task<VnptResult<VnptDocumentDto>> UpdateProcessAsync(string token, string documentId, string userCodeFirst, string userCodeSeccond, string positionA, string positionB )
+        public static (string, int) GetVnptEContractPosition(byte[] pdfBytes, AnchorBox anchor,
+        double width = 170, double height = 90, double offsetY = 36,
+        double margin = 18, double xAdjust = 0)
+        {
+            using var ms = new MemoryStream(pdfBytes);
+            using var doc = PdfDocument.Open(ms);
+            var page = doc.GetPage(anchor.Page);
+            var lastPage = doc.NumberOfPages;
+
+            double pw = page.Width;
+
+            var llx = Math.Clamp(anchor.Left + xAdjust, margin, pw - margin - width);
+            var lly = Math.Max(anchor.Bottom - offsetY - height, margin);
+
+            var pos = $"{(int)llx},{(int)lly},{(int)(llx + width)},{(int)(lly + height)}";
+            return (pos, lastPage);
+        }
+
+        private async Task<VnptResult<VnptDocumentDto>> CreateDocumentPlusAsync(string token, Dealer dealer, ApplicationUser user, string? additional, string? regionDealer, CancellationToken ct)
+        {
+            var templateCode = _cfg["EContract:DealerTemplateCode"] ?? throw new ArgumentNullException("EContract:DealerTemplateCode is not exist");
+            var template = await _unitOfWork.EContractTemplateRepository.GetByCodeAsync(templateCode, ct);
+            if (template is null) throw new Exception($"Template with code '{templateCode}' is not exist");
+
+            var templateActive = template.GetActive();
+            if (templateActive is null) throw new Exception($"Template with code '{templateCode}' has not active version");
+
+            var term = await _unitOfWork.EContractTermRepository.GetByLevelAsync(dealer.DealerLevel, ct);
+            if (term is null) throw new Exception($"Term for dealer level '{dealer.DealerLevel}' is not exist");
+
+            var companyName = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist");
+            var data = new Dictionary<string, object?>
+            {
+                ["company.name"] = companyName,
+                ["company.address"] = _cfg["Company:Address"] ?? "N/A",
+                ["company.taxNo"] = _cfg["Company:TaxNo"] ?? "N/A",
+                ["dealer.name"] = dealer.Name,
+                ["dealer.address"] = dealer.Address,
+                ["dealer.taxNo"] = dealer.TaxNo,
+                ["dealer.contact"] = $"{user.Email}, {user.PhoneNumber}",
+                ["contract.date"] = DateTime.UtcNow.ToString("dd/MM/yyyy"),
+                ["contract.effectiveDate"] = DateTime.UtcNow.ToString("dd/MM/yyyy"),
+                ["contract.expiryDate"] = DateTime.UtcNow.AddDays(365).ToString("dd/MM/yyyy"),
+                ["term.scope"] = term.Scope,
+                ["terms.pricing"] = term.Pricing,
+                ["terms.payment"] = term.Payment,
+                ["terms.commitments"] = term.Commitment,
+                ["terms.region"] = regionDealer == null ? "Toàn quốc" : regionDealer,
+                ["terms.noticeDays"] = term.NoticeDay,
+                ["terms.orderConfirmDays"] = term.OrderConfirmDays,
+                ["terms.deliveryLocation"] = term.DeliveryLocation,
+                ["terms.paymentMethod"] = term.PaymentMethod,
+                ["terms.paymentDueDays"] = term.PaymentDueDays,
+                ["terms.penaltyRate"] = term.PenaltyRate,
+                ["terms.claimDays"] = term.ClaimDays,
+                ["terms.terminationNoticeDays"] = term.TerminationNoticeDays,
+                ["terms.disputeLocation"] = term.DisputeLocation,
+                ["roles.A.representative"] = term.RoleRepresentative,
+                ["roles.A.title"] = term.RoleTitle,
+                ["roles.B.representative"] = user.FullName,
+                ["roles.B.title"] = "Khách hàng",
+                ["additional"] = additional == null ? "Không có điều khoản bổ sung" : additional
+            };
+
+            var html = EContractPdf.ReplacePlaceholders(templateActive.ContentHtml, data, htmlEncode: false);
+            if (!string.IsNullOrWhiteSpace(templateActive.StyleCss))
+                html = EContractPdf.InjectStyle(html, templateActive.StyleCss);
+
+            //html = EContractPdf.RenderHtml(html, term);
+            var pdfBytes = await EContractPdf.RenderAsync(html);
+            var anchors = EContractPdf.FindAnchors(pdfBytes, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
+
+            var positionA = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
+            var positionB = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_B"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: 0);
+
+            var documentTypeId = int.Parse(_cfg["EContract:DocumentTypeId"] ?? throw new NullReferenceException("EContract:DocumentTypeId is not exist"));
+            var departmentId = int.Parse(_cfg["EContract:DepartmentId"] ?? throw new NullReferenceException("EContract:DepartmentId is not exist"));
+
+            var randomText = Guid.NewGuid().ToString()[..6].ToUpper();
+
+            var request = new CreateDocumentDTO
+            {
+                TypeId = documentTypeId,
+                DepartmentId = departmentId,
+                No = $"EContract-{randomText}",
+                Subject = $"Dealer Contract",
+                Description = "Contract allows customers to open dealer"
+            };
+
+            request.FileInfo.File = pdfBytes;
+            request.FileInfo.FileName = $"E-Contract Dealer_{randomText}_{dealer.Name}.pdf";
+
+            var createResult = await _vnpt.CreateDocumentAsync(token, request);
+            createResult.Data!.PositionA = positionA.Item1;
+            createResult.Data.PositionB = positionB.Item1;
+            createResult.Data.PageSign = positionA.Item2;
+
+            return createResult;
+        }
+
+        private async Task<VnptResult<VnptDocumentDto>> UpdateProcessAsync(string token, string documentId, string userCodeFirst, string userCodeSeccond, string positionA, string positionB, int pageSign)
         {
             var request = new VnptUpdateProcessDTO
             {
@@ -254,8 +354,8 @@ namespace SWP391Web.Application.Services
                 ProcessInOrder = true,
                 Processes =
                 [
-                    new (orderNo:1, processedByUserCode:userCodeFirst, accessPermissionCode:"D", position: positionA, pageSign: 1),
-                    new (orderNo:2, processedByUserCode:userCodeSeccond, accessPermissionCode:"D", position: positionB, pageSign: 1)
+                    new (orderNo:1, processedByUserCode:userCodeFirst, accessPermissionCode:"D", position: positionA, pageSign: pageSign),
+                        new (orderNo:2, processedByUserCode:userCodeSeccond, accessPermissionCode:"D", position: positionB, pageSign: pageSign)
                 ]
             };
 
@@ -293,7 +393,7 @@ namespace SWP391Web.Application.Services
                     ShowReason = vnptProcessDTO.ShowReason,
                     ConfirmTermsConditions = vnptProcessDTO.ConfirmTermsConditions,
                 };
-                
+
                 var signResult = await _vnpt.SignProcess(token, request);
 
                 if (!signResult.Success)
