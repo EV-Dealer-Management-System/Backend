@@ -1,0 +1,288 @@
+﻿using Microsoft.Playwright;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.ValueObjects;
+using System.Globalization;
+using System.Net;
+using System.Reflection;
+using System.Text;
+using System.Text.RegularExpressions;
+using UglyToad.PdfPig;
+
+namespace SWP391Web.Application.Pdf
+{
+    public class EContractPdf
+    {
+        private static readonly Regex Placeholder = new(@"\{\{\s*([A-Za-z0-9\._]+)\s*(?:(?::\s*([^}]+))|\|\s*date\.format\s*['""]([^'""]+)['""])?\s*\}\}", RegexOptions.Compiled);
+        public static MemoryStream RenderDealerEContract(string companyName, string dealerName, string dealerAddress, string contact, string taxNo, DateTime date)
+        {
+            var ms = new MemoryStream();
+            Document.Create(c =>
+            {
+                c.Page(p =>
+                {
+                    p.Margin(40);
+                    p.Size(PageSizes.A4);
+                    p.Header().Text($"CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM").SemiBold().FontSize(18).AlignCenter();
+                    p.Header().Text($"Độc lập - Tự do - Hạnh phúc").SemiBold().FontSize(18).AlignCenter();
+                    p.Header().Text($"HỢP ĐỒNG ĐẠI LÝ – {companyName}").SemiBold().FontSize(18).AlignCenter();
+                    p.Content().PaddingVertical(10).Column(col =>
+                    {
+                        col.Item().Text($"Bên A (Hãng): {companyName}");
+                        col.Item().Text($"Bên B (Đại lý): {dealerName}");
+                        col.Item().Text($"Địa chỉ ĐL: {dealerAddress}");
+                        col.Item().Text($"Mã số thuế: {taxNo}");
+                        col.Item().Text($"Liên hệ: {contact}");
+                        col.Item().Text($"Ngày lập: {date:hh:mm dd/MM/yyyy}");
+                        col.Item().PaddingTop(10).Text("Điều 1: Phạm vi…");
+                        col.Item().Text("Điều 2: Giá cả, chiết khấu…");
+                        col.Item().Text("Điều 3: Thanh toán, giao nhận…");
+                        col.Item().Text("Điều 4: Cam kết…");
+                        col.Item().PaddingTop(10).Text("Điều 1: Phạm vi…");
+                        col.Item().Text("Điều 2: Giá cả, chiết khấu…");
+                        col.Item().Text("Điều 3: Thanh toán, giao nhận…");
+                        col.Item().Text("Điều 4: Cam kết…");
+                        col.Item().PaddingTop(10).Text("Điều 1: Phạm vi…");
+                        col.Item().Text("Điều 2: Giá cả, chiết khấu…");
+                        col.Item().Text("Điều 3: Thanh toán, giao nhận…");
+                        col.Item().Text("Điều 4: Cam kết…");
+                        col.Item().PaddingTop(10).Text("Điều 1: Phạm vi…");
+                        col.Item().Text("Điều 2: Giá cả, chiết khấu…");
+                        col.Item().Text("Điều 3: Thanh toán, giao nhận…");
+                        col.Item().Text("Điều 4: Cam kết…");
+
+                        //Sign position
+                        col.Item().PaddingTop(20).Row(row =>
+                        {
+                            row.Spacing(30); // khoảng cách giữa 2 bên
+
+                            // BÊN A (trái)
+                            row.RelativeItem().Column(c =>
+                            {
+                                c.Item().PaddingLeft(20).Text("ĐẠI_DIỆN_BÊN_A").FontSize(12); // anchor
+                            });
+
+                            // BÊN B (phải)
+                            row.RelativeItem().Column(c =>
+                            {
+                                c.Item().AlignRight().PaddingRight(20).Text("ĐẠI_DIỆN_BÊN_B").FontSize(12); // anchor
+                            });
+                        });
+                    });
+                    p.Footer().AlignRight().Text(t => { t.Span("Trang "); t.CurrentPageNumber(); t.Span(" / "); t.TotalPages(); });
+                });
+            }).GeneratePdf(ms);
+            ms.Position = 0; return ms;
+        }
+
+        public static AnchorBox FindAnchorBox(byte[] pdfBytes, string anchorText)
+        {
+            using var ms = new MemoryStream(pdfBytes);
+            using var doc = PdfDocument.Open(ms);
+            int lastPgae = doc.NumberOfPages;
+            var page = doc.GetPage(lastPgae);
+
+            foreach (var word in page.GetWords())
+            {
+                if (word.Text.Contains(anchorText, StringComparison.Ordinal))
+                {
+                    var bbox = word.BoundingBox;
+                    return new AnchorBox
+                    {
+                        Page = lastPgae,
+                        Top = bbox.Top,
+                        Bottom = bbox.Bottom,
+                        Left = bbox.Left,
+                        Right = bbox.Right
+                    };
+                }
+            }
+
+            throw new InvalidOperationException($"Cannot find anchor text '{anchorText}' in pdf.");
+        }
+
+        public static async Task<byte[]> RenderAsync(string html)
+        {
+            try
+            {
+                using var playwright = await Playwright.CreateAsync();
+                await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+                {
+                    Headless = true
+                });
+
+                var context = await browser.NewContextAsync(new BrowserNewContextOptions
+                {
+                    Locale = "vi-VN"
+                });
+
+                var page = await context.NewPageAsync();
+
+                var dataUrl = "data:text/html;base64," + Convert.ToBase64String(Encoding.UTF8.GetBytes(html));
+                await page.GotoAsync(dataUrl, new PageGotoOptions
+                {
+                    WaitUntil = WaitUntilState.NetworkIdle
+                });
+
+                var pdf = await page.PdfAsync(new PagePdfOptions
+                {
+                    Format = "A4",
+                    PrintBackground = true,
+                    Margin = new Margin
+                    {
+                        Top = "20mm",
+                        Bottom = "15mm",
+                        Left = "15mm",
+                        Right = "15mm"
+                    }
+                });
+
+                return pdf;
+            }
+            catch (PlaywrightException ex) when (ex.Message.Contains("Executable doesn't exist"))
+            {
+                await Task.Run(() => Program.Main(new[] { "install", "chromium" }));
+                return await RenderAsync(html);
+            }
+        }
+
+        public static string ReplacePlaceholders(string html, Object values, bool htmlEncode = false)
+        {
+            return Placeholder.Replace(html, m =>
+            {
+                var path = m.Groups[1].Value.Trim();
+                var format = m.Groups[2].Success ? m.Groups[2].Value.Trim()
+                           : m.Groups[3].Success ? m.Groups[3].Value.Trim()
+                           : null;
+
+                var value = ResolvePath(values, path);
+                if (value == null)
+                {
+                    return string.Empty;
+                }
+
+                string text;
+                if (value is IFormattable fo && !string.IsNullOrWhiteSpace(format))
+                {
+                    text = fo.ToString(format, CultureInfo.InvariantCulture) ?? string.Empty;
+                }
+                else
+                {
+                    text = value?.ToString() ?? string.Empty;
+                }
+
+                return htmlEncode ? WebUtility.HtmlEncode(text) : text;
+            });
+        }
+
+        private static object? ResolvePath(object root, string path)
+        {
+            var segments = path.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            object? current = root;
+
+            foreach (var segment in segments)
+            {
+                if (current == null) return null;
+                if (current is IDictionary<string, object?> dict)
+                {
+                    if (!dict.TryGetValue(segment, out current))
+                    {
+                        var joined = string.Join(".", segments);
+                        return dict.TryGetValue(joined, out var val) ? val : null;
+                    }
+                    continue;
+                }
+                var type = current?.GetType();
+
+                var prop = type?.GetProperty(segment, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                if (prop != null)
+                {
+                    current = prop.GetValue(current);
+                    continue;
+                }
+
+                var field = type?.GetField(segment, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                if (field != null)
+                {
+                    current = field.GetValue(current);
+                    continue;
+                }
+
+                return null;
+            }
+
+            return current;
+        }
+
+        public static Dictionary<string, AnchorBox> FindAnchors(byte[] pdfBytes, params string[] anchors)
+        {
+            var result = new Dictionary<string, AnchorBox>(StringComparer.Ordinal);
+            using var ms = new MemoryStream(pdfBytes);
+            using var doc = PdfDocument.Open(ms);
+
+            var remaining = new HashSet<string>(anchors, StringComparer.Ordinal);
+
+            for (int pageNumber = 1; pageNumber <= doc.NumberOfPages && remaining.Count > 0; pageNumber++)
+            {
+                var page = doc.GetPage(pageNumber);
+                foreach (var word in page.GetWords())
+                {
+                    foreach (var token in remaining.ToArray())
+                    {
+                        if (word.Text.Contains(token, StringComparison.Ordinal))
+                        {
+                            var bound = word.BoundingBox;
+                            result[token] = new AnchorBox
+                            {
+                                Page = pageNumber,
+                                Top = bound.Top,
+                                Bottom = bound.Bottom,
+                                Left = bound.Left,
+                                Right = bound.Right
+                            };
+                            remaining.Remove(token);
+                            if (remaining.Count == 0) break;
+                        }
+                    }
+                    if (remaining.Count == 0) break;
+                }
+            }
+
+            if (remaining.Count > 0)
+            {
+                var missing = string.Join(", ", remaining);
+                throw new InvalidOperationException($"Cannot find anchor text(s): {missing} in pdf.");
+            }
+
+            return result;
+        }
+
+        public static string InjectStyle(string html, string css)
+        {
+            const string marker = "</head>";
+            var style = $"<style>\n{css}\n</style>\n";
+            var idx = html.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            return idx >= 0 ? html.Insert(idx, style) : style + html;
+        }
+
+        //public static string RenderHtml(string html, EContractTerm term)
+        //{
+        //    if (!string.IsNullOrWhiteSpace(term.AdditionalTerms))
+        //    {
+        //        html = html.Replace("{{ additional }}", term.AdditionalTerms);
+        //    }
+        //    else
+        //    {
+        //        html = Regex.Replace(
+        //            html,
+        //            @"\s*<div class=""section-title"">Điều Khoản Bổ Sung</div>\s*<p>\s*\{\{\s*additional\s*\}\}\s*</p>",
+        //            string.Empty,
+        //            RegexOptions.IgnoreCase | RegexOptions.Singleline
+        //        );
+        //    }
+
+        //    return html;
+        //}
+    }
+}

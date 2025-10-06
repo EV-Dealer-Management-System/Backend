@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWP391Web.Application.DTO.EContract
+namespace SWP391Web.Domain.ValueObjects
 {
     public class AnchorBox
     {
