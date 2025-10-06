@@ -11,6 +11,9 @@ namespace SWP391Web.Application.DTO.EContract
         public string DealerName { get; set; } = null!;
         public string DealerAddress { get; set; } = null!;
         public string TaxNo { get; set; } = null!;
+        public int DealerLevel { get; set; }
+        public string? AdditionalTerm { get; set; }
+        public string? RegionDealer { get; set; }
         public string FullNameManager { get; set; } = null!;
         public string EmailManager { get; set; } = null!;
         public string? PhoneNumberManager { get; set; }
