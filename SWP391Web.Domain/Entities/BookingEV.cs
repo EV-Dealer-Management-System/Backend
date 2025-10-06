@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Domain.Entities
 {
-    public class BookingElectricVehicle
+    public class BookingEV
     {
         public Guid Id { get; set; }
         public Guid DealerId { get; set; } // Đại lý thực hiện booking

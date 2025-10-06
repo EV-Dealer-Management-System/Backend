@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Domain.Entities
 {
-    public class BookingElectricVehicleDetail
+    public class BookingEVDetail
     {
         public Guid Id { get; set; }
         public Guid BookingId { get; set; }
