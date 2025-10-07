@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
 using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Application.DTO.BookingEV;
+using SWP391Web.Application.DTO.BookingEVDetail;
 using SWP391Web.Application.DTO.Customer;
 using SWP391Web.Application.DTO.ElectricVehicle;
 using SWP391Web.Application.DTO.ElectricVehicleColor;
@@ -23,6 +25,16 @@ namespace SWP391Web.Application.Mappings
             CreateMap<ElectricVehicleModel, GetElectricVehicleModelDTO>().ReverseMap();
             CreateMap<ElectricVehicleVersion, GetElectricVehicleVersionDTO>().ReverseMap();
             CreateMap<ElectricVehicle, GetElecticVehicleDTO>().ReverseMap();
+            CreateMap<BookingEV, GetBookingEVDTO>()
+                .ForMember(dest => dest.BookingEVDetails, opt => opt.MapFrom(src => src.BookingEVDetails)).ReverseMap();
+            CreateMap<BookingEVDetail, GetBookingEVDetailDTO>()
+                .ForMember(dest => dest.Version, opt => opt.MapFrom(src => new VersionDTO
+                {
+                    VersionId = src.VersionId,
+                    ModelId = src.Version.ModelId
+                }));
+                
+
         }
     }
 }
