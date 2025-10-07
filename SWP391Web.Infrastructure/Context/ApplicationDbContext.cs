@@ -16,17 +16,28 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<Customer> Customers { get; set; }
         public DbSet<EmailTemplate> EmailTemplates { get; set; }
         public DbSet<CustomerOrder> CustomerOrders { get; set; }
-        public DbSet<ContractTemplate> ContractTemplates { get; set; }
         public DbSet<Dealer> Dealers { get; set; }
         public DbSet<ElectricVehicleColor> ElectricVehicleColors { get; set; }
         public DbSet<ElectricVehicleModel> ElectricVehicleModels { get; set; }
         public DbSet<ElectricVehicleVersion> ElectricVehicleVersions { get; set; }
         public DbSet<ElectricVehicle> ElectricVehicles { get; set; }
+        public DbSet<EContract> EContracts { get; set; }
+        public DbSet<EContractTemplate> EContractTemplates { get; set; }
+        public DbSet<EContractTemplateVersion> EContractTemplateVersions { get; set; }
+        public DbSet<EContractAmendment> EContractAmendments { get; set; }
+        public DbSet<EContractTerm> EContractTerms { get; set; }
+        public DbSet<BookingEV> BookingEVs { get; set; }
+        public DbSet<BookingEVDetail> BookingEVDetails { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            EmailSeeder.SeedEmailTemplate(modelBuilder);
 
+            //Seed initial data
+            EmailSeeder.SeedEmailTemplate(modelBuilder);
+            EContractSeeder.EContractTemplateSeeder.SeedDealerEContract(modelBuilder);
+            EContractTermSeeder.SeedTerm(modelBuilder);
+
+            // Customize ASP.NET Identity table names
             modelBuilder.Entity<ApplicationUser>(b =>
                 b.ToTable("ApplicationUsers"));
 
@@ -114,6 +125,85 @@ namespace SWP391Web.Infrastructure.Context
             // Index on ManagerId in Dealer for performance
             modelBuilder.Entity<Dealer>()
                 .HasIndex(d => d.ManagerId);
+
+            /******************************************************************************/
+            // Configure ElectricVehicle entity
+
+            modelBuilder.Entity<ElectricVehicle>()
+                .HasOne(ev => ev.Version)
+                .WithMany(vs => vs.ElectricVehicles)
+                .HasForeignKey(ev => ev.VersionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ElectricVehicle>()
+                .HasOne(ev => ev.Color)
+                .WithMany(c => c.ElectricVehicles)
+                .HasForeignKey(ev => ev.ColorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ElectricVehicle>()
+                .HasOne(ev => ev.Dealer)
+                .WithMany(d => d.ElectricVehicles)
+                .HasForeignKey(ev => ev.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure ElectricVehicleVersion entity
+
+            modelBuilder.Entity<ElectricVehicleVersion>()
+                .HasOne(vs => vs.Model)
+                .WithMany(ev => ev.Versions)
+                .HasForeignKey(ev => ev.ModelId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure EContractAmendment entity
+
+            modelBuilder.Entity<EContractAmendment>()
+                .HasOne(ea => ea.EContract)
+                .WithMany(e => e.Amendments)
+                .HasForeignKey(ea => ea.EContractId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure EContractTemplate entity
+
+            modelBuilder.Entity<EContractTemplate>()
+                .HasMany(et => et.Versions)
+                .WithOne()
+                .HasForeignKey("ContractTemplateId")  
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure BookingEVDetail entity
+
+            modelBuilder.Entity<BookingEVDetail>()
+                .HasOne(bd => bd.BookingEV)
+                .WithMany(b => b.BookingEVDetails)
+                .HasForeignKey(bd => bd.BookingId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<BookingEVDetail>()
+                .HasOne(bd => bd.Version)
+                .WithMany(v => v.BookingEVDetails)
+                .HasForeignKey(bd => bd.VersionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<BookingEVDetail>()
+                .HasOne(bd => bd.Color)
+                .WithMany(c => c.BookingEVDetails)
+                .HasForeignKey(bd => bd.ColorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure BookingEV entity
+
+            modelBuilder.Entity<BookingEV>()
+                .HasOne(b => b.Dealer)
+                .WithMany(d => d.BookingEVs)
+                .HasForeignKey(b => b.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
         }
     }
 }

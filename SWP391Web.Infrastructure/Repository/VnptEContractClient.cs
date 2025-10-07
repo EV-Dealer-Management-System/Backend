@@ -100,7 +100,7 @@ namespace SWP391Web.Infrastructure.Repository
             };
             Bearer(request, token);
 
-            return  await SendAsync<T>(request);
+            return await SendAsync<T>(request);
         }
 
         private async Task<VnptResult<T>> GetAsync<T>(string token, string url)
@@ -124,13 +124,8 @@ namespace SWP391Web.Infrastructure.Repository
         }
 
         public async Task<VnptResult<ProcessRespone>> SignProcess(string token, VnptProcessDTO vnptProcessDTO)
-        {
-            var jsonPayload = JsonConvert.SerializeObject(vnptProcessDTO, new JsonSerializerSettings
-            {
-                NullValueHandling = NullValueHandling.Ignore
-            });
-            return await PostAsync<ProcessRespone>(token, "/api/documents/process", vnptProcessDTO);
-        }
+            => await PostAsync<ProcessRespone>(token, "/api/documents/process", vnptProcessDTO);
+
 
         public async Task<HttpResponseMessage> GetDownloadResponseAsync(string token, string? rangeHeader = null, CancellationToken ct = default)
         {

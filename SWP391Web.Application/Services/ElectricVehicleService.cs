@@ -202,7 +202,6 @@ namespace SWP391Web.Application.Services
                 if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
                     vehicle.ImageUrl = dto.ImageUrl;
 
-
                 // Không set: DealerId, ColorId, VersionId
                 _unitOfWork.ElectricVehicleRepository.Update(vehicle);
                 await _unitOfWork.SaveAsync();

@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Domain.Enums
 {
-    public enum ContractStatus
+    public enum ElectricVehicleStatus
     {
-        Draft = 0
     }
 }

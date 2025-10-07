@@ -9,9 +9,9 @@ namespace SWP391Web.Domain.Entities
 {
     public class ElectricVehicleVersion
     {
-        public Guid? Id { get; set; }
-        public Guid? ModelId { get; set; }
-        public string VersionName { get; set; }
+        public Guid Id { get; set; }
+        public Guid ModelId { get; set; }
+        public string? VersionName { get; set; }
         public decimal MotorPower { get; set; }
         public decimal BatteryCapacity { get; set; }
         public decimal RangePerCharge { get; set; }
@@ -20,6 +20,10 @@ namespace SWP391Web.Domain.Entities
         public decimal Weight { get; set; }
         public decimal Height { get; set; }
         public int ProductionYear { get; set; }
-        public string Description { get; set; }
+        public string? Description { get; set; }
+
+        public ElectricVehicleModel Model { get; set; } = null!;
+        public ICollection<ElectricVehicle> ElectricVehicles { get; set; } = new List<ElectricVehicle>();
+        public ICollection<BookingEVDetail> BookingEVDetails { get; set; } = new List<BookingEVDetail>();
     }
 }

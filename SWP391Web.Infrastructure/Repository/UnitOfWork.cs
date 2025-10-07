@@ -18,6 +18,8 @@ namespace SWP391Web.Infrastructure.Repository
         public IElectricVehicleModelRepository ElectricVehicleModelRepository { get; private set; }
         public IElectricVehicleVersionRepository ElectricVehicleVersionRepository { get; private set; }
         public IElectricVehicleRepository ElectricVehicleRepository { get; private set; }
+        public IEContractTemplateRepository EContractTemplateRepository { get; private set; }
+        public IEContractTermRepository EContractTermRepository { get; private set; }
 
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
@@ -33,6 +35,8 @@ namespace SWP391Web.Infrastructure.Repository
             ElectricVehicleModelRepository = new ElectricVehicleModelRepository(_context);
             ElectricVehicleVersionRepository = new ElectricVehicleVersionRepository(_context);
             ElectricVehicleRepository = new ElectricVehicleRepository(_context);
+            EContractTemplateRepository = new EContractTemplateRepository(_context);
+            EContractTermRepository = new EContractTermRepository(_context);
         }
         public async Task<int> SaveAsync()
         {
