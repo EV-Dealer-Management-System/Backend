@@ -14,6 +14,10 @@ namespace SWP391Web.Domain.Entities
         public Guid ColorId { get; set; }
         public int Quantity { get; set; }
         public DateTime? ExpectedDeliveryDate { get; set; }
-        
+
+        public BookingEV BookingEV { get; set; } = null!;
+        public ElectricVehicleVersion Version { get; set; } = null!;
+        public ElectricVehicleColor Color { get; set; } = null!;
+
     }
 }

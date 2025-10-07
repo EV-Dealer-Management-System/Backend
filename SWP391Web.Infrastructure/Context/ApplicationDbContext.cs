@@ -26,6 +26,8 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<EContractTemplateVersion> EContractTemplateVersions { get; set; }
         public DbSet<EContractAmendment> EContractAmendments { get; set; }
         public DbSet<EContractTerm> EContractTerms { get; set; }
+        public DbSet<BookingEV> BookingEVs { get; set; }
+        public DbSet<BookingEVDetail> BookingEVDetails { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -172,6 +174,37 @@ namespace SWP391Web.Infrastructure.Context
                 .WithOne()
                 .HasForeignKey("ContractTemplateId")  
                 .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure BookingEVDetail entity
+
+            modelBuilder.Entity<BookingEVDetail>()
+                .HasOne(bd => bd.BookingEV)
+                .WithMany(b => b.BookingEVDetails)
+                .HasForeignKey(bd => bd.BookingId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<BookingEVDetail>()
+                .HasOne(bd => bd.Version)
+                .WithMany(v => v.BookingEVDetails)
+                .HasForeignKey(bd => bd.VersionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<BookingEVDetail>()
+                .HasOne(bd => bd.Color)
+                .WithMany(c => c.BookingEVDetails)
+                .HasForeignKey(bd => bd.ColorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure BookingEV entity
+
+            modelBuilder.Entity<BookingEV>()
+                .HasOne(b => b.Dealer)
+                .WithMany(d => d.BookingEVs)
+                .HasForeignKey(b => b.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
         }
     }
 }
