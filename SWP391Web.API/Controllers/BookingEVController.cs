@@ -22,5 +22,36 @@ namespace SWP391Web.API.Controllers
             var response = await _bookingEVService.CreateBookingEVAsync(createBookingEVDTO);
             return StatusCode(response.StatusCode, response);
         }
+
+        [HttpGet("get-all-bookings")]
+        public async Task<ActionResult<ResponseDTO>> GetAllBookingEVs()
+        {
+            var response = await _bookingEVService.GetAllBookingEVsAsync();
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet("get-booking-by-id/{bookingId}")]
+        public async Task<ActionResult<ResponseDTO>> GetBookingEVById([FromRoute] Guid bookingId)
+        {
+            var response = await _bookingEVService.GetBookingEVByIdAsync(bookingId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut("cancel-booking/{bookingId}")]
+        public async Task<ActionResult<ResponseDTO>> CancelBookingEV([FromRoute] Guid bookingId)
+        {
+            var response = await _bookingEVService.CancelBookingEVAsync(bookingId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut("approve-booking/{bookingId}")]
+        public async Task<ActionResult<ResponseDTO>> ApprovedBookingEVStatus([FromRoute] Guid bookingId)
+        {
+            var response = await _bookingEVService.ApprovedBookingEVStatusAsync(bookingId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut("reject-booking/{bookingId}")]
+        public async Task<ActionResult<ResponseDTO>> RejectedBookingEVStatus([FromRoute] Guid bookingId)
+        {
+            var response = await _bookingEVService.RejectedBookingEVStatusAsync(bookingId);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }
