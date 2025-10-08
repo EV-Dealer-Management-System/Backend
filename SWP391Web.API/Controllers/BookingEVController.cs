@@ -4,6 +4,7 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.BookingEV;
 using SWP391Web.Application.DTO.BookingEVDetail;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Enums;
 
 namespace SWP391Web.API.Controllers
 {
@@ -19,7 +20,7 @@ namespace SWP391Web.API.Controllers
         [HttpPost("create-booking")]
         public  async Task<ActionResult<ResponseDTO>> CreateBookingEV([FromBody] CreateBookingEVDTO createBookingEVDTO)
         {
-            var response = await _bookingEVService.CreateBookingEVAsync(createBookingEVDTO);
+            var response = await _bookingEVService.CreateBookingEVAsync(User, createBookingEVDTO);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -35,22 +36,10 @@ namespace SWP391Web.API.Controllers
             var response = await _bookingEVService.GetBookingEVByIdAsync(bookingId);
             return StatusCode(response.StatusCode, response);
         }
-        [HttpPut("cancel-booking/{bookingId}")]
-        public async Task<ActionResult<ResponseDTO>> CancelBookingEV([FromRoute] Guid bookingId)
+        [HttpPut("update-booking-status/{bookingId}")]
+        public async Task<ActionResult<ResponseDTO>> UpdateBookingStatus(Guid bookingId, [FromQuery] BookingStatus newStatus)
         {
-            var response = await _bookingEVService.CancelBookingEVAsync(bookingId);
-            return StatusCode(response.StatusCode, response);
-        }
-        [HttpPut("approve-booking/{bookingId}")]
-        public async Task<ActionResult<ResponseDTO>> ApprovedBookingEVStatus([FromRoute] Guid bookingId)
-        {
-            var response = await _bookingEVService.ApprovedBookingEVStatusAsync(bookingId);
-            return StatusCode(response.StatusCode, response);
-        }
-        [HttpPut("reject-booking/{bookingId}")]
-        public async Task<ActionResult<ResponseDTO>> RejectedBookingEVStatus([FromRoute] Guid bookingId)
-        {
-            var response = await _bookingEVService.RejectedBookingEVStatusAsync(bookingId);
+            var response = await _bookingEVService.UpdateBookingStatusAsync(bookingId, newStatus);
             return StatusCode(response.StatusCode, response);
         }
     }

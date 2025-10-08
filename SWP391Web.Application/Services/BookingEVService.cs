@@ -9,8 +9,10 @@ using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using UglyToad.PdfPig.Outline;
 
 namespace SWP391Web.Application.Services
 {
@@ -64,21 +66,23 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> CreateBookingEVAsync(CreateBookingEVDTO createBookingEVDTO)
+        public async Task<ResponseDTO> CreateBookingEVAsync(ClaimsPrincipal user, CreateBookingEVDTO createBookingEVDTO)
         {
             try
             {
-                var isExistDealer = await _unitOfWork.DealerRepository.IsExistByIdAsync(createBookingEVDTO.DealerId,CancellationToken.None);
-                if (!isExistDealer)
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Dealer not found",
+                        Message = "User not found",
                         StatusCode = 404,
                     };
                 }
-                var dealer = await _unitOfWork.DealerRepository.GetByIdAsync(createBookingEVDTO.DealerId, CancellationToken.None);
+
+                var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+
                 if (dealer == null)
                 {
                     return new ResponseDTO
@@ -91,7 +95,7 @@ namespace SWP391Web.Application.Services
 
                 var bookingEV = new BookingEV
                 {
-                    DealerId = createBookingEVDTO.DealerId,
+                    DealerId = dealer.Id,
                     Note = createBookingEVDTO.Note,
                     BookingDate = DateTime.UtcNow,
                     Status = BookingStatus.Pending,
@@ -105,13 +109,13 @@ namespace SWP391Web.Application.Services
                     Quantity = detail.Quantity,
                 }).ToList();
 
-                await _unitOfWork.BookingEVRepository.AddAsync(bookingEV,CancellationToken.None);
+                await _unitOfWork.BookingEVRepository.AddAsync(bookingEV, CancellationToken.None);
                 await _unitOfWork.SaveAsync();
 
                 var bookingWithDetails = await _unitOfWork.BookingEVRepository
                     .GetBookingWithIdAsync(bookingEV.Id);
 
-                var getBookingEV =  _mapper.Map<GetBookingEVDTO>(bookingWithDetails);
+                var getBookingEV = _mapper.Map<GetBookingEVDTO>(bookingWithDetails);
 
                 return new ResponseDTO
                 {
@@ -120,9 +124,9 @@ namespace SWP391Web.Application.Services
                     StatusCode = 200,
                     Result = getBookingEV
                 };
-                
+
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 return new ResponseDTO()
                 {
@@ -139,14 +143,14 @@ namespace SWP391Web.Application.Services
             throw new NotImplementedException();
         }
 
-        public　async Task<ResponseDTO> GetBookingEVByIdAsync(Guid bookingId)
+        public async Task<ResponseDTO> GetBookingEVByIdAsync(Guid bookingId)
         {
             try
             {
-                var bookingEV =  await _unitOfWork.BookingEVRepository
+                var bookingEV = await _unitOfWork.BookingEVRepository
                     .GetBookingWithIdAsync(bookingId);
                 if (bookingEV == null)
-                    {
+                {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
@@ -176,7 +180,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> ApprovedBookingEVStatusAsync(Guid bookingId)
+        public async Task<ResponseDTO> UpdateBookingStatusAsync(Guid bookingId, BookingStatus newStatus)
         {
             try
             {
@@ -187,83 +191,53 @@ namespace SWP391Web.Application.Services
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = " Booking not found ",
-                        StatusCode = 404,
-                    };
-                }
-
-                if(bookingEV.Status != BookingStatus.Pending)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = " Invalid status value ",
-                        StatusCode = 400,
-                    };
-                }
-
-                bookingEV.Status = BookingStatus.Approved;
-                
-
-                _unitOfWork.BookingEVRepository.Update(bookingEV);
-                await _unitOfWork.SaveAsync();
-
-                return new ResponseDTO
-                {
-                    IsSuccess = true,
-                    Message = " Booking approved successfully ",
-                    StatusCode = 200,
-                };
-
-
-            }
-            catch (Exception ex) {
-                return new ResponseDTO()
-                {
-                    IsSuccess = false,
-                    Message = ex.Message,
-                    StatusCode = 500,
-                };
-            }
-        }
-
-        public async Task<ResponseDTO> RejectedBookingEVStatusAsync(Guid bookingId)
-        {
-            try
-            {
-                var bookingEV = await _unitOfWork.BookingEVRepository
-                    .GetBookingWithIdAsync(bookingId);
-                if (bookingEV is null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
                         Message = "Booking not found",
                         StatusCode = 404,
                     };
                 }
 
-                if (bookingEV.Status != BookingStatus.Pending)
+                //khong cho phep update neu da bi huy, duyet hoac tu choi
+                if (bookingEV.Status == BookingStatus.Cancelled
+                    || bookingEV.Status == BookingStatus.Approved
+                    || bookingEV.Status == BookingStatus.Rejected)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Invalid status value",
-                        StatusCode = 404,
+                        Message = "Cannot update status of a cancelled, approved or rejected booking",
+                        StatusCode = 400,
                     };
                 }
 
-                bookingEV.Status = BookingStatus.Rejected;
+                //ktra logic hop li de chuyen status
+                if (newStatus == BookingStatus.Pending)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Cannot update status to pending",
+                        StatusCode = 400,
+                    };
+                }
+
+                bookingEV.Status = newStatus;
                 _unitOfWork.BookingEVRepository.Update(bookingEV);
                 await _unitOfWork.SaveAsync();
+
+                string message = newStatus switch
+                {
+                    BookingStatus.Approved => "Booking approved successfully",
+                    BookingStatus.Rejected => "Booking rejected successfully",
+                    BookingStatus.Cancelled => "Booking cancelled successfully",
+                    _ => "Booking status updated successfully"
+                };
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
-                    Message = " Reject booking successfully ",
+                    Message = message,
                     StatusCode = 200,
                 };
-
             }
             catch (Exception ex)
             {
