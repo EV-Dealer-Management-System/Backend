@@ -20,7 +20,7 @@ namespace SWP391Web.Infrastructure.Repository
         public IElectricVehicleRepository ElectricVehicleRepository { get; private set; }
         public IEContractTemplateRepository EContractTemplateRepository { get; private set; }
         public IEContractTermRepository EContractTermRepository { get; private set; }
-
+        public IBookingEVRepository BookingEVRepository { get; private set; }
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -37,6 +37,7 @@ namespace SWP391Web.Infrastructure.Repository
             ElectricVehicleRepository = new ElectricVehicleRepository(_context);
             EContractTemplateRepository = new EContractTemplateRepository(_context);
             EContractTermRepository = new EContractTermRepository(_context);
+            BookingEVRepository = new BookingEVRepository(_context);
         }
         public async Task<int> SaveAsync()
         {
