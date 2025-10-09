@@ -55,42 +55,12 @@ namespace SWP391Web.Domain.Entities
 
         public EContractAmendment AddAmendment(Guid eContractId, string title, string s3HtmlKey, string htmlSha256, string? htmlTag, string? notes, string createdBy)
         {
-            if (Status is not (EContractStatus.Draft or EContractStatus.Sent))
+            if (Status is not (EContractStatus.Draft or EContractStatus.Ready))
                 throw new InvalidOperationException("Only draft or sent contract can be amended.");
 
             var amendment = new EContractAmendment(eContractId, title, s3HtmlKey, htmlSha256, htmlTag, notes, createdBy);
             _amendments.Add(amendment);
             return amendment;
-        }
-
-        public void MarkSent()
-        {
-            if (Status != EContractStatus.Draft)
-                throw new InvalidOperationException("Only draft contract can be sent.");
-            Status = EContractStatus.Sent;
-        }
-
-        public void LockForSigning(string finalPdfKey, string finalPdfSha256, string? finalPdfTag)
-        {
-            if (Status != EContractStatus.Sent)
-                throw new InvalidOperationException("Send before locking.");
-            Status = EContractStatus.LockedForSigning;
-        }
-
-        public void AttachFinalPdf(string finalPdfKey, string finalPdfSha256, string? finalPdfTag)
-        {
-            if (Status != EContractStatus.LockedForSigning)
-                throw new InvalidOperationException("Only locked contract can attach final PDF.");
-            FinalPdfKey = finalPdfKey;
-            FinalPdfSha256 = finalPdfSha256;
-            FinalPdfTag = finalPdfTag;
-        }
-
-        public void MarkCompleted()
-        {
-            if (Status != EContractStatus.LockedForSigning)
-                throw new InvalidOperationException("Only locked contract can be completed.");
-            Status = EContractStatus.Completed;
         }
     }
 }

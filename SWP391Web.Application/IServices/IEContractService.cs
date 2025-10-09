@@ -1,6 +1,6 @@
 ﻿using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.EContract;
-using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
 
 namespace SWP391Web.Application.IServices
@@ -16,5 +16,8 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> CreateEContractAsync(CreateDealerDTO createDealerDTO, CancellationToken ct);
         Task<VnptResult<VnptSmartCAResponse>> AddSmartCA(AddNewSmartCADTO addNewSmartCADTO);
         Task<VnptResult<VnptFullUserData>> GetSmartCAInformation(int userId);
+        Task<VnptResult<VnptSmartCAResponse>> UpdateSmartCA(UpdateSmartDTO updateSmartDTO);
+        Task<VnptResult<UpdateEContractResponse>> UpdateEContract(UpdateEContractDTO updateEContractDTO);
+        Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus);
     }
 }

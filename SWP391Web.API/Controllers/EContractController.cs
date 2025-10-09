@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
 
 namespace SWP391Web.API.Controllers
@@ -12,8 +13,8 @@ namespace SWP391Web.API.Controllers
     public class EContractController : ControllerBase
     {
         private readonly IEContractService _svc;
-        public EContractController(IEContractService svc) 
-        { 
+        public EContractController(IEContractService svc)
+        {
             _svc = svc;
         }
 
@@ -94,7 +95,7 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult<ResponseDTO>> AddSmartCA([FromBody] AddNewSmartCADTO dto)
         {
             var r = await _svc.AddSmartCA(dto);
-            return Ok(r); 
+            return Ok(r);
         }
 
         [HttpGet]
@@ -102,6 +103,37 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult<ResponseDTO>> GetSmartCAInformation([FromRoute] int userId)
         {
             var r = await _svc.GetSmartCAInformation(userId);
+            return Ok(r);
+        }
+
+        [HttpPost]
+        [Route("update-smartca")]
+        public async Task<ActionResult<ResponseDTO>> UpdateSmartCA([FromBody] UpdateSmartDTO dto)
+        {
+            var r = await _svc.UpdateSmartCA(dto);
+            return Ok(r);
+        }
+
+        [HttpPost]
+        [Route("update-econtract")]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<ResponseDTO>> UpdateEContract([FromForm] UpdateEContractDTO dto)
+        {
+            if (dto.File is null || dto.File.Length == 0)
+                return BadRequest(new { message = "file is missing." });
+
+            if (dto.File.ContentType?.Contains("pdf", StringComparison.OrdinalIgnoreCase) != true)
+                return BadRequest(new { message = "File is not PDF." });
+
+            var r = await _svc.UpdateEContract(dto);
+            return Ok(r);
+        }
+
+        [HttpGet]
+        [Route("get-econtract-list")]
+        public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber, [FromQuery] int? pageSize, [FromQuery] EContractStatus eContractStatus)
+        {
+            var r = await _svc.GetEContractList(pageNumber, pageSize, eContractStatus);
             return Ok(r);
         }
     }
