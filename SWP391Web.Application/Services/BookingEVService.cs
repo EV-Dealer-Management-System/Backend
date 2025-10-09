@@ -138,9 +138,29 @@ namespace SWP391Web.Application.Services
 
         }
 
-        public Task<ResponseDTO> GetAllBookingEVsAsync()
+        public async Task<ResponseDTO> GetAllBookingEVsAsync()
         {
-            throw new NotImplementedException();
+            try
+            {
+                var bookingEVs = await _unitOfWork.BookingEVRepository.GetAllAsync();
+                var getBookingEVs = _mapper.Map<List<GetBookingEVDTO>>(bookingEVs);
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Bookings retrieved successfully",
+                    StatusCode = 200,
+                    Result = getBookingEVs
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500,
+                };
+            }
         }
 
         public async Task<ResponseDTO> GetBookingEVByIdAsync(Guid bookingId)
