@@ -83,9 +83,29 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public Task<ResponseDTO> GetAllVehiclesAsync()
+        public async Task<ResponseDTO> GetAllVehiclesAsync()
         {
-            throw new NotImplementedException();
+            try
+            {
+                var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllAsync();
+                var getVehicles = _mapper.Map<List<GetElecticVehicleDTO>>(vehicles);
+                return new ResponseDTO()
+                {
+                    IsSuccess = true,
+                    Message = "Get all vehicles successfully.",
+                    StatusCode = 200,
+                    Result = getVehicles
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
         }
 
         public async Task<ResponseDTO> GetVehicleByIdAsync(Guid vehicleId)

@@ -10,7 +10,6 @@ namespace SWP391Web.Application.DTO.BookingEV
 {
     public class CreateBookingEVDTO
     {
-        public Guid DealerId { get; set; } // Đại lý thực hiện booking
         public string? Note { get; set; }
         public List<CreateBookingEVDetailDTO> BookingDetails { get; set; } = new();
     }
