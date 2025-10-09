@@ -105,6 +105,42 @@ namespace SWP391Web.Application.Services
             }
         }
 
+        public async Task<ResponseDTO> GetAllColorsByModelIdAndVersionIdAsync(Guid modelId, Guid versionId)
+        {
+            try
+            {
+                var colors = await _unitOfWork.ElectricVehicleColorRepository.GetAllByModelIdAndVersionIdAsync(modelId, versionId);
+                if (colors is null)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "No colors found for the specified model and version.",
+                        StatusCode = 404
+                    };
+                }
+
+                var getColors = _mapper.Map<List<GetElectricVehicleColorDTO>>(colors);
+
+                return new ResponseDTO()
+                {
+                    IsSuccess = true,
+                    Message = "Colors retrieved successfully.",
+                    Result = getColors,
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
         public async Task<ResponseDTO> GetColorByCodeAsync(string colorCode)
         {
             try

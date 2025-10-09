@@ -10,7 +10,7 @@ namespace SWP391Web.Application.IServices
 {
     public interface IElectricVehicleVersionService
     {
-        Task<ResponseDTO> GetAllVersionsAsync();
+        Task<ResponseDTO> GetAllVersionsByModelIdAsync(Guid modelId);
         Task<ResponseDTO> GetVersionByIdAsync(Guid versionId);
         Task<ResponseDTO> GetVersionByNameAsync(string versionName);
         Task<ResponseDTO> CreateVersionAsync(CreateElectricVehicleVersionDTO createElectricVehicleVersionDTO);
