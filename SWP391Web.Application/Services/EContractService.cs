@@ -6,6 +6,7 @@ using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Pdf;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
 using SWP391Web.Infrastructure.IRepository;
 using System.Text;
@@ -71,19 +72,6 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                //    // 1) Load dealer + manager
-                //    var dealer = await _unitOfWork.DealerRepository.GetByIdAsync(dto.DealerId, ct);
-                //    if (dealer is null) return new ResponseDTO { IsSuccess = false, StatusCode = 404, Message = "Dealer not exist" };
-
-                //    var manager = await _unitOfWork.DealerMemberRepository.GetManagerAsync(dto.DealerId, ct);
-                //    if (manager is null) return new ResponseDTO { IsSuccess = false, StatusCode = 400, Message = "Dealer has not DealerManager" };
-
-
-                //    // 2) Render PDF (QuestPDF) — mock company info
-                //    var companyName = "EV Manufacturer Sample"; // sample
-                //    using var pdf = DealerContractPdf.Render(companyName, dealer.Name, dealer.Address, dealer.Email + ", " + dealer.PhoneNumber, DateTime.Now);
-                // 1) Load dealer + manager
-
                 var isExistDealer = await _unitOfWork.DealerRepository.IsExistByNameAsync(createDealerDTO.DealerName, ct);
                 if (isExistDealer)
                     return new ResponseDTO
@@ -119,7 +107,7 @@ namespace SWP391Web.Application.Services
                     Name = createDealerDTO.DealerName,
                     Address = createDealerDTO.DealerAddress,
                     TaxNo = createDealerDTO.TaxNo,
-                    
+
                     Manager = user
                 };
 
@@ -198,52 +186,6 @@ namespace SWP391Web.Application.Services
                     Message = $"Error to create EContract: {ex.Message}"
                 };
             }
-        }
-
-        private async Task<VnptResult<VnptDocumentDto>> CreateDocumentAsync(string token, Dealer dealer, ApplicationUser user)
-        {
-
-            // 2) Render PDF (QuestPDF) — mock company info
-            var companyName = "EV Manufacturer Sample"; // sample
-            using var pdf = EContractPdf.RenderDealerEContract(companyName, dealer.Name, dealer.Address, user.Email + ", " + user.PhoneNumber, dealer.TaxNo, DateTime.Now);
-            var documentTypeId = 3059;
-            var departmentId = 3110;
-            var bytes = pdf.ToArray();
-            var pageA = EContractPdf.FindAnchorBox(bytes, "ĐẠI_DIỆN_BÊN_A");
-            var pageB = EContractPdf.FindAnchorBox(bytes, "ĐẠI_DIỆN_BÊN_B");
-
-            double weight = 170, hight = 90, offsetY = 36, margin = 18;
-            using var ms = new MemoryStream(bytes);
-            using var doc = PdfDocument.Open(ms);
-            var page = doc.GetPage(pageA.Page);
-            double pw = page.Width;
-
-            double llxA = Math.Clamp(pageA.Left, margin, pw - margin - weight);
-            double llyA = Math.Max(pageA.Bottom - offsetY - hight, margin);
-            string posA = $"{(int)llxA - 28},{(int)llyA},{(int)(llxA + weight - 28)},{(int)(llyA + hight)}";
-
-            double llxB = Math.Clamp(pageB.Left, margin, pw - margin - weight);
-            double llyB = Math.Max(pageB.Bottom - offsetY - hight, margin);
-            string posB = $"{(int)llxB},{(int)llyB},{(int)(llxB + weight)},{(int)(llyB + hight)}";
-
-            var randomText = Guid.NewGuid().ToString()[..5].ToUpper();
-            var request = new CreateDocumentDTO
-            {
-                TypeId = documentTypeId,
-                DepartmentId = departmentId,
-                No = $"EContract-{randomText}",
-                Subject = $"Test-{randomText}",
-                Description = "Test"
-            };
-
-            request.FileInfo.File = pdf.ToArray();
-            request.FileInfo.FileName = $"EContract-{randomText}.pdf";
-
-            var createResult = await _vnpt.CreateDocumentAsync(token, request);
-            createResult.Data!.PositionA = posA;
-            createResult.Data.PositionB = posB;
-            Console.WriteLine($"CreateDocument: {createResult.Messages[0]}");
-            return createResult;
         }
 
         public static (string, int) GetVnptEContractPosition(byte[] pdfBytes, AnchorBox anchor,
@@ -540,6 +482,62 @@ namespace SWP391Web.Application.Services
             catch (Exception ex)
             {
                 return new VnptResult<VnptFullUserData>($"Exception when getting SmartCA information: {ex.Message}");
+            }
+        }
+
+        public async Task<VnptResult<VnptSmartCAResponse>> UpdateSmartCA(UpdateSmartDTO updateSmartDTO)
+        {
+            try
+            {
+                var token = await GetAccessTokenAsync();
+                var response = await _vnpt.UpdateSmartCA(token, updateSmartDTO);
+                if (!response.Success)
+                {
+                    var errors = string.Join(", ", response.Messages);
+                    throw new Exception($"Error to update SmartCA: {errors}");
+                }
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return new VnptResult<VnptSmartCAResponse>($"Exception when updating SmartCA: {ex.Message}");
+            }
+        }
+
+        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContract(UpdateEContractDTO updateEContractDTO)
+        {
+            try
+            {
+                var token = await GetAccessTokenAsync();
+                var response = await _vnpt.UpdateEContract(token, updateEContractDTO);
+                if (!response.Success)
+                {
+                    var errors = string.Join(", ", response.Messages);
+                    throw new Exception($"Error to update EContract: {errors}");
+                }
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return new VnptResult<UpdateEContractResponse>($"Exception when updating EContract: {ex.Message}");
+            }
+        }
+
+        public async Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus)
+        {
+            try
+            {
+                var token = await GetAccessTokenAsync();
+                var response = await _vnpt.GetEContractList(token, pageNumber, pageSize, eContractStatus);
+                if (!response.Success)
+                {
+                    var errors = string.Join(", ", response.Messages);
+                    throw new Exception($"Error to get EContract list: {errors}");
+                }
+                return response;
+            }
+            catch (Exception ex) {
+                return new VnptResult<GetEContractResponse<DocumentListItemDto>>($"Exception when get EContract list: {ex.Message}");
             }
         }
     }
