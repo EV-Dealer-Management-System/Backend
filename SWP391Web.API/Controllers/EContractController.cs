@@ -35,7 +35,7 @@ namespace SWP391Web.API.Controllers
             return Ok(r);
         }
         // Orchestrator: create PDF + push + send
-        [HttpPost("dealer-contracts")]
+        [HttpPost("ready-dealer-contracts")]
         public async Task<ActionResult<ResponseDTO>> CreateEContractAsync([FromBody] CreateEContractDTO dto, CancellationToken ct)
         {
             var r = await _svc.CreateEContractAsync(User, dto, ct);
@@ -61,14 +61,14 @@ namespace SWP391Web.API.Controllers
 
         [HttpGet]
         [Route("preview")]
-        public async Task<IActionResult> Preview([FromQuery] string token, CancellationToken ct)
+        public async Task<IActionResult> Preview([FromQuery] string downloadURL, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(token))
-                return BadRequest("Missing token");
+            if (string.IsNullOrWhiteSpace(downloadURL))
+                return BadRequest("Missing downloadURL");
 
             Request.Headers.TryGetValue("Range", out var rangeHeader);
 
-            var upstream = await _svc.GetPreviewResponseAsync(token, rangeHeader.ToString(), ct);
+            var upstream = await _svc.GetPreviewResponseAsync(downloadURL, rangeHeader.ToString(), ct);
             HttpContext.Response.RegisterForDispose(upstream);
 
             if (!upstream.IsSuccessStatusCode)
