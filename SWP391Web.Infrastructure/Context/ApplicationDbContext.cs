@@ -144,7 +144,7 @@ namespace SWP391Web.Infrastructure.Context
             modelBuilder.Entity<ElectricVehicle>()
                 .HasOne(ev => ev.Dealer)
                 .WithMany(d => d.ElectricVehicles)
-                .HasForeignKey(ev => ev.DealerId)
+                .HasForeignKey(ev => ev.WarehouseId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             /******************************************************************************/
