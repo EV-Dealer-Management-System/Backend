@@ -205,6 +205,14 @@ namespace SWP391Web.Infrastructure.Context
                 .HasForeignKey(b => b.DealerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            /******************************************************************************/
+            // Configure EContract entity
+
+            modelBuilder.Entity<EContract>()
+                .HasOne(e => e.Ower)
+                .WithOne(o => o.EContract)
+                .HasForeignKey<EContract>(e => e.OwnerBy)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
