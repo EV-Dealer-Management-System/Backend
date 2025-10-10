@@ -128,12 +128,12 @@ namespace SWP391Web.Infrastructure.Repository
             => await PostAsync<ProcessRespone>(token, "/api/documents/process", vnptProcessDTO);
 
 
-        public async Task<HttpResponseMessage> GetDownloadResponseAsync(string token, string? rangeHeader = null, CancellationToken ct = default)
+        public async Task<HttpResponseMessage> GetDownloadResponseAsync(string downloadURL, string? rangeHeader = null, CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(token))
-                throw new ArgumentException("downloadToken is required", nameof(token));
+            if (string.IsNullOrWhiteSpace(downloadURL))
+                throw new ArgumentException("downloadURL is required", nameof(downloadURL));
 
-            var url = $"{_baseUrl}/Api/Download?token={token}";
+            var url = $"{downloadURL}";
             var req = new HttpRequestMessage(HttpMethod.Get, url);
 
             if (!string.IsNullOrWhiteSpace(rangeHeader))
@@ -162,7 +162,8 @@ namespace SWP391Web.Infrastructure.Repository
 
             var content = new MultipartFormDataContent
            {
-               { new StringContent(updateEContractDTO.Id), "Id" }
+               { new StringContent(updateEContractDTO.Id), "Id" },
+                { new StringContent(updateEContractDTO.Subject ?? ""), "Subject" }
            };
 
             using var fileStream = updateEContractDTO.File.OpenReadStream();

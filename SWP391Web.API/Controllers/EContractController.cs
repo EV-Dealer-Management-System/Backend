@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.IServices;
@@ -36,7 +37,15 @@ namespace SWP391Web.API.Controllers
         [HttpPost("dealer-contracts")]
         public async Task<ActionResult<ResponseDTO>> CreateDealerContract([FromBody] CreateDealerDTO dto, CancellationToken ct)
         {
-            var r = await _svc.CreateEContractAsync(dto, ct);
+            var r = await _svc.CreateEContractAsync(User, dto, ct);
+            return StatusCode(r.StatusCode, r);
+        }
+
+        [HttpPost]
+        [Route("draft-dealer-contracts")]
+        public async Task<ActionResult<ResponseDTO>> CreateDraftDealerContract([FromBody] CreateDealerDTO dto, CancellationToken ct)
+        {
+            var r = await _svc.CreateDraftEContractAsync(User, dto, ct);
             return StatusCode(r.StatusCode, r);
         }
 
@@ -81,13 +90,19 @@ namespace SWP391Web.API.Controllers
             if (upstream.Content.Headers.ContentLength is long len)
                 Response.ContentLength = len;
 
-            var fileName = upstream.Content.Headers.ContentDisposition?.FileNameStar
-                           ?? upstream.Content.Headers.ContentDisposition?.FileName
-                           ?? "document.pdf";
-            Response.Headers["Content-Disposition"] = $"inline; filename=\"{fileName}\"";
+            var upstreamCd = upstream.Content.Headers.ContentDisposition;
+            var safeFileName = upstreamCd?.FileNameStar ?? upstreamCd?.FileName ?? "document.pdf";
+
+            var cd = new ContentDispositionHeaderValue("inline")
+            {
+                FileNameStar = safeFileName
+            };
+            Response.Headers[HeaderNames.ContentDisposition] = cd.ToString();
+
             Response.ContentType = contentType;
-            Response.Headers["Cache-Control"] = "no-store";
-            return File(stream, contentType);
+            Response.Headers[HeaderNames.CacheControl] = "no-store";
+
+            return new FileStreamResult(stream, contentType);
         }
 
         [HttpPost]
@@ -136,5 +151,6 @@ namespace SWP391Web.API.Controllers
             var r = await _svc.GetEContractList(pageNumber, pageSize, eContractStatus);
             return Ok(r);
         }
+
     }
 }

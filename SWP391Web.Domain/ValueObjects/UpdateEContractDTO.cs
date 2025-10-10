@@ -10,13 +10,13 @@ namespace SWP391Web.Domain.ValueObjects
 {
     public class UpdateEContractDTO
     {
-        [FromForm(Name = "Id")]        // nếu VNPT cần "id" thường, đổi Name="id"
+        [FromForm(Name = "Id")]       
         public string Id { get; set; } = null!;
 
-        [FromForm(Name = "Subject")]   // BẮT BUỘC: VNPT đang báo lỗi field này
+        [FromForm(Name = "Subject")]  
         public string Subject { get; set; } = null!;
 
-        [FromForm(Name = "file")]      // field file đúng là "file"
+        [FromForm(Name = "file")]     
         public IFormFile File { get; set; } = null!;
     }
 }

@@ -3,13 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SWP391Web.API", "SWP391Web.API\SWP391Web.API.csproj", "{B0E3AC2F-3A0F-4CFC-9D5E-8D477C12A62D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EVManagementSystem.API", "SWP391Web.API\EVManagementSystem.API.csproj", "{B0E3AC2F-3A0F-4CFC-9D5E-8D477C12A62D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SWP391Web.Application", "SWP391Web.Application\SWP391Web.Application.csproj", "{47ADAEEC-7E4C-4487-A5D5-59D617628BB3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EVManagementSystem.Application", "SWP391Web.Application\EVManagementSystem.Application.csproj", "{47ADAEEC-7E4C-4487-A5D5-59D617628BB3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SWP391Web.Domain", "SWP391Web.Domain\SWP391Web.Domain.csproj", "{D86528F4-F558-447F-86DE-6EF75C6726C4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EVManagementSystem.Domain", "SWP391Web.Domain\EVManagementSystem.Domain.csproj", "{D86528F4-F558-447F-86DE-6EF75C6726C4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SWP391Web.Infrastructure", "SWP391Web.Infrastructure\SWP391Web.Infrastructure.csproj", "{D3DD5ED1-D6FC-4089-BB1E-747FF765F203}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EVManagementSystem.Infrastructure", "SWP391Web.Infrastructure\EVManagementSystem.Infrastructure.csproj", "{D3DD5ED1-D6FC-4089-BB1E-747FF765F203}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
