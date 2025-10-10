@@ -33,6 +33,7 @@ namespace SWP391Web.API.Extentions
             services.AddScoped<IElectricVehicleModelService, ElectricVehicleModelService>();
             services.AddScoped<IElectricVehicleVersionService, ElectricVehicleVersionService>();
             services.AddScoped<IElectricVehicleService, ElectricVehicleService>();
+            services.AddScoped<IBookingEVService, BookingEVService>();
 
             // Register Infrastructure Repositories
             services.AddScoped<IUnitOfWork, UnitOfWork>();

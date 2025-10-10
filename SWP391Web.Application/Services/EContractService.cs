@@ -5,6 +5,7 @@ using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Pdf;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.ValueObjects;
 using SWP391Web.Infrastructure.IRepository;
 using System.Security.Claims;
 using System.Text;
@@ -163,7 +164,7 @@ namespace SWP391Web.Application.Services
                 // 3) Auth VNPT
                 var token = await GetAccessTokenAsync();
 
-                var vnptUserCode = eContract.O
+                var vnptUserCode = eContract.
                 var vnptUser = new VnptUserUpsert
                 {
                     Code = vnptUserCode,

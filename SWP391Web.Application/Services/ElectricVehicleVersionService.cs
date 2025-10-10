@@ -85,9 +85,33 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public Task<ResponseDTO> GetAllVersionsAsync()
+        public Task<ResponseDTO> DeleteVersionAsync(Guid versionId)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<ResponseDTO> GetAllVersionsByModelIdAsync(Guid modelId)
+        {
+            try
+            {
+                var versions = await _unitOfWork.ElectricVehicleVersionRepository.GetAllAsync(v => v.ModelId == modelId);
+                var getVersions = _mapper.Map<List<GetElectricVehicleVersionDTO>>(versions);
+                return new ResponseDTO()
+                {
+                    IsSuccess = true,
+                    Message = "Get all versions by model successfully.",
+                    StatusCode = 200,
+                    Result = getVersions
+                };
+            }catch(Exception ex)
+            {
+                return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
         }
 
         public async Task<ResponseDTO> GetVersionByIdAsync(Guid versionId)

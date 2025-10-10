@@ -33,6 +33,18 @@ namespace SWP391Web.Infrastructure.Repository
                 .SingleOrDefaultAsync(ct);
         }
 
+        public async Task<Dealer?> GetManagerByUserIdAsync(string userId, CancellationToken ct)
+        {
+           return await context.Dealers.FirstOrDefaultAsync(dl => dl.ManagerId == userId, ct);
+
+        }
+
+        public async Task<bool> IsExistByIdAsync(Guid id, CancellationToken ct)
+        {
+            return await context.Dealers
+                .AnyAsync(dl => dl.Id == id, ct);
+        }
+
         public async Task<bool> IsExistByNameAsync(string name, CancellationToken ct)
         {
             return await context.Dealers

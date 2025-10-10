@@ -11,9 +11,8 @@ namespace SWP391Web.Domain.Entities
         public Guid Id { get; set; }
         public string? ModelName { get; set; }
         public string? Description { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public bool IsActive { get; set; }
-
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsActive { get; set; } = true;
         public ICollection<ElectricVehicleVersion> Versions { get; set; } = new List<ElectricVehicleVersion>();
     }
 }

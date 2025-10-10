@@ -10,13 +10,13 @@ namespace SWP391Web.Application.DTO.ElectricVehicle
     public class UpdateElectricVehicleDTO
     {
         public string VIN { get; set; }
-        public StatusVehicle Status { get; set; }
+        public StatusVehicle? Status { get; set; }
         public DateTime? ManufactureDate { get; set; }
         public DateTime? ImportDate { get; set; }
         public DateTime? WarrantyExpiryDate { get; set; }
         public string CurrentLocation { get; set; }
         public DateTime? DeliveryDate { get; set; }
-        public decimal CostPrice { get; set; }
+        public decimal? CostPrice { get; set; }
         public DateTime? DealerReceivedDate { get; set; }
         public string ImageUrl { get; set; }
     }

@@ -40,7 +40,7 @@ namespace SWP391Web.Application.Services
 
                 ElectricVehicle electricVehicle = new ElectricVehicle
                 {
-                    DealerId = createElectricVehicleDTO.DealerId,
+                    WarehouseId = createElectricVehicleDTO.WarehouseId,
                     VersionId = createElectricVehicleDTO.VersionId,
                     ColorId = createElectricVehicleDTO.ColorId,
                     VIN = createElectricVehicleDTO.VIN,
@@ -83,9 +83,29 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public Task<ResponseDTO> GetAllVehiclesAsync()
+        public async Task<ResponseDTO> GetAllVehiclesAsync()
         {
-            throw new NotImplementedException();
+            try
+            {
+                var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllAsync();
+                var getVehicles = _mapper.Map<List<GetElecticVehicleDTO>>(vehicles);
+                return new ResponseDTO()
+                {
+                    IsSuccess = true,
+                    Message = "Get all vehicles successfully.",
+                    StatusCode = 200,
+                    Result = getVehicles
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
         }
 
         public async Task<ResponseDTO> GetVehicleByIdAsync(Guid vehicleId)
@@ -172,14 +192,35 @@ namespace SWP391Web.Application.Services
                         StatusCode = 404 };
 
                 // Chỉ update các trường thông tin, không động đến khóa ngoại
-                vehicle.VIN = dto.VIN;
-                vehicle.Status = dto.Status;
-                vehicle.ManufactureDate = dto.ManufactureDate;
-                vehicle.ImportDate = dto.ImportDate;
-                vehicle.WarrantyExpiryDate = dto.WarrantyExpiryDate;
-                vehicle.CurrentLocation = dto.CurrentLocation;
-                vehicle.CostPrice = dto.CostPrice;
-                vehicle.ImageUrl = dto.ImageUrl;
+                if (!string.IsNullOrWhiteSpace(dto.VIN))
+                    vehicle.VIN = dto.VIN;
+
+                if (dto.Status.HasValue)
+                    vehicle.Status = dto.Status.Value;
+
+                if (dto.ManufactureDate.HasValue && dto.ManufactureDate.Value != default)
+                    vehicle.ManufactureDate = dto.ManufactureDate.Value;
+
+                if (dto.ImportDate.HasValue && dto.ImportDate.Value != default)
+                    vehicle.ImportDate = dto.ImportDate.Value;
+
+                if (dto.WarrantyExpiryDate.HasValue && dto.WarrantyExpiryDate.Value != default)
+                    vehicle.WarrantyExpiryDate = dto.WarrantyExpiryDate.Value;
+
+                if (dto.DeliveryDate.HasValue && dto.DeliveryDate.Value != default)
+                    vehicle.DeliveryDate = dto.DeliveryDate.Value;
+
+                if (!string.IsNullOrWhiteSpace(dto.CurrentLocation))
+                    vehicle.CurrentLocation = dto.CurrentLocation;
+
+                if (dto.CostPrice.HasValue && dto.CostPrice.Value >= 0)
+                    vehicle.CostPrice = dto.CostPrice.Value;
+
+                if (dto.DealerReceivedDate.HasValue && dto.DealerReceivedDate.Value != default)
+                    vehicle.DealerReceivedDate = dto.DealerReceivedDate.Value;
+
+                if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
+                    vehicle.ImageUrl = dto.ImageUrl;
 
                 // Không set: DealerId, ColorId, VersionId
                 _unitOfWork.ElectricVehicleRepository.Update(vehicle);

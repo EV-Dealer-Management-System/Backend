@@ -21,10 +21,10 @@ namespace SWP391Web.API.Controllers
             var response = await _electricVehicleVersionService.CreateVersionAsync(createElectricVehicleVersionDTO);
             return StatusCode(response.StatusCode, response);
         }
-        [HttpGet("get-all-versions")]
-        public async Task<ActionResult<ResponseDTO>> GetAllVersionsAsync()
+        [HttpGet("get-all-versions-by-modelid/{modelId}")]
+        public async Task<ActionResult<ResponseDTO>> GetAllVersionsByModelIdAsync(Guid modelId)
         {
-            var response = await _electricVehicleVersionService.GetAllVersionsAsync();
+            var response = await _electricVehicleVersionService.GetAllVersionsByModelIdAsync(modelId);
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-version-by-id/{versionId}")]

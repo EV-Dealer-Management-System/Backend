@@ -29,6 +29,10 @@ namespace SWP391Web.Domain.Entities
         public EContractStatus Status { get; private set; } = EContractStatus.Draft;
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
         public string CreatedBy { get; private set; } = null!;
+        public string OwnerBy { get; private set; } = null!;
+
+
+        public readonly ApplicationUser Ower = null!;
 
         private readonly List<EContractAmendment> _amendments = new();
         public IReadOnlyCollection<EContractAmendment> Amendments => _amendments.AsReadOnly();

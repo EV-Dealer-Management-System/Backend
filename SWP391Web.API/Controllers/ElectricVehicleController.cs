@@ -29,15 +29,15 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-vehicle-by-id/{vehicleId}")]
-        public async Task<ActionResult> GetVehicleByIdAsync([FromRoute] Guid vehicleId)
+        public async Task<ActionResult<ResponseDTO>> GetVehicleByIdAsync([FromRoute] Guid vehicleId)
         {
             var response = await _electricVehicleService.GetVehicleByIdAsync(vehicleId);
             return StatusCode(response.StatusCode, response);
         }
-        [HttpGet("get-vehicle-by-vin/{vehicleVIN}")]
-        public async Task<ActionResult> GetVehicleByVINAsync([FromRoute] string vehicleName)
+        [HttpGet("get-vehicle-by-vin/{vin}")]
+        public async Task<ActionResult<ResponseDTO>> GetVehicleByVINAsync([FromRoute] string vin)
         {
-            var response = await _electricVehicleService.GetVehicleByVinAsync(vehicleName);
+            var response = await _electricVehicleService.GetVehicleByVinAsync(vin);
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut("update-vehicle")]
