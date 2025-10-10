@@ -10,7 +10,7 @@ namespace SWP391Web.Application.DTO.ElectricVehicle
     public class GetElecticVehicleDTO
     {
         public Guid Id { get; set; }
-        public Guid DealerId { get; set; }
+        public Guid WarehouseId { get; set; }
         public Guid VersionId { get; set; }
         public Guid ColorId { get; set; }
         public string VIN { get; set; }
