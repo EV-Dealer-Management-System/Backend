@@ -19,6 +19,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\SWP391Web.Application\EVManagementSystem.Application.csproj" />
 		<ProjectReference Include="..\SWP391Web.Application\SWP391Web.Application.csproj" />
 		<ProjectReference Include="..\SWP391Web.Infrastructure\SWP391Web.Infrastructure.csproj" />
 	</ItemGroup>

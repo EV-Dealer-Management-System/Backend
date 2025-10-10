@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Infrastructure;
 using SWP391Web.API.Extentions;
-using SWP391Web.Application.Options;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.Seeders;
 

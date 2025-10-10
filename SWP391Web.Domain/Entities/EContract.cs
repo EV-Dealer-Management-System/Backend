@@ -15,11 +15,11 @@ namespace SWP391Web.Domain.Entities
         public int TemplateVersionNo { get; private set; }
 
         // Snapshot
-        public string BaseHtmlKey { get; private set; } = null!;
+        public string? BaseHtmlKey { get; private set; }
         public string? FinalPdfKey { get; private set; }
-        public string ManifestKey { get; private set; } = null!;
+        public string? ManifestKey { get; private set; }
 
-        public string BaseHtmlSha256 { get; private set; } = null!;
+        public string? BaseHtmlSha256 { get; private set; }
         public string? FinalPdfSha256 { get; private set; }
         public string? ManifestSha256 { get; private set; }
         public string? BaseHtmlTag { get; private set; }
@@ -29,16 +29,34 @@ namespace SWP391Web.Domain.Entities
         public EContractStatus Status { get; private set; } = EContractStatus.Draft;
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
         public string CreatedBy { get; private set; } = null!;
+        public string OwnerBy { get; private set; } = null!;
+
+
+        public readonly ApplicationUser Ower = null!;
 
         private readonly List<EContractAmendment> _amendments = new();
         public IReadOnlyCollection<EContractAmendment> Amendments => _amendments.AsReadOnly();
 
-        private EContract() { } 
-        public EContract(EContractTemplate contractTemplate, EContractTemplateVersion templateVersion, string baseHtmlKey, string manifestKey, string baseHtmlSha256, string manifestSha256, string? baseHtmlTag, string? manifestTag, string createdBy)
+        private EContract() { }
+        public EContract(Guid Id, EContractTemplate contractTemplate, EContractTemplateVersion templateVersion, string createdBy, string ownerBy)
         {
             if (!templateVersion.IsActive)
                 throw new InvalidOperationException("Only active template version can be used to create contract.");
 
+            this.Id = Id;
+            TemplateId = contractTemplate.Id;
+            TemplateVersionId = templateVersion.Id;
+            TemplateVersionNo = templateVersion.VersionNo;
+
+            CreatedBy = createdBy;
+            OwnerBy = ownerBy;
+        }
+        public EContract(Guid Id, EContractTemplate contractTemplate, EContractTemplateVersion templateVersion, string? baseHtmlKey, string? manifestKey, string? baseHtmlSha256, string? manifestSha256, string? baseHtmlTag, string? manifestTag, string createdBy)
+        {
+            if (!templateVersion.IsActive)
+                throw new InvalidOperationException("Only active template version can be used to create contract.");
+
+            this.Id = Id;
             TemplateId = contractTemplate.Id;
             TemplateVersionId = templateVersion.Id;
             TemplateVersionNo = templateVersion.VersionNo;

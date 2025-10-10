@@ -100,6 +100,10 @@ namespace SWP391Web.Domain.ValueObjects
 
         [JsonPropertyName("downloadUrl")]
         public string? DownloadUrl { get; set; }
+        public byte[]? FileBytes { get; set; }
+        public string? PositionA { get; set; }
+        public string? PositionB { get; set; }
+        public int? PageSign { get; set; }
     }
 
     public class ValueDescription
