@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using EVManagementSystem.Application.DTO.EContract;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using SWP391Web.Application.DTO.Auth;
@@ -35,7 +36,7 @@ namespace SWP391Web.API.Controllers
         }
         // Orchestrator: create PDF + push + send
         [HttpPost("dealer-contracts")]
-        public async Task<ActionResult<ResponseDTO>> CreateDealerContract([FromBody] CreateDealerDTO dto, CancellationToken ct)
+        public async Task<ActionResult<ResponseDTO>> CreateEContractAsync([FromBody] CreateEContractDTO dto, CancellationToken ct)
         {
             var r = await _svc.CreateEContractAsync(User, dto, ct);
             return StatusCode(r.StatusCode, r);

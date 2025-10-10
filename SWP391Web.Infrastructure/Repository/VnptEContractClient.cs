@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using Newtonsoft.Json;
 using SWP391Web.Domain.Enums;
+using System.Net.Http;
 
 namespace SWP391Web.Infrastructure.Repository
 {
@@ -155,7 +156,7 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<VnptResult<VnptSmartCAResponse>> UpdateSmartCA(string token, UpdateSmartDTO updateSmartDTO)
             => await PostAsync<VnptSmartCAResponse>(token, "/api/users/smart-ca/update", updateSmartDTO);
 
-        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContract(string token, UpdateEContractDTO updateEContractDTO)
+        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContractAsync(string token, UpdateEContractDTO updateEContractDTO)
         {
             var httpRequest = new HttpRequestMessage(HttpMethod.Post, _baseUrl + "/api/documents/update");
             Bearer(httpRequest, token);
@@ -176,6 +177,29 @@ namespace SWP391Web.Infrastructure.Repository
             httpRequest.Content = content;
 
             return await SendAsync<UpdateEContractResponse>(httpRequest);
+        }
+
+        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContract(string token, UpdateEContractDTO updateEContractDTO)
+        {
+            var result = await UpdateEContractAsync(token, updateEContractDTO);
+            var pdfBytes = await GetPdfBytesFromDownloadUrlAsync(result.Data?.DownloadUrl, token);
+
+            result.Data!.FileBytes = pdfBytes;
+            return result;
+        }
+
+        private async Task<byte[]> GetPdfBytesFromDownloadUrlAsync(string downloadUrl, string token)
+        {
+            if (string.IsNullOrWhiteSpace(downloadUrl))
+                throw new InvalidOperationException("DownloadUrl is empty. The API did not return a file URL.");
+
+            using var req = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
+            Bearer(req, token);
+
+            using var httpResp = await _http.SendAsync(req);
+            httpResp.EnsureSuccessStatusCode();
+
+            return await httpResp.Content.ReadAsByteArrayAsync();
         }
 
         public Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetEContractList(string token, int? pageNumber, int? pageSize, EContractStatus eContractStatus)

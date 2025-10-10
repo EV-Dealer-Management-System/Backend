@@ -1,10 +1,13 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using EVManagementSystem.Application.DTO.EContract;
+using Microsoft.Extensions.Configuration;
+using SWP391Web.Application.DTO;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Pdf;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
 using SWP391Web.Infrastructure.IRepository;
 using System.Security.Claims;
@@ -148,10 +151,11 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> CreateEContractAsync(ClaimsPrincipal userClaim, Guid eContractId, CancellationToken ct)
+        public async Task<ResponseDTO> CreateEContractAsync(ClaimsPrincipal userClaim, CreateEContractDTO createEContractDTO, CancellationToken ct)
         {
             try
             {
+                var eContractId = createEContractDTO.EContractId;
                 var eContract = await _unitOfWork.EContractRepository.GetByIdAsync(eContractId, ct);
                 if (eContract is null)
                     return new ResponseDTO
@@ -164,14 +168,25 @@ namespace SWP391Web.Application.Services
                 // 3) Auth VNPT
                 var token = await GetAccessTokenAsync();
 
-                var vnptUserCode = eContract.
+                var dealerManagerId = eContract.OwnerBy;
+
+                var dealerManager = await _unitOfWork.UserManagerRepository.GetByIdAsync(dealerManagerId);
+                if (dealerManager is null)
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 409,
+                        Message = "Cannot find dealer manager"
+                    };
+
+
                 var vnptUser = new VnptUserUpsert
                 {
-                    Code = vnptUserCode,
-                    UserName = user.Email,
-                    Name = user.FullName,
-                    Email = user.Email,
-                    Phone = user.PhoneNumber,
+                    Code = dealerManagerId,
+                    UserName = dealerManager.Email,
+                    Name = dealerManager.FullName,
+                    Email = dealerManager.Email,
+                    Phone = dealerManager.PhoneNumber,
                     ReceiveOtpMethod = 1,
                     ReceiveNotificationMethod = 0,
                     SignMethod = 2,
@@ -187,41 +202,17 @@ namespace SWP391Web.Application.Services
 
                 var upsert = await CreateOrUpdateUsersAsync(token, vnptUserList);
 
-                var created = await CreateDocumentPlusAsync(userClaim, token, dealer, user, createDealerDTO.AdditionalTerm, createDealerDTO.RegionDealer, ct);
-
                 var companyApproverUserCode = _cfg["SmartCA:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
 
-                var documentId = created.Data?.Id;
-                if (documentId is null)
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        StatusCode = 500,
-                        Message = "VNPT did not return document ID."
-                    };
+                var uProcess = await UpdateProcessAsync(token, eContractId.ToString(), companyApproverUserCode, dealerManagerId, createEContractDTO.positionA, createEContractDTO.positionB, createEContractDTO.pageSign);
 
-                if (created.Data?.PositionA is null || created.Data.PositionB is null)
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        StatusCode = 500,
-                        Message = "VNPT did not return signature positions."
-                    };
-
-                var uProcess = await UpdateProcessAsync(token, documentId, companyApproverUserCode, vnptUserCode, created.Data.PositionA, created.Data.PositionB, created.Data.PageSign);
-
-                var sent = await SendProcessAsync(token, documentId);
-
-                await _unitOfWork.DealerRepository.AddAsync(dealer, ct);
-                var randomPassword = "Dealer@" + Guid.NewGuid().ToString()[..5];
-                await _unitOfWork.UserManagerRepository.CreateAsync(user, randomPassword);
-                await _unitOfWork.SaveAsync();
+                var sent = await SendProcessAsync(token, eContractId.ToString());
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     StatusCode = 201,
-                    Message = "PDF is created",
+                    Message = "Econtract ready to sign",
                     Result = sent
                 };
             }
@@ -339,7 +330,8 @@ namespace SWP391Web.Application.Services
                     Guid.Parse(createResult.Data!.Id),
                     template,
                     templateActive,
-                    userId
+                    userId,
+                    dealer.ManagerId
                 );
 
             await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
@@ -347,7 +339,6 @@ namespace SWP391Web.Application.Services
             createResult.Data!.PositionA = positionA.Item1;
             createResult.Data.PositionB = positionB.Item1;
             createResult.Data.PageSign = positionA.Item2;
-            createResult.Data.PdfBytes = pdfBytes;
             createResult.Data.FileName = request.FileInfo.FileName;
 
             return createResult;
@@ -580,6 +571,13 @@ namespace SWP391Web.Application.Services
                     var errors = string.Join(", ", response.Messages);
                     throw new Exception($"Error to update EContract: {errors}");
                 }
+                byte[] pdfBytes = response.Data!.FileBytes;
+                var anchors = EContractPdf.FindAnchors(pdfBytes, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
+                var positionA = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
+                var positionB = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_B"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: 0);
+                response.Data.PositionA = positionA.Item1;
+                response.Data.PositionB = positionB.Item1;
+                response.Data.PageSign = positionA.Item2;
                 return response;
             }
             catch (Exception ex)
@@ -599,7 +597,7 @@ namespace SWP391Web.Application.Services
                     var errors = string.Join(", ", response.Messages);
                     throw new Exception($"Error to get EContract list: {errors}");
                 }
-                return response;
+                    return response;
             }
             catch (Exception ex)
             {

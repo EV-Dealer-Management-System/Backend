@@ -38,7 +38,7 @@ namespace SWP391Web.Domain.Entities
         public IReadOnlyCollection<EContractAmendment> Amendments => _amendments.AsReadOnly();
 
         private EContract() { }
-        public EContract(Guid Id, EContractTemplate contractTemplate, EContractTemplateVersion templateVersion, string createdBy)
+        public EContract(Guid Id, EContractTemplate contractTemplate, EContractTemplateVersion templateVersion, string createdBy, string ownerBy)
         {
             if (!templateVersion.IsActive)
                 throw new InvalidOperationException("Only active template version can be used to create contract.");
@@ -49,6 +49,7 @@ namespace SWP391Web.Domain.Entities
             TemplateVersionNo = templateVersion.VersionNo;
 
             CreatedBy = createdBy;
+            OwnerBy = ownerBy;
         }
         public EContract(Guid Id, EContractTemplate contractTemplate, EContractTemplateVersion templateVersion, string? baseHtmlKey, string? manifestKey, string? baseHtmlSha256, string? manifestSha256, string? baseHtmlTag, string? manifestTag, string createdBy)
         {

@@ -1,4 +1,5 @@
-﻿using SWP391Web.Application.DTO.Auth;
+﻿using EVManagementSystem.Application.DTO.EContract;
+using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
@@ -14,7 +15,7 @@ namespace SWP391Web.Application.IServices
 
         Task<ResponseDTO> SignProcess(string token, VnptProcessDTO vnptProcessDTO);
         Task<HttpResponseMessage> GetPreviewResponseAsync(string token, string? rangeHeader = null, CancellationToken ct = default);
-        Task<ResponseDTO> CreateEContractAsync(ClaimsPrincipal userClaim, CreateDealerDTO createDealerDTO, CancellationToken ct);
+        Task<ResponseDTO> CreateEContractAsync(ClaimsPrincipal userClaim, CreateEContractDTO createEContractDTO, CancellationToken ct);
         Task<VnptResult<VnptSmartCAResponse>> AddSmartCA(AddNewSmartCADTO addNewSmartCADTO);
         Task<VnptResult<VnptFullUserData>> GetSmartCAInformation(int userId);
         Task<VnptResult<VnptSmartCAResponse>> UpdateSmartCA(UpdateSmartDTO updateSmartDTO);
