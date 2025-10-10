@@ -6,13 +6,14 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Domain.Entities
 {
-    public class ElectricVehicleModel
+    public class EVInventory
     {
         public Guid Id { get; set; }
-        public string? ModelName { get; set; }
+        public string Name { get; set; }
+        public string Location { get; set; }
         public string? Description { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public bool IsActive { get; set; } = true;
-        public ICollection<ElectricVehicleVersion> Versions { get; set; } = new List<ElectricVehicleVersion>();
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }

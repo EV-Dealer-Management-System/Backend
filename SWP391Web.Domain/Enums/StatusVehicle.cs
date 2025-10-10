@@ -11,6 +11,6 @@ namespace SWP391Web.Domain.Enums
         InStock = 1,
         Sold = 2,
         InTransit = 3,
-        Accident = 4,
+        Mantainance = 4,
     }
 }

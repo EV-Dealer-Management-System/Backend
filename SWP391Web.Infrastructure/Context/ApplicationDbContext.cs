@@ -28,7 +28,6 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<EContractTerm> EContractTerms { get; set; }
         public DbSet<BookingEV> BookingEVs { get; set; }
         public DbSet<BookingEVDetail> BookingEVDetails { get; set; }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

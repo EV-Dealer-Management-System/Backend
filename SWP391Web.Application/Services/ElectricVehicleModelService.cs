@@ -111,9 +111,30 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public Task<ResponseDTO> GetAllModelsAsync()
+        public async Task<ResponseDTO> GetAllModelsAsync()
         {
-            throw new NotImplementedException();
+            try
+            {
+                var models = await _unitOfWork.ElectricVehicleModelRepository.GetAllAsync();
+                var getModels = _mapper.Map<List<GetElectricVehicleModelDTO>>(models);
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Model retrieve successfully",
+                    Result = getModels,
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500,
+                };
+
+            }
         }
 
         public async Task<ResponseDTO> GetModelByIdAsync(Guid modelId)

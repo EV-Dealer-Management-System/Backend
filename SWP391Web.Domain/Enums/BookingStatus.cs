@@ -11,7 +11,7 @@ namespace SWP391Web.Domain.Enums
         Pending = 0,
         Approved = 1,
         Rejected = 2,
-        Completed = 3,
-        Cancelled = 4
+        Cancelled = 3,
+        Completed = 4
     }
 }

@@ -1,0 +1,37 @@
+﻿using Microsoft.EntityFrameworkCore;
+using SWP391Web.Domain.Entities;
+using SWP391Web.Infrastructure.Context;
+using SWP391Web.Infrastructure.IRepository;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SWP391Web.Infrastructure.Repository
+{
+    public class BookingEVRepository : Repository<BookingEV>, IBookingEVRepository
+    {
+        public readonly ApplicationDbContext _context;
+        public BookingEVRepository(ApplicationDbContext context) : base(context)
+        {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+        }
+        public async Task<BookingEV?> GetBookingWithIdAsync(Guid bookingId)
+        {
+          return await _context.BookingEVs
+                .Include(b => b.BookingEVDetails)
+                    .ThenInclude(bd => bd.Version)
+                        .ThenInclude(v => v.Model)
+                .Include(b => b.BookingEVDetails)
+                    .ThenInclude(bd => bd.Color)
+                .Include(b => b.Dealer)
+                .FirstOrDefaultAsync(b => b.Id == bookingId);
+        }
+
+        public async Task<bool> IsBookingExistsById(Guid bookingId)
+        {
+            return await _context.BookingEVs.AnyAsync(b => b.Id == bookingId);
+        }
+    }
+}
