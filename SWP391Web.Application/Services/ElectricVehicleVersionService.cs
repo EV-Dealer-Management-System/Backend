@@ -85,6 +85,11 @@ namespace SWP391Web.Application.Services
             }
         }
 
+        public Task<ResponseDTO> DeleteVersionAsync(Guid versionId)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<ResponseDTO> GetAllVersionsByModelIdAsync(Guid modelId)
         {
             try

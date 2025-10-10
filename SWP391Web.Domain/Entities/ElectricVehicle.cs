@@ -12,7 +12,7 @@ namespace SWP391Web.Domain.Entities
         public Guid Id { get; set; }
         public Guid VersionId { get; set; }
         public Guid ColorId { get; set; }
-        public Guid? WarehouseId { get; set; }
+        public Guid WarehouseId { get; set; }
         public string VIN { get; set; }
         public StatusVehicle Status { get; set; }
         public DateTime? ManufactureDate { get; set; }

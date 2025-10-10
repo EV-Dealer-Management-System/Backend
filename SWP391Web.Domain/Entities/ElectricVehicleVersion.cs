@@ -21,6 +21,7 @@ namespace SWP391Web.Domain.Entities
         public decimal Height { get; set; }
         public int ProductionYear { get; set; }
         public string? Description { get; set; }
+        public bool IsActive { get; set; } = true;
 
         public ElectricVehicleModel Model { get; set; } = null!;
         public ICollection<ElectricVehicle> ElectricVehicles { get; set; } = new List<ElectricVehicle>();
