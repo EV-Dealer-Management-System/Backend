@@ -28,6 +28,8 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<EContractTerm> EContractTerms { get; set; }
         public DbSet<BookingEV> BookingEVs { get; set; }
         public DbSet<BookingEVDetail> BookingEVDetails { get; set; }
+        public DbSet<EVInventory> EVCInventories { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -142,10 +144,20 @@ namespace SWP391Web.Infrastructure.Context
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<ElectricVehicle>()
-                .HasOne(ev => ev.Dealer)
+                .HasOne(ev => ev.EVCWarehouse)
                 .WithMany(d => d.ElectricVehicles)
                 .HasForeignKey(ev => ev.WarehouseId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ElectricVehicle>()
+                .HasOne(ev => ev.DealerWarehouse)
+                .WithMany(d => d.ElectricVehicles)
+                .HasForeignKey(ev => ev.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ElectricVehicle>()
+                .HasIndex(ev => ev.VIN)
+                .IsUnique();
 
             /******************************************************************************/
             // Configure ElectricVehicleVersion entity
@@ -212,25 +224,6 @@ namespace SWP391Web.Infrastructure.Context
                 .WithOne(o => o.EContract)
                 .HasForeignKey<EContract>(e => e.OwnerBy)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            /******************************************************************************/
-            // Configure EV entity
-
-            modelBuilder.Entity<ElectricVehicle>()
-                .HasOne(ev => ev.EVCWarehouse)
-                .WithMany(w => w.ElectricVehicles)
-                .HasForeignKey(ev => ev.WarehouseId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<ElectricVehicle>()
-                .HasOne(ev => ev.DealerWarehouse)
-                .WithMany(d => d.ElectricVehicles)
-                .HasForeignKey(ev => ev.WarehouseId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<ElectricVehicle>()
-                .HasIndex(ev => ev.VIN)
-                .IsUnique();
         }
     }
 }
