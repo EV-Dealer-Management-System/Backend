@@ -4,6 +4,7 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.ElectricVehicle;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Services;
+using SWP391Web.Domain.Enums;
 
 namespace SWP391Web.API.Controllers
 {
@@ -44,6 +45,12 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult> UpdateVehicleAsync(Guid vehicleId, [FromBody] UpdateElectricVehicleDTO updateElectricVehicleDTO)
         {
             var response = await _electricVehicleService.UpdateVehicleAsync(vehicleId, updateElectricVehicleDTO);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut("update-vehicle-status/{vehicleId}/{status}")]
+        public async Task<ActionResult> UpdateVehicleStatusAsync([FromRoute] Guid vehicleId, [FromRoute] StatusVehicle status)
+        {
+            var response = await _electricVehicleService.UpdateVehicleStatusAsync(vehicleId, status);
             return StatusCode(response.StatusCode, response);
         }
 

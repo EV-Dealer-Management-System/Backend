@@ -3,6 +3,7 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.ElectricVehicleVersion;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
@@ -123,11 +124,70 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetAllVersionsByModelIdAsync(Guid modelId)
+        public async Task<ResponseDTO> GetAllAvailableVersionsByModelIdAsync(Guid modelId)
         {
             try
             {
-                var versions = await _unitOfWork.ElectricVehicleVersionRepository.GetAllAsync(v => v.ModelId == modelId);
+                var versions = await _unitOfWork.ElectricVehicleVersionRepository
+                    .GetAllAsync(v => v.ModelId == modelId && v.IsActive);
+                if(versions == null || !versions.Any())
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "No available versions found for the specified model.",
+                        StatusCode = 404
+                    };
+                }
+
+                var availableVersions = new List<GetElectricVehicleVersionDTO>();
+                foreach(var version in versions)
+                {
+                    var vehicles = await _unitOfWork.ElectricVehicleRepository
+                        .GetAllAsync(ev => ev.VersionId == version.Id && ev.Status == StatusVehicle.Available);
+
+                    if(vehicles != null && vehicles.Any())
+                    {
+                        availableVersions.Add(_mapper.Map<GetElectricVehicleVersionDTO>(version));
+                    }
+                }
+
+                if(!availableVersions.Any())
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "No available versions found for the specified model.",
+                        StatusCode = 404
+                    };
+                }
+
+                return new ResponseDTO()
+                {
+                    IsSuccess = true,
+                    Message = "Get all available versions by model successfully.",
+                    StatusCode = 200,
+                    Result = availableVersions
+                };
+
+
+            }
+            catch(Exception ex)
+            {
+                return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetAllVersionsAsync()
+        {
+            try
+            {
+                var versions = await _unitOfWork.ElectricVehicleVersionRepository.GetAllAsync();
                 var getVersions = _mapper.Map<List<GetElectricVehicleVersionDTO>>(versions);
                 return new ResponseDTO()
                 {

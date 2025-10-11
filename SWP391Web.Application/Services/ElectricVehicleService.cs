@@ -3,6 +3,7 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.ElectricVehicle;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
@@ -186,10 +187,12 @@ namespace SWP391Web.Application.Services
             {
                 var vehicle = await _unitOfWork.ElectricVehicleRepository.GetByIdsAsync(vehicleId);
                 if (vehicle == null)
-                    return new ResponseDTO { 
-                        IsSuccess = false, 
-                        Message = "Vehicle not found.", 
-                        StatusCode = 404 };
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Vehicle not found.",
+                        StatusCode = 404
+                    };
 
                 // Chỉ update các trường thông tin, không động đến khóa ngoại
                 if (!string.IsNullOrWhiteSpace(dto.VIN))
@@ -231,6 +234,45 @@ namespace SWP391Web.Application.Services
                     IsSuccess = true,
                     Message = "Vehicle updated successfully.",
                     StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+
+
+        }
+
+        public async Task<ResponseDTO> UpdateVehicleStatusAsync(Guid vehicleId, StatusVehicle newStatus)
+        {
+            try
+            {
+                var vehicle = await _unitOfWork.ElectricVehicleRepository.GetByIdsAsync(vehicleId);
+                if (vehicle == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Vehicle not found",
+                        StatusCode = 404,
+                    };
+                }
+
+                vehicle.Status = newStatus;
+                _unitOfWork.ElectricVehicleRepository.Update(vehicle);
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Vehicle status updated successfully",
+                    StatusCode = 200,
                 };
             }
             catch (Exception ex)
