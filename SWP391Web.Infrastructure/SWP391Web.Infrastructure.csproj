@@ -16,4 +16,8 @@
     <ProjectReference Include="..\SWP391Web.Domain\SWP391Web.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Migrations\" />
+  </ItemGroup>
+
 </Project>
