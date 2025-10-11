@@ -29,6 +29,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<BookingEV> BookingEVs { get; set; }
         public DbSet<BookingEVDetail> BookingEVDetails { get; set; }
         public DbSet<EVInventory> EVCInventories { get; set; }
+        public DbSet<Warehouse> Warehouses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -144,13 +145,7 @@ namespace SWP391Web.Infrastructure.Context
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<ElectricVehicle>()
-                .HasOne(ev => ev.EVCWarehouse)
-                .WithMany(d => d.ElectricVehicles)
-                .HasForeignKey(ev => ev.WarehouseId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<ElectricVehicle>()
-                .HasOne(ev => ev.DealerWarehouse)
+                .HasOne(ev => ev.Warehouse)
                 .WithMany(d => d.ElectricVehicles)
                 .HasForeignKey(ev => ev.WarehouseId)
                 .OnDelete(DeleteBehavior.Restrict);
