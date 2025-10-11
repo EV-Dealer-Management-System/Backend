@@ -12,6 +12,7 @@ namespace SWP391Web.Application.DTO.ElectricVehicleModel
         public string? ModelName { get; set; }
         public string? Description { get; set; }
         public DateTime CreatedAt { get; set; }
-        
+        public bool IsActive { get; set; }
+
     }
 }

@@ -51,6 +51,7 @@ namespace SWP391Web.Application.Services
                     Height = createElectricVehicleVersionDTO.Height,
                     ProductionYear = createElectricVehicleVersionDTO.ProductionYear,
                     Description = createElectricVehicleVersionDTO.Description,
+                    IsActive = true,
                 };
 
                 if (electricVehicleVersion is null)
@@ -85,9 +86,41 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public Task<ResponseDTO> DeleteVersionAsync(Guid versionId)
+        public async Task<ResponseDTO> DeleteVersionAsync(Guid versionId)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var version = await _unitOfWork.ElectricVehicleVersionRepository.GetByIdsAsync(versionId);
+                if (version == null)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "Version not found.",
+                        StatusCode = 404
+                    };
+                }
+
+                version.IsActive = false;//soft delete by setting IsActive to false
+                _unitOfWork.ElectricVehicleVersionRepository.Update(version);
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO()
+                {
+                    IsSuccess = true,
+                    Message = "Delete version successfully.",
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
         }
 
         public async Task<ResponseDTO> GetAllVersionsByModelIdAsync(Guid modelId)

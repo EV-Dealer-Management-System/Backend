@@ -21,6 +21,7 @@ namespace SWP391Web.Infrastructure.IRepository
         public IEContractTemplateRepository EContractTemplateRepository { get; }
         public IEContractTermRepository EContractTermRepository { get; }
         public IBookingEVRepository BookingEVRepository { get; }
+        public IEVCInventoryRepository EVCInventoryRepository { get; }
         Task<int> SaveAsync();
     }
 }

@@ -42,6 +42,7 @@ namespace SWP391Web.Application.Services
                     ModelName = createElectricVehicleModelDTO.ModelName,
                     Description = createElectricVehicleModelDTO.Description,
                     CreatedAt = DateTime.UtcNow,
+                    IsActive = true
                 };
 
                 if (electricVehicleModel is null)
