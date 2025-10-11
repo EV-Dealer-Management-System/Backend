@@ -13,6 +13,7 @@ using SWP391Web.Infrastructure.IRepository;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using System.Web;
 using UglyToad.PdfPig;
 
 namespace SWP391Web.Application.Services
@@ -117,7 +118,6 @@ namespace SWP391Web.Application.Services
 
                 dealer.ApplicationUsers.Add(user);
 
-                // 3) Auth VNPT
                 var token = await GetAccessTokenAsync();
 
                 var created = await CreateDocumentPlusAsync(userClaim, token, dealer, user, createDealerDTO.AdditionalTerm, createDealerDTO.RegionDealer, ct);
@@ -129,7 +129,8 @@ namespace SWP391Web.Application.Services
                 var companyName = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist");
                 var supportEmail = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist");
 
-                await _emailService.SendContractEmailAsync(user.Email, user.FullName, created.Data!.Subject, created.Data!.DownloadUrl, created.Data.PdfBytes, created.Data.FileName, companyName, supportEmail);
+                var decodeUrl = HttpUtility.UrlDecode(created.Data!.DownloadUrl);
+                await _emailService.SendContractEmailAsync(user.Email, user.FullName, created.Data!.Subject, decodeUrl, created.Data.PdfBytes, created.Data.FileName, companyName, supportEmail);
 
                 await _unitOfWork.SaveAsync();
                 return new ResponseDTO
@@ -165,7 +166,6 @@ namespace SWP391Web.Application.Services
                         Message = "Cannot find EContract"
                     };
 
-                // 3) Auth VNPT
                 var token = await GetAccessTokenAsync();
 
                 var dealerManagerId = eContract.OwnerBy;
