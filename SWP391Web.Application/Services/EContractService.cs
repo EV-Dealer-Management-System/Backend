@@ -6,6 +6,7 @@ using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Pdf;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
@@ -86,22 +87,13 @@ namespace SWP391Web.Application.Services
                         Message = "Dealer name is exist"
                     };
 
-                var isEmailExist = await _unitOfWork.UserManagerRepository.IsEmailExist(createDealerDTO.EmailManager);
-                if (isEmailExist)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        StatusCode = 409,
-                        Message = "Email is exist"
-                    };
-                }
-
                 var user = new ApplicationUser
                 {
+                    UserName = createDealerDTO.EmailManager,
                     FullName = createDealerDTO.FullNameManager,
                     Email = createDealerDTO.EmailManager,
-                    PhoneNumber = createDealerDTO.PhoneNumberManager
+                    PhoneNumber = createDealerDTO.PhoneNumberManager,
+                    LockoutEnabled = true
                 };
 
                 var dealer = new Dealer
@@ -372,7 +364,7 @@ namespace SWP391Web.Application.Services
         public Task<byte[]> DownloadAsync(string url)
           => _vnpt.DownloadAsync(url);
 
-        public async Task<ResponseDTO> SignProcess(string token, VnptProcessDTO vnptProcessDTO)
+        public async Task<ResponseDTO> SignProcess(string token, VnptProcessDTO vnptProcessDTO, CancellationToken ct)
         {
             try
             {
@@ -405,6 +397,11 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
+                if (signResult.Data.Status.Value == (int)EContractStatus.Completed)
+                {
+                    await CreateDealerAccount(signResult.Data.Id.ToString(), ct);
+                }
+
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -422,6 +419,39 @@ namespace SWP391Web.Application.Services
                     Message = $"Lỗi ký số: {ex.Message}"
                 };
             }
+        }
+
+        private async Task CreateDealerAccount(string documentId, CancellationToken ct)
+        {
+            var eContract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(documentId), ct);
+            if (eContract is null) throw new Exception($"Cannot find EContract with id '{documentId}'");
+
+            var dealerManager = await _unitOfWork.UserManagerRepository.GetByIdAsync(eContract.OwnerBy);
+            if (dealerManager is null) throw new Exception($"Cannot find dealer manager with id '{eContract.OwnerBy}'");
+
+            var password = "Dealer@" + Guid.NewGuid().ToString()[..6];
+
+            dealerManager.EmailConfirmed = true;
+            dealerManager.PhoneNumberConfirmed = true;
+            dealerManager.LockoutEnabled = false;
+            _unitOfWork.UserManagerRepository.Update(dealerManager);
+
+            var addToRoleResult = await _unitOfWork.UserManagerRepository.AddToRoleAsync(dealerManager, StaticUserRole.DealerManager);
+            if (addToRoleResult is null) throw new Exception($"Cannot add dealer manager to role '{StaticUserRole.DealerManager}'");
+
+            await _unitOfWork.UserManagerRepository.SetPassword(dealerManager, password);
+            await _unitOfWork.SaveAsync();
+
+            var data = new Dictionary<string, string>
+            {
+                ["FullName"] = dealerManager.FullName,
+                ["UserName"] = dealerManager.Email,
+                ["Password"] = password,
+                ["LoginUrl"] = "https://metrohcmc.xyz", // để tạm thời, config sau
+                ["Company"] = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist"),
+                ["SupportEmail"] = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist")
+            };
+            await _emailService.SendEmailFromTemplate(dealerManager.Email, "DealerWelcome", data);
         }
 
         public async Task<HttpResponseMessage> GetPreviewResponseAsync(string token, string? rangeHeader = null, CancellationToken ct = default)

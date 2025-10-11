@@ -3,7 +3,7 @@ using SWP391Web.Domain.Entities;
 
 namespace SWP391Web.Infrastructure.IRepository
 {
-    public interface IUserManagerRepository
+    public interface IUserManagerRepository : IRepository<ApplicationUser>
     {
         Task<ApplicationUser?> GetByEmailAsync(string email);
         Task<ApplicationUser?> GetByIdAsync(string id);
@@ -18,5 +18,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<IList<string>> GetRoleAsync(ApplicationUser user);
         Task<string> GeneratePasswordResetTokenAsync(ApplicationUser user);
         Task<IdentityResult> ResetPasswordAsync(ApplicationUser user, string token, string newPassword);
+        Task<IdentityResult> SetPassword(ApplicationUser user, string newPassword);
     }
 }
