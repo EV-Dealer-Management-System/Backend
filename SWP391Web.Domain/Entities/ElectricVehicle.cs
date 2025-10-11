@@ -27,6 +27,6 @@ namespace SWP391Web.Domain.Entities
         public ElectricVehicleVersion Version { get; set; } = null!;
         public ElectricVehicleColor Color { get; set; } = null!;
         public Dealer? DealerWarehouse { get; set; }
-        public EVInventory? EVCWarehouse { get; set; } = null!;
+        public EVInventory? EVCWarehouse { get; set; }
     }
 }
