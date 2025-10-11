@@ -128,9 +128,8 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var versions = await _unitOfWork.ElectricVehicleVersionRepository
-                    .GetAllAsync(v => v.ModelId == modelId && v.IsActive);
-                if(versions == null || !versions.Any())
+                var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAvailableVehicleByModelIdAsync(modelId);
+                if (!vehicles.Any())
                 {
                     return new ResponseDTO()
                     {
@@ -140,15 +139,14 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var availableVersionIds = await _unitOfWork.ElectricVehicleRepository
-                    .GetAvailableVersionIdsByModelIdAsync(modelId);
-
-                var availableVersions = versions
-                    .Where(v => availableVersionIds.Contains(v.Id))
+                var availableVersions = vehicles
+                    .Select(ev => ev.Version)
+                    .DistinctBy(v => v.Id)
                     .Select(v => _mapper.Map<GetElectricVehicleVersionDTO>(v))
                     .ToList();
 
-                if(!availableVersions.Any())
+
+                if (!availableVersions.Any())
                 {
                     return new ResponseDTO()
                     {
@@ -163,7 +161,7 @@ namespace SWP391Web.Application.Services
                     IsSuccess = true,
                     Message = "Get all available versions by model successfully.",
                     StatusCode = 200,
-                    Result = availableVersionIds
+                    Result = availableVersions
                 };
 
 

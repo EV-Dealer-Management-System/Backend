@@ -105,11 +105,11 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetAllColorsByModelIdAndVersionIdAsync(Guid modelId, Guid versionId)
+        public async Task<ResponseDTO> GetAvailableColorsByModelIdAndVersionIdAsync(Guid modelId, Guid versionId)
         {
             try
             {
-                var colors = await _unitOfWork.ElectricVehicleColorRepository.GetAllByModelIdAndVersionIdAsync(modelId, versionId);
+                var colors = await _unitOfWork.ElectricVehicleColorRepository.GetAvailableColorsByModelIdAndVersionIdAsync(modelId, versionId);
                 if (colors is null)
                 {
                     return new ResponseDTO()

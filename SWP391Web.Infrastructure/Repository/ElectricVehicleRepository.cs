@@ -18,22 +18,21 @@ namespace SWP391Web.Infrastructure.Repository
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
-
-        public async Task<List<Guid>> GetAvailableVersionIdsByModelIdAsync(Guid modelId)
+        public async Task<List<ElectricVehicle?>> GetAvailableVehicleByModelIdAsync(Guid modelId)
         {
             return await _context.ElectricVehicles
-                .Where(ev => ev.Status == StatusVehicle.Available 
-                && _context.EVCInventories.Any(w => w.Id == ev.WarehouseId)) // Ensure the vehicle is in a warehouse
-                .Select(ev => ev.VersionId)
-                .Distinct()
+                .Where(ev => ev.Version.ModelId == modelId
+                     && ev.Status == StatusVehicle.Available
+                     && ev.Warehouse.EVCInventoryId != null)
+                .Include(ev => ev.Version)
+                .Include(ev => ev.Color)
+                .Include(ev => ev.Warehouse)
                 .ToListAsync();
-
         }
 
-        public async Task<ElectricVehicle?> GetByIdsAsync(Guid vehicleId)
+        public Task<ElectricVehicle?> GetByIdsAsync(Guid vehicleId)
         {
-            return await _context.ElectricVehicles
-                .FirstOrDefaultAsync(v => v.Id == vehicleId);
+            throw new NotImplementedException();
         }
 
         public async Task<ElectricVehicle?> GetByVINAsync(string vin)

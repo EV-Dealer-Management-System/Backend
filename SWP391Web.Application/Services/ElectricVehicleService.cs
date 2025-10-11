@@ -39,13 +39,26 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
+                var warehouse = await _unitOfWork.WarehouseRepository
+                    .GetWarehouseByIdAsync(createElectricVehicleDTO.WarehouseId);
+                if(warehouse is null || warehouse.WarehouseType != WarehouseType.EVInventory 
+                    || !warehouse.EVCInventory.IsActive)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "Warehouse not found or not an EV Inventory warehouse.",
+                        StatusCode = 404
+                    };
+                }
+
                 ElectricVehicle electricVehicle = new ElectricVehicle
                 {
                     WarehouseId = createElectricVehicleDTO.WarehouseId,
                     VersionId = createElectricVehicleDTO.VersionId,
                     ColorId = createElectricVehicleDTO.ColorId,
                     VIN = createElectricVehicleDTO.VIN,
-                    Status = createElectricVehicleDTO.Status,
+                    Status = StatusVehicle.Available,
                     ManufactureDate = createElectricVehicleDTO.ManufactureDate,
                     ImportDate = createElectricVehicleDTO.ImportDate,
                     WarrantyExpiryDate = createElectricVehicleDTO.WarrantyExpiryDate,

@@ -11,7 +11,7 @@ namespace SWP391Web.Application.IServices
     public interface IElectricVehicleColorService
     {
         Task<ResponseDTO> GetAllColorsAsync();
-        Task<ResponseDTO> GetAllColorsByModelIdAndVersionIdAsync(Guid modelId, Guid versionId);
+        Task<ResponseDTO> GetAvailableColorsByModelIdAndVersionIdAsync(Guid modelId, Guid versionId);
         Task<ResponseDTO> GetColorByIdAsync(Guid colorId);
         Task<ResponseDTO> CreateColorAsync(CreateElectricVehicleColorDTO createElectricVehicleColorDTO);
         Task<ResponseDTO> UpdateColorAsync(Guid colorId, UpdateElectricVehicleColor updateElectricVehicleColor);
