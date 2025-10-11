@@ -1,5 +1,6 @@
 ﻿using SWP391Web.Application.DTO;
 using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
 
 namespace SWP391Web.Infrastructure.IRepository
@@ -14,6 +15,9 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<HttpResponseMessage> GetDownloadResponseAsync(string token, string? rangeHeader = null, CancellationToken ct = default);
         Task<VnptResult<VnptSmartCAResponse>> AddSmartCA(string token, AddNewSmartCADTO addNewSmartCADTO);
         Task<VnptResult<VnptFullUserData>> GetSmartCAInformation(string token, int userId);
+        Task<VnptResult<VnptSmartCAResponse>> UpdateSmartCA(string token, UpdateSmartDTO updateSmartDTO);
+        Task<VnptResult<UpdateEContractResponse>> UpdateEContract(string token, UpdateEContractDTO updateEContractDTO);
+        Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetEContractList(string token, int? pageNumber, int? pageSize, EContractStatus eContractStatus);
         Task<byte[]> DownloadAsync(string url);
     }
 }

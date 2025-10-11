@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.IRepository;
 using System;
@@ -16,6 +17,17 @@ namespace SWP391Web.Infrastructure.Repository
         public ElectricVehicleRepository(ApplicationDbContext context) : base(context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+        }
+
+        public async Task<List<Guid>> GetAvailableVersionIdsByModelIdAsync(Guid modelId)
+        {
+            return await _context.ElectricVehicles
+                .Where(ev => ev.Status == StatusVehicle.Available 
+                && _context.EVCInventories.Any(w => w.Id == ev.WarehouseId)) // Ensure the vehicle is in a warehouse
+                .Select(ev => ev.VersionId)
+                .Distinct()
+                .ToListAsync();
+
         }
 
         public async Task<ElectricVehicle?> GetByIdsAsync(Guid vehicleId)

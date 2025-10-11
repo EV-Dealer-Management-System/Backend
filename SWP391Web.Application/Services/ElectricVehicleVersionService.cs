@@ -140,17 +140,13 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var availableVersions = new List<GetElectricVehicleVersionDTO>();
-                foreach(var version in versions)
-                {
-                    var vehicles = await _unitOfWork.ElectricVehicleRepository
-                        .GetAllAsync(ev => ev.VersionId == version.Id && ev.Status == StatusVehicle.Available);
+                var availableVersionIds = await _unitOfWork.ElectricVehicleRepository
+                    .GetAvailableVersionIdsByModelIdAsync(modelId);
 
-                    if(vehicles != null && vehicles.Any())
-                    {
-                        availableVersions.Add(_mapper.Map<GetElectricVehicleVersionDTO>(version));
-                    }
-                }
+                var availableVersions = versions
+                    .Where(v => availableVersionIds.Contains(v.Id))
+                    .Select(v => _mapper.Map<GetElectricVehicleVersionDTO>(v))
+                    .ToList();
 
                 if(!availableVersions.Any())
                 {
@@ -167,7 +163,7 @@ namespace SWP391Web.Application.Services
                     IsSuccess = true,
                     Message = "Get all available versions by model successfully.",
                     StatusCode = 200,
-                    Result = availableVersions
+                    Result = availableVersionIds
                 };
 
 

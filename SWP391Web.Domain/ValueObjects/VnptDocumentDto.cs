@@ -29,5 +29,7 @@ namespace SWP391Web.Application.DTO.Auth
         public string? PositionA { get; set; }
         public string? PositionB { get; set; }
         public int PageSign { get; set; }
+        public byte[]? PdfBytes { get; set; }
+        public string? FileName { get; set; }
     }
 }

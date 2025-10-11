@@ -18,6 +18,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\SWP391Web.Domain\SWP391Web.Domain.csproj" />
 		<ProjectReference Include="..\SWP391Web.Infrastructure\SWP391Web.Infrastructure.csproj" />
 	</ItemGroup>
 

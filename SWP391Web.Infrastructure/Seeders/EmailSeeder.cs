@@ -140,6 +140,72 @@ namespace SWP391Web.Infrastructure.Seeders
        Status = EmailStatus.Active
    });
 
+            modelBuilder.Entity<EmailTemplate>().HasData(
+              new
+              {
+                  Id = Guid.Parse("c1b4c5a2-0e9b-4f11-aa2f-3cf19b0f9e0b"),
+                  TemplateName = "NotifyContractPdf",
+                  SenderName = "SWP391",
+                  SenderEmail = "hoangtuzami@gmail.com",
+                  Category = "Contract",
+                  SubjectLine = "Thông báo hợp đồng: {ContractSubject}",
+                  PreHeaderText = "Hợp đồng của bạn đã sẵn sàng để xem/tải (PDF).",
+                  // Liệt kê các placeholder bạn dự định thay thế
+                  PersonalizationTags = "{FullName},{ContractSubject},{DownloadLink},{Company},{SupportEmail}",
+                  BodyContent = @"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+    <meta charset='UTF-8'>
+    <title>Thông báo hợp đồng</title>
+</head>
+<body style='font-family: Segoe UI, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0;'>
+    <table width='100%' cellpadding='0' cellspacing='0' style='background-color: #f4f4f4; padding: 40px 0;'>
+        <tr>
+            <td align='center'>
+                <table width='600' cellpadding='0' cellspacing='0' style='background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'>
+                    <tr>
+                        <td style='background-color: #0ea5e9; padding: 20px; text-align: center; color: white;'>
+                            <h2 style='margin: 0;'>SWP391</h2>
+                            <p style='margin: 0;'>Thông báo hợp đồng</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style='padding: 30px;'>
+                            <p style='font-size: 16px;'>Xin chào <strong>{FullName}</strong>,</p>
+                            <p style='font-size: 16px;'>Hợp đồng <strong>{ContractSubject}</strong> của bạn đã sẵn sàng.</p>
+                            <p style='font-size: 16px;'>Bạn có thể xem hoặc tải về bản PDF bằng cách nhấn nút bên dưới:</p>
+                            <div style='text-align: center; margin: 30px 0;'>
+                                <a href='{DownloadLink}' style='background-color: #0ea5e9; color: white; padding: 14px 28px; text-decoration: none; font-size: 16px; border-radius: 6px; display: inline-block;'>Xem/Tải hợp đồng (PDF)</a>
+                            </div>
+                            <p style='font-size: 14px; color: #666;'>Nếu nút không hiển thị, bạn có thể mở liên kết: <a href='{DownloadLink}' style='color: #0ea5e9; text-decoration: none;'>{DownloadLink}</a></p>
+                            <p style='font-size: 14px; color: #666;'>Nếu cần hỗ trợ, vui lòng liên hệ: <a href='mailto:{SupportEmail}' style='color: #0ea5e9; text-decoration: none;'>{SupportEmail}</a>.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style='background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 13px; color: #999;'>
+                            <p style='margin: 0;'>Trân trọng,</p>
+                            <p style='margin: 0;'><strong>{Company}</strong> - Đội ngũ hỗ trợ SWP391</p>
+                            <p style='margin: 0;'>Đây là email tự động, vui lòng không phản hồi.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>",
+                  FooterContent = "SWP391 Support Team",
+                  CallToAction = "<a href=\"{DownloadLink}\">Xem/Tải hợp đồng (PDF)</a>",
+                  Language = "Vietnamese",
+                  RecipientType = "Customer",
+                  CreatedBy = "System",
+                  CreatedAt = new DateTime(2025, 10, 09, 0, 0, 0, DateTimeKind.Utc),
+                  UpdatedBy = "System",
+                  UpdatedAt = new DateTime(2025, 10, 09, 0, 0, 0, DateTimeKind.Utc),
+                  Status = EmailStatus.Active
+              });
+
         }
     }
 }

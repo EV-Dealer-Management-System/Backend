@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using EVManagementSystem.Application.DTO.EContract;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
 
 namespace SWP391Web.API.Controllers
@@ -12,8 +15,8 @@ namespace SWP391Web.API.Controllers
     public class EContractController : ControllerBase
     {
         private readonly IEContractService _svc;
-        public EContractController(IEContractService svc) 
-        { 
+        public EContractController(IEContractService svc)
+        {
             _svc = svc;
         }
 
@@ -32,10 +35,18 @@ namespace SWP391Web.API.Controllers
             return Ok(r);
         }
         // Orchestrator: create PDF + push + send
-        [HttpPost("dealer-contracts")]
-        public async Task<ActionResult<ResponseDTO>> CreateDealerContract([FromBody] CreateDealerDTO dto, CancellationToken ct)
+        [HttpPost("ready-dealer-contracts")]
+        public async Task<ActionResult<ResponseDTO>> CreateEContractAsync([FromBody] CreateEContractDTO dto, CancellationToken ct)
         {
-            var r = await _svc.CreateEContractAsync(dto, ct);
+            var r = await _svc.CreateEContractAsync(User, dto, ct);
+            return StatusCode(r.StatusCode, r);
+        }
+
+        [HttpPost]
+        [Route("draft-dealer-contracts")]
+        public async Task<ActionResult<ResponseDTO>> CreateDraftDealerContract([FromBody] CreateDealerDTO dto, CancellationToken ct)
+        {
+            var r = await _svc.CreateDraftEContractAsync(User, dto, ct);
             return StatusCode(r.StatusCode, r);
         }
 
@@ -50,14 +61,14 @@ namespace SWP391Web.API.Controllers
 
         [HttpGet]
         [Route("preview")]
-        public async Task<IActionResult> Preview([FromQuery] string token, CancellationToken ct)
+        public async Task<IActionResult> Preview([FromQuery] string downloadURL, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(token))
-                return BadRequest("Missing token");
+            if (string.IsNullOrWhiteSpace(downloadURL))
+                return BadRequest("Missing downloadURL");
 
             Request.Headers.TryGetValue("Range", out var rangeHeader);
 
-            var upstream = await _svc.GetPreviewResponseAsync(token, rangeHeader.ToString(), ct);
+            var upstream = await _svc.GetPreviewResponseAsync(downloadURL, rangeHeader.ToString(), ct);
             HttpContext.Response.RegisterForDispose(upstream);
 
             if (!upstream.IsSuccessStatusCode)
@@ -80,13 +91,19 @@ namespace SWP391Web.API.Controllers
             if (upstream.Content.Headers.ContentLength is long len)
                 Response.ContentLength = len;
 
-            var fileName = upstream.Content.Headers.ContentDisposition?.FileNameStar
-                           ?? upstream.Content.Headers.ContentDisposition?.FileName
-                           ?? "document.pdf";
-            Response.Headers["Content-Disposition"] = $"inline; filename=\"{fileName}\"";
+            var upstreamCd = upstream.Content.Headers.ContentDisposition;
+            var safeFileName = upstreamCd?.FileNameStar ?? upstreamCd?.FileName ?? "document.pdf";
+
+            var cd = new ContentDispositionHeaderValue("inline")
+            {
+                FileNameStar = safeFileName
+            };
+            Response.Headers[HeaderNames.ContentDisposition] = cd.ToString();
+
             Response.ContentType = contentType;
-            Response.Headers["Cache-Control"] = "no-store";
-            return File(stream, contentType);
+            Response.Headers[HeaderNames.CacheControl] = "no-store";
+
+            return new FileStreamResult(stream, contentType);
         }
 
         [HttpPost]
@@ -94,7 +111,7 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult<ResponseDTO>> AddSmartCA([FromBody] AddNewSmartCADTO dto)
         {
             var r = await _svc.AddSmartCA(dto);
-            return Ok(r); 
+            return Ok(r);
         }
 
         [HttpGet]
@@ -104,5 +121,37 @@ namespace SWP391Web.API.Controllers
             var r = await _svc.GetSmartCAInformation(userId);
             return Ok(r);
         }
+
+        [HttpPost]
+        [Route("update-smartca")]
+        public async Task<ActionResult<ResponseDTO>> UpdateSmartCA([FromBody] UpdateSmartDTO dto)
+        {
+            var r = await _svc.UpdateSmartCA(dto);
+            return Ok(r);
+        }
+
+        [HttpPost]
+        [Route("update-econtract")]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<ResponseDTO>> UpdateEContract([FromForm] UpdateEContractDTO dto)
+        {
+            if (dto.File is null || dto.File.Length == 0)
+                return BadRequest(new { message = "file is missing." });
+
+            if (dto.File.ContentType?.Contains("pdf", StringComparison.OrdinalIgnoreCase) != true)
+                return BadRequest(new { message = "File is not PDF." });
+
+            var r = await _svc.UpdateEContract(dto);
+            return Ok(r);
+        }
+
+        [HttpGet]
+        [Route("get-econtract-list")]
+        public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber, [FromQuery] int? pageSize, [FromQuery] EContractStatus eContractStatus)
+        {
+            var r = await _svc.GetEContractList(pageNumber, pageSize, eContractStatus);
+            return Ok(r);
+        }
+
     }
 }

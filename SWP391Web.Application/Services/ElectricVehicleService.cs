@@ -49,7 +49,6 @@ namespace SWP391Web.Application.Services
                     ManufactureDate = createElectricVehicleDTO.ManufactureDate,
                     ImportDate = createElectricVehicleDTO.ImportDate,
                     WarrantyExpiryDate = createElectricVehicleDTO.WarrantyExpiryDate,
-                    CurrentLocation = createElectricVehicleDTO.CurrentLocation,
                     CostPrice = createElectricVehicleDTO.CostPrice,
                     ImageUrl = createElectricVehicleDTO.ImageUrl,
                 };
@@ -212,9 +211,6 @@ namespace SWP391Web.Application.Services
 
                 if (dto.DeliveryDate.HasValue && dto.DeliveryDate.Value != default)
                     vehicle.DeliveryDate = dto.DeliveryDate.Value;
-
-                if (!string.IsNullOrWhiteSpace(dto.CurrentLocation))
-                    vehicle.CurrentLocation = dto.CurrentLocation;
 
                 if (dto.CostPrice.HasValue && dto.CostPrice.Value >= 0)
                     vehicle.CostPrice = dto.CostPrice.Value;
