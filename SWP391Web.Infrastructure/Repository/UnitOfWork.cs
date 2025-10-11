@@ -26,7 +26,7 @@ namespace SWP391Web.Infrastructure.Repository
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
 
-            UserManagerRepository = new UserManagerRepository(userManagerRepository);
+            UserManagerRepository = new UserManagerRepository(userManagerRepository, _context);
             CustomerRepository = new CustomerRepository(_context);
             EmailTemplateRepository = new EmailTemplateRepository(_context);
             CustomerOrderRepository = new CustomerOrderRepository(_context);

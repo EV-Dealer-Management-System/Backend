@@ -1,16 +1,19 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.IRepository;
 
 namespace SWP391Web.Infrastructure.Repository
 {
-    public class UserManagerRepository : IUserManagerRepository
+    public class UserManagerRepository : Repository<ApplicationUser>, IUserManagerRepository
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        public UserManagerRepository(UserManager<ApplicationUser> userManager) 
+        private readonly ApplicationDbContext _context;
+        public UserManagerRepository(UserManager<ApplicationUser> userManager, ApplicationDbContext context) : base(context)
         {
             _userManager = userManager;
+            _context = context;
         }
 
         public async Task<IdentityResult> AccessFailedAsync(ApplicationUser user)
@@ -76,6 +79,12 @@ namespace SWP391Web.Infrastructure.Repository
 
         public async Task<IdentityResult> ResetPasswordAsync(ApplicationUser user, string token, string newPassword)
         {
+            return await _userManager.ResetPasswordAsync(user, token, newPassword);
+        }
+        
+        public async Task<IdentityResult> SetPassword(ApplicationUser user, string newPassword)
+        {
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             return await _userManager.ResetPasswordAsync(user, token, newPassword);
         }
     }

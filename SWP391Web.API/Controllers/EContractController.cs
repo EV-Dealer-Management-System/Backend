@@ -52,9 +52,9 @@ namespace SWP391Web.API.Controllers
 
         // Sign process
         [HttpPost("sign-process")]
-        public async Task<ActionResult<ResponseDTO>> SignProcess([FromQuery] string token, [FromBody] VnptProcessDTO dto)
+        public async Task<ActionResult<ResponseDTO>> SignProcess([FromQuery] string token, [FromBody] VnptProcessDTO dto, CancellationToken ct)
         {
-            var r = await _svc.SignProcess(token, dto);
+            var r = await _svc.SignProcess(token, dto, ct);
             return StatusCode(r.StatusCode, r);
         }
 
