@@ -219,6 +219,22 @@ namespace SWP391Web.Infrastructure.Context
                 .WithOne(o => o.EContract)
                 .HasForeignKey<EContract>(e => e.OwnerBy)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure Warehouse entity
+
+            modelBuilder.Entity<Warehouse>()
+                .HasOne(w => w.Dealer)
+                .WithOne(d => d.Warehouse)
+                .HasForeignKey<Warehouse>(w => w.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Warehouse>()
+                .HasOne(w => w.EVInventory)
+                .WithOne(d => d.Warehouse)
+                .HasForeignKey<Warehouse>(w => w.EVInventoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
         }
     }
 }
