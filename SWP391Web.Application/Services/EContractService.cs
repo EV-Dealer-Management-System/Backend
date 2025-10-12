@@ -312,11 +312,12 @@ namespace SWP391Web.Application.Services
             };
 
             request.FileInfo.File = pdfBytes;
-            request.FileInfo.FileName = $"E-Contract Dealer_{randomText}_{dealer.Name}.pdf";
+            var fileName = $"Dealer_E-Contract_{randomText}_{dealer.Name}.pdf".Trim();
+            request.FileInfo.FileName = fileName;
 
             var createResult = await _vnpt.CreateDocumentAsync(token, request);
 
-            var EContract = new EContract(Guid.Parse(createResult.Data.Id), userId, user.Id);
+            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.Id, fileName, userId, user.Id);
 
             await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
 

@@ -36,7 +36,7 @@ namespace SWP391Web.API.Controllers
 
         [HttpGet]
         [Route("get-access-token-for-evc")]
-        [Authorize(Roles = StaticUserRole.Admin)]
+        //[Authorize(Roles = StaticUserRole.Admin)]
         public async Task<ActionResult<ResponseDTO>> GetAccessToken()
         {
             var r = await _svc.GetAccessTokenAsync();
@@ -45,7 +45,7 @@ namespace SWP391Web.API.Controllers
 
         [HttpPost]
         [Route("ready-dealer-contracts")]
-        [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
+        //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> CreateEContractAsync([FromBody] CreateEContractDTO dto, CancellationToken ct)
         {
             var r = await _svc.CreateEContractAsync(User, dto, ct);
@@ -54,7 +54,7 @@ namespace SWP391Web.API.Controllers
 
         [HttpPost]
         [Route("draft-dealer-contracts")]
-        [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
+        //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> CreateDraftDealerContract([FromBody] CreateDealerDTO dto, CancellationToken ct)
         {
             var r = await _svc.CreateDraftEContractAsync(User, dto, ct);
