@@ -120,15 +120,6 @@ namespace SWP391Web.API.Controllers
             return new FileStreamResult(stream, contentType);
         }
 
-        [HttpGet]
-        [Route("preview-html")]
-        [AllowAnonymous]
-        public async Task<IActionResult> PreviewHtml([FromQuery] string downloadUrl, CancellationToken ct)
-        {
-            var html = await _svc.ChangeWordToHtml(downloadUrl, ct);
-            return Content(html, "text/html", Encoding.UTF8);
-        }
-
         [HttpPost]
         [Route("add-smartca")]
         [AllowAnonymous]

@@ -23,7 +23,6 @@ namespace SWP391Web.Application.IServices
         Task<VnptResult<UpdateEContractResponse>> UpdateEContract(UpdateEContractDTO updateEContractDTO);
         Task<ResponseDTO<EContract>> GetEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus);
         Task<ResponseDTO> CreateDraftEContractAsync(ClaimsPrincipal userClaim, CreateDealerDTO createDealerDTO, CancellationToken ct);
-        Task<string> ChangeWordToHtml(string downloadUrl, CancellationToken ct);
         Task<VnptResult<VnptDocumentDto>> GetVnptEContractByIdAsync(string eContractId, CancellationToken ct);
         Task<ResponseDTO<EContract>> GetEContractByIdAsync(string eContractId, CancellationToken ct);
     }
