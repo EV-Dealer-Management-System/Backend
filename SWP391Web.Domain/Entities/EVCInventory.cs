@@ -16,6 +16,6 @@ namespace SWP391Web.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-        public ICollection<ElectricVehicle> ElectricVehicles { get; set; } = new List<ElectricVehicle>();
+        public Warehouse Warehouse { get; set; } = null!;
     }
 }
