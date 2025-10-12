@@ -36,7 +36,7 @@ namespace SWP391Web.API.Controllers
 
         [HttpGet]
         [Route("get-access-token-for-evc")]
-        [Authorize(Roles = StaticUserRole.Admin)]
+        //[Authorize(Roles = StaticUserRole.Admin)]
         public async Task<ActionResult<ResponseDTO>> GetAccessToken()
         {
             var r = await _svc.GetAccessTokenAsync();
@@ -45,7 +45,7 @@ namespace SWP391Web.API.Controllers
 
         [HttpPost]
         [Route("ready-dealer-contracts")]
-        [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
+        //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> CreateEContractAsync([FromBody] CreateEContractDTO dto, CancellationToken ct)
         {
             var r = await _svc.CreateEContractAsync(User, dto, ct);
@@ -54,7 +54,7 @@ namespace SWP391Web.API.Controllers
 
         [HttpPost]
         [Route("draft-dealer-contracts")]
-        [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
+        //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> CreateDraftDealerContract([FromBody] CreateDealerDTO dto, CancellationToken ct)
         {
             var r = await _svc.CreateDraftEContractAsync(User, dto, ct);
@@ -158,12 +158,20 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpGet]
-        [Route("get-econtract-list")]
+        [Route("get-all-econtract-list")]
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default)
         {
-            var r = await _svc.GetEContractList(pageNumber, pageSize, eContractStatus);
+            var r = await _svc.GetAllEContractList(pageNumber, pageSize, eContractStatus);
             return Ok(r);
+        }
+
+        [HttpPost]
+        [Route("get-all-vnpt-econtract-by-id")]
+        public async Task<ActionResult<ResponseDTO>> GetVnptEContractByIdPost([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default)
+        {
+            var r = await _svc.GetAllVnptEContractList(pageNumber, pageSize, eContractStatus);
+            return StatusCode((int)r.Code, r);
         }
 
         [HttpGet]

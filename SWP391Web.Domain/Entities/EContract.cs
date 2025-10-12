@@ -11,6 +11,7 @@ namespace SWP391Web.Domain.Entities
     {
         public Guid Id { get; private set; }
         public Guid TemplateId { get; private set; }
+        public string? Name { get; set; }
         // Snapshot
         public string? StorageUrl { get; private set; }
         public EContractStatus Status { get; private set; } = EContractStatus.Draft;
@@ -22,9 +23,11 @@ namespace SWP391Web.Domain.Entities
         public readonly ApplicationUser Ower = null!;
 
         private EContract() { }
-        public EContract(Guid id, string createdBy, string ownerBy)
+        public EContract(Guid id, Guid templateId, string? name, string createdBy, string ownerBy)
         {
             Id = id;
+            TemplateId = templateId;
+            Name = name;
             CreatedBy = createdBy;
             OwnerBy = ownerBy;
         }
