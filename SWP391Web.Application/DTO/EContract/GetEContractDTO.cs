@@ -11,8 +11,6 @@ namespace SWP391Web.Application.DTO.EContract
     {
         public Guid Id { get; private set; }
         public Guid TemplateId { get; private set; }
-        public Guid TemplateVersionId { get; private set; }
-        public int TemplateVersionNo { get; private set; }
 
         public EContractStatus Status { get; private set; }
         public DateTime CreatedAt { get; private set; }

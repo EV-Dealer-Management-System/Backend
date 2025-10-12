@@ -12,7 +12,6 @@ namespace SWP391Web.Infrastructure.Repository
         public ICustomerRepository CustomerRepository { get; private set; }
         public IEmailTemplateRepository EmailTemplateRepository { get; private set; }
         public ICustomerOrderRepository CustomerOrderRepository { get; private set; }
-        public IContractTemplateRepository ContractTemplateRepository { get; private set; }
         public IDealerRepository DealerRepository { get; private set; }
         public IElectricVehicleColorRepository ElectricVehicleColorRepository { get; private set; }
         public IElectricVehicleModelRepository ElectricVehicleModelRepository { get; private set; }
@@ -22,6 +21,8 @@ namespace SWP391Web.Infrastructure.Repository
         public IEContractTermRepository EContractTermRepository { get; private set; }
         public IEContractRepository EContractRepository { get; private set; }
         public IBookingEVRepository BookingEVRepository { get; private set; }
+        public IEVCInventoryRepository EVCInventoryRepository { get; private set; }
+        public IWarehouseRepository WarehouseRepository { get; private set; }
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -30,7 +31,6 @@ namespace SWP391Web.Infrastructure.Repository
             CustomerRepository = new CustomerRepository(_context);
             EmailTemplateRepository = new EmailTemplateRepository(_context);
             CustomerOrderRepository = new CustomerOrderRepository(_context);
-            ContractTemplateRepository = new ContractTemplateRepository(_context);
             DealerRepository = new DealerRepository(_context);
             ElectricVehicleColorRepository = new ElectricVehicleColorRepository(_context);
             ElectricVehicleModelRepository = new ElectricVehicleModelRepository(_context);
@@ -40,6 +40,8 @@ namespace SWP391Web.Infrastructure.Repository
             EContractTermRepository = new EContractTermRepository(_context);
             EContractRepository = new EContractRepository(_context);
             BookingEVRepository = new BookingEVRepository(_context);
+            EVCInventoryRepository = new EVCInventoryRepository(_context);
+            WarehouseRepository = new WarehouseRepository(_context);
         }
         public async Task<int> SaveAsync()
         {

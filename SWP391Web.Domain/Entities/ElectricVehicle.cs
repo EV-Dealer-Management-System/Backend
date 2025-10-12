@@ -18,7 +18,6 @@ namespace SWP391Web.Domain.Entities
         public DateTime? ManufactureDate { get; set; }
         public DateTime? ImportDate { get; set; }
         public DateTime? WarrantyExpiryDate { get; set; }
-        public string CurrentLocation { get; set; } = null!;
         public DateTime? DeliveryDate { get; set; }
         public decimal CostPrice { get; set; }
         public DateTime? DealerReceivedDate { get; set; }
@@ -26,7 +25,6 @@ namespace SWP391Web.Domain.Entities
 
         public ElectricVehicleVersion Version { get; set; } = null!;
         public ElectricVehicleColor Color { get; set; } = null!;
-        public Dealer? DealerWarehouse { get; set; }
-        public EVInventory? EVCWarehouse { get; set; }
+        public Warehouse Warehouse { get; set; } = null!;
     }
 }

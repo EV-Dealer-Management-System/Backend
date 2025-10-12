@@ -23,12 +23,11 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<ElectricVehicle> ElectricVehicles { get; set; }
         public DbSet<EContract> EContracts { get; set; }
         public DbSet<EContractTemplate> EContractTemplates { get; set; }
-        public DbSet<EContractTemplateVersion> EContractTemplateVersions { get; set; }
-        public DbSet<EContractAmendment> EContractAmendments { get; set; }
         public DbSet<EContractTerm> EContractTerms { get; set; }
         public DbSet<BookingEV> BookingEVs { get; set; }
         public DbSet<BookingEVDetail> BookingEVDetails { get; set; }
-        public DbSet<EVInventory> EVCInventories { get; set; }
+        public DbSet<EVCInventory> EVCInventories { get; set; } 
+        public DbSet<Warehouse> Warehouses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -144,13 +143,7 @@ namespace SWP391Web.Infrastructure.Context
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<ElectricVehicle>()
-                .HasOne(ev => ev.EVCWarehouse)
-                .WithMany(d => d.ElectricVehicles)
-                .HasForeignKey(ev => ev.WarehouseId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<ElectricVehicle>()
-                .HasOne(ev => ev.DealerWarehouse)
+                .HasOne(ev => ev.Warehouse)
                 .WithMany(d => d.ElectricVehicles)
                 .HasForeignKey(ev => ev.WarehouseId)
                 .OnDelete(DeleteBehavior.Restrict);
@@ -166,24 +159,6 @@ namespace SWP391Web.Infrastructure.Context
                 .HasOne(vs => vs.Model)
                 .WithMany(ev => ev.Versions)
                 .HasForeignKey(ev => ev.ModelId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            /******************************************************************************/
-            // Configure EContractAmendment entity
-
-            modelBuilder.Entity<EContractAmendment>()
-                .HasOne(ea => ea.EContract)
-                .WithMany(e => e.Amendments)
-                .HasForeignKey(ea => ea.EContractId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            /******************************************************************************/
-            // Configure EContractTemplate entity
-
-            modelBuilder.Entity<EContractTemplate>()
-                .HasMany(et => et.Versions)
-                .WithOne()
-                .HasForeignKey("ContractTemplateId")  
                 .OnDelete(DeleteBehavior.Restrict);
 
             /******************************************************************************/
@@ -224,6 +199,28 @@ namespace SWP391Web.Infrastructure.Context
                 .WithOne(o => o.EContract)
                 .HasForeignKey<EContract>(e => e.OwnerBy)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<EContract>()
+                .HasOne(e => e.EContractTemplate)
+                .WithMany(t => t.EContracts)
+                .HasForeignKey(e => e.TemplateId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure Warehouse entity
+
+            modelBuilder.Entity<Warehouse>()
+                .HasOne(w => w.Dealer)
+                .WithOne(d => d.Warehouse)
+                .HasForeignKey<Warehouse>(w => w.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Warehouse>()
+                .HasOne(w => w.EVCInventory)
+                .WithOne(d => d.Warehouse)
+                .HasForeignKey<Warehouse>(w => w.EVCInventoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
         }
     }
 }

@@ -22,6 +22,7 @@ appsettings.Development.json
 appsettings.json
 Migrations
 
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/

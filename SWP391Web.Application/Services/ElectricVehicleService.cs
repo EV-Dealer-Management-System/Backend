@@ -3,6 +3,7 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.ElectricVehicle;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
@@ -38,17 +39,29 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
+                var warehouse = await _unitOfWork.WarehouseRepository
+                    .GetWarehouseByIdAsync(createElectricVehicleDTO.WarehouseId);
+                if(warehouse is null || warehouse.WarehouseType != WarehouseType.EVInventory 
+                    || !warehouse.EVCInventory.IsActive)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "Warehouse not found or not an EV Inventory warehouse.",
+                        StatusCode = 404
+                    };
+                }
+
                 ElectricVehicle electricVehicle = new ElectricVehicle
                 {
                     WarehouseId = createElectricVehicleDTO.WarehouseId,
                     VersionId = createElectricVehicleDTO.VersionId,
                     ColorId = createElectricVehicleDTO.ColorId,
                     VIN = createElectricVehicleDTO.VIN,
-                    Status = createElectricVehicleDTO.Status,
+                    Status = StatusVehicle.Available,
                     ManufactureDate = createElectricVehicleDTO.ManufactureDate,
                     ImportDate = createElectricVehicleDTO.ImportDate,
                     WarrantyExpiryDate = createElectricVehicleDTO.WarrantyExpiryDate,
-                    CurrentLocation = createElectricVehicleDTO.CurrentLocation,
                     CostPrice = createElectricVehicleDTO.CostPrice,
                     ImageUrl = createElectricVehicleDTO.ImageUrl,
                 };
@@ -99,6 +112,43 @@ namespace SWP391Web.Application.Services
             }
             catch (Exception ex)
             {
+                return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetAvailableQuantityByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId)
+        {
+            try
+            {
+
+
+                var quantity = await _unitOfWork.ElectricVehicleRepository
+                    .GetAvailableQuantityByModelVersionColorAsync(modelId, versionId, colorId);
+
+                if(quantity == 0)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No available vehicles for the selected model, version, and color.",
+                        StatusCode = 400
+                    };
+                }
+
+                return new ResponseDTO()
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Available quantity retrieved successfully",
+                    Result = quantity
+                };
+
+            } catch (Exception ex) {
                 return new ResponseDTO()
                 {
                     IsSuccess = false,
@@ -186,10 +236,12 @@ namespace SWP391Web.Application.Services
             {
                 var vehicle = await _unitOfWork.ElectricVehicleRepository.GetByIdsAsync(vehicleId);
                 if (vehicle == null)
-                    return new ResponseDTO { 
-                        IsSuccess = false, 
-                        Message = "Vehicle not found.", 
-                        StatusCode = 404 };
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Vehicle not found.",
+                        StatusCode = 404
+                    };
 
                 // Chỉ update các trường thông tin, không động đến khóa ngoại
                 if (!string.IsNullOrWhiteSpace(dto.VIN))
@@ -210,9 +262,6 @@ namespace SWP391Web.Application.Services
                 if (dto.DeliveryDate.HasValue && dto.DeliveryDate.Value != default)
                     vehicle.DeliveryDate = dto.DeliveryDate.Value;
 
-                if (!string.IsNullOrWhiteSpace(dto.CurrentLocation))
-                    vehicle.CurrentLocation = dto.CurrentLocation;
-
                 if (dto.CostPrice.HasValue && dto.CostPrice.Value >= 0)
                     vehicle.CostPrice = dto.CostPrice.Value;
 
@@ -231,6 +280,45 @@ namespace SWP391Web.Application.Services
                     IsSuccess = true,
                     Message = "Vehicle updated successfully.",
                     StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+
+
+        }
+
+        public async Task<ResponseDTO> UpdateVehicleStatusAsync(Guid vehicleId, StatusVehicle newStatus)
+        {
+            try
+            {
+                var vehicle = await _unitOfWork.ElectricVehicleRepository.GetByIdsAsync(vehicleId);
+                if (vehicle == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Vehicle not found",
+                        StatusCode = 404,
+                    };
+                }
+
+                vehicle.Status = newStatus;
+                _unitOfWork.ElectricVehicleRepository.Update(vehicle);
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Vehicle status updated successfully",
+                    StatusCode = 200,
                 };
             }
             catch (Exception ex)
