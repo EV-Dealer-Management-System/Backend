@@ -1,4 +1,5 @@
 ﻿using EVManagementSystem.Application.DTO.EContract;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using SWP391Web.Application.DTO;
 using SWP391Web.Application.DTO.Auth;
@@ -454,8 +455,17 @@ namespace SWP391Web.Application.Services
             await _emailService.SendEmailFromTemplate(dealerManager.Email, "DealerWelcome", data);
         }
 
-        public async Task<HttpResponseMessage> GetPreviewResponseAsync(string token, string? rangeHeader = null, CancellationToken ct = default)
-            => await _vnpt.GetDownloadResponseAsync(token, rangeHeader, ct);
+        public async Task<HttpResponseMessage> GetPreviewResponseAsync(string downloadUrl, string? rangeHeader = null, CancellationToken ct = default)
+        {
+            try
+            {
+                return await _vnpt.GetDownloadResponseAsync(downloadUrl, rangeHeader, ct);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error to get preview response: {ex.Message}");
+            }
+        }
 
         public async Task<ProcessLoginInfoDto> GetAccessTokenAsyncByCode(string processCode, CancellationToken ct = default)
         {
@@ -595,12 +605,19 @@ namespace SWP391Web.Application.Services
             try
             {
                 var token = await GetAccessTokenAsync();
-                var response = await _vnpt.UpdateEContract(token, updateEContractDTO);
+                var filePdf = await EContractPdf.RenderAsync(updateEContractDTO.HtmlFile);
+
+                var formFile = new FormFile(
+                    new MemoryStream(filePdf), 0, filePdf.Length, "file", updateEContractDTO.Subject + ".pdf"
+                );
+
+                var response = await _vnpt.UpdateEContract(token, updateEContractDTO.Id, updateEContractDTO.Subject, formFile);
                 if (!response.Success)
                 {
                     var errors = string.Join(", ", response.Messages);
                     throw new Exception($"Error to update EContract: {errors}");
                 }
+
                 byte[] pdfBytes = response.Data!.FileBytes;
                 var anchors = EContractPdf.FindAnchors(pdfBytes, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
                 var positionA = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
@@ -627,11 +644,42 @@ namespace SWP391Web.Application.Services
                     var errors = string.Join(", ", response.Messages);
                     throw new Exception($"Error to get EContract list: {errors}");
                 }
-                    return response;
+                return response;
             }
             catch (Exception ex)
             {
                 return new VnptResult<GetEContractResponse<DocumentListItemDto>>($"Exception when get EContract list: {ex.Message}");
+            }
+        }
+
+        public async Task<HttpResponseMessage> GetHtmtEContractAsync(string downloadUrl, CancellationToken ct)
+        {
+            try
+            {
+               return await _vnpt.GetDownloadResponseAsync(downloadUrl, null, ct);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error to get HTMT EContract: {ex.Message}");
+            }
+        }
+
+        public async Task<VnptResult<VnptDocumentDto>> GetEContractByIdAsync(string eContractId, CancellationToken ct)
+        {
+            try
+            {
+                var token = await GetAccessTokenAsync();
+                var response = await _vnpt.GetEContractByIdAsync(token, eContractId);
+                if (!response.Success)
+                {
+                    var errors = string.Join(", ", response.Messages);
+                    throw new Exception($"Error to get EContract by id: {errors}");
+                }
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return new VnptResult<VnptDocumentDto>($"Exception when get EContract by id: {ex.Message}");
             }
         }
     }

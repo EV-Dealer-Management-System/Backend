@@ -35,7 +35,7 @@ namespace SWP391Web.Domain.ValueObjects
     public class DocumentListItemDto
     {
         [JsonProperty("id")]
-        public string Id { get; set; } = default!; // dùng string cho an toàn (API của bạn cũng đang dùng string)
+        public string Id { get; set; } = default!;
 
         [JsonProperty("createdDate")]
         public DateTime CreatedDate { get; set; }

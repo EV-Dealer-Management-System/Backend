@@ -1,12 +1,16 @@
 ﻿using EVManagementSystem.Application.DTO.EContract;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.IServices;
+using SWP391Web.Application.Pdf;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
+using System.Text;
 
 namespace SWP391Web.API.Controllers
 {
@@ -21,21 +25,27 @@ namespace SWP391Web.API.Controllers
         }
 
 
-        [HttpGet("get-info-to-sign-process-by-code")]
+        [HttpGet]
+        [Route("get-info-to-sign-process-by-code")]
+        [AllowAnonymous]
         public async Task<ActionResult<ResponseDTO>> GetInfoSignProcess([FromQuery] string processCode)
         {
             var r = await _svc.GetAccessTokenAsyncByCode(processCode);
             return Ok(r);
         }
 
-        [HttpGet("get-access-token-for-evc")]
+        [HttpGet]
+        [Route("get-access-token-for-evc")]
+        [Authorize(Roles = StaticUserRole.Admin)]
         public async Task<ActionResult<ResponseDTO>> GetAccessToken()
         {
             var r = await _svc.GetAccessTokenAsync();
             return Ok(r);
         }
-        // Orchestrator: create PDF + push + send
-        [HttpPost("ready-dealer-contracts")]
+        
+        [HttpPost]
+        [Route("ready-dealer-contracts")]
+        [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> CreateEContractAsync([FromBody] CreateEContractDTO dto, CancellationToken ct)
         {
             var r = await _svc.CreateEContractAsync(User, dto, ct);
@@ -44,6 +54,7 @@ namespace SWP391Web.API.Controllers
 
         [HttpPost]
         [Route("draft-dealer-contracts")]
+        [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> CreateDraftDealerContract([FromBody] CreateDealerDTO dto, CancellationToken ct)
         {
             var r = await _svc.CreateDraftEContractAsync(User, dto, ct);
@@ -51,7 +62,9 @@ namespace SWP391Web.API.Controllers
         }
 
         // Sign process
-        [HttpPost("sign-process")]
+        [HttpPost]
+        [Route("sign-process")]
+        [AllowAnonymous]
         public async Task<ActionResult<ResponseDTO>> SignProcess([FromQuery] string token, [FromBody] VnptProcessDTO dto, CancellationToken ct)
         {
             var r = await _svc.SignProcess(token, dto, ct);
@@ -61,6 +74,7 @@ namespace SWP391Web.API.Controllers
 
         [HttpGet]
         [Route("preview")]
+        [AllowAnonymous]
         public async Task<IActionResult> Preview([FromQuery] string downloadURL, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(downloadURL))
@@ -106,8 +120,40 @@ namespace SWP391Web.API.Controllers
             return new FileStreamResult(stream, contentType);
         }
 
+        [HttpGet]
+        [Route("preview-html")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PreviewHtml([FromQuery] string downloadUrl, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(downloadUrl))
+                return BadRequest("Missing downloadUrl");
+
+            // 1. Download PDF từ VNPT
+            var upstream = await _svc.GetHtmtEContractAsync(downloadUrl, ct);
+            if (!upstream.IsSuccessStatusCode)
+            {
+                var err = await upstream.Content.ReadAsStringAsync(ct);
+                return StatusCode((int)upstream.StatusCode, err);
+            }
+
+            // 2. Lưu tệp PDF tạm
+            var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+            var pdfPath = Path.Combine(tempDir, "input.pdf");
+            await using (var fs = System.IO.File.Create(pdfPath))
+                await upstream.Content.CopyToAsync(fs, ct);
+
+            // 3. Convert PDF → HTML qua Docker
+            var htmlPath = await EContractPdf.ConvertPdfToHtmlAsync(pdfPath);
+
+            // 4. Trả về HTML
+            var html = await System.IO.File.ReadAllTextAsync(htmlPath, Encoding.UTF8);
+            return Content(html, "text/html", Encoding.UTF8);
+        }
+
         [HttpPost]
         [Route("add-smartca")]
+        [AllowAnonymous]
         public async Task<ActionResult<ResponseDTO>> AddSmartCA([FromBody] AddNewSmartCADTO dto)
         {
             var r = await _svc.AddSmartCA(dto);
@@ -116,6 +162,7 @@ namespace SWP391Web.API.Controllers
 
         [HttpGet]
         [Route("smartca-info/{userId}")]
+        [AllowAnonymous]
         public async Task<ActionResult<ResponseDTO>> GetSmartCAInformation([FromRoute] int userId)
         {
             var r = await _svc.GetSmartCAInformation(userId);
@@ -124,6 +171,7 @@ namespace SWP391Web.API.Controllers
 
         [HttpPost]
         [Route("update-smartca")]
+        [AllowAnonymous]
         public async Task<ActionResult<ResponseDTO>> UpdateSmartCA([FromBody] UpdateSmartDTO dto)
         {
             var r = await _svc.UpdateSmartCA(dto);
@@ -133,20 +181,16 @@ namespace SWP391Web.API.Controllers
         [HttpPost]
         [Route("update-econtract")]
         [Consumes("multipart/form-data")]
-        public async Task<ActionResult<ResponseDTO>> UpdateEContract([FromForm] UpdateEContractDTO dto)
+        [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
+        public async Task<ActionResult<ResponseDTO>> UpdateEContract([FromBody] UpdateEContractDTO dto)
         {
-            if (dto.File is null || dto.File.Length == 0)
-                return BadRequest(new { message = "file is missing." });
-
-            if (dto.File.ContentType?.Contains("pdf", StringComparison.OrdinalIgnoreCase) != true)
-                return BadRequest(new { message = "File is not PDF." });
-
             var r = await _svc.UpdateEContract(dto);
             return Ok(r);
         }
 
         [HttpGet]
         [Route("get-econtract-list")]
+        //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber, [FromQuery] int? pageSize, [FromQuery] EContractStatus eContractStatus)
         {
             var r = await _svc.GetEContractList(pageNumber, pageSize, eContractStatus);

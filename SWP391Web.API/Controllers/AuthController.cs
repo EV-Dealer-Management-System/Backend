@@ -15,27 +15,6 @@ namespace SWP391Web.API.Controllers
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
         }
 
-        [HttpPost("register-customer")]
-        public async Task<ActionResult<ResponseDTO>> RegisterCustomer([FromBody] RegisterCustomerDTO registerCustomerDTO, CancellationToken token)
-        {
-            var response = await _authService.RegisterCustomer(registerCustomerDTO, token);
-            return StatusCode(response.StatusCode, response);
-        }
-
-        [HttpPost("resend-verify-email")]
-        public async Task<ActionResult<ResponseDTO>> SendVerifyEmail([FromBody] ResendVerifyEmailDTO resendVerifyEmailDTO)
-        {
-            var response = await _authService.ResendVerifyEmail(resendVerifyEmailDTO.Email);
-            return StatusCode(response.StatusCode, response);
-        }
-
-        [HttpPost("verify-email")]
-        public async Task<ActionResult<ResponseDTO>> VerifyEmail([FromQuery] string userId, [FromQuery] string token)
-        {
-            var response = await _authService.VerifyEmil(userId, token);
-            return StatusCode(response.StatusCode, response);
-        }
-
         [HttpPost("login-user")]
         public async Task<ActionResult<ResponseDTO>> LoginUser([FromBody] LoginUserDTO loginUserDTO)
         {

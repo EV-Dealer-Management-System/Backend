@@ -6,17 +6,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWP391Web.Domain.ValueObjects
+namespace SWP391Web.Application.DTO.EContract
 {
     public class UpdateEContractDTO
     {
-        [FromForm(Name = "Id")]       
         public string Id { get; set; } = null!;
 
-        [FromForm(Name = "Subject")]  
         public string Subject { get; set; } = null!;
 
-        [FromForm(Name = "file")]     
-        public IFormFile File { get; set; } = null!;
+        public string HtmlFile { get; set; } = null!;
     }
 }
