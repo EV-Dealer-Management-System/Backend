@@ -12,7 +12,6 @@ namespace SWP391Web.Infrastructure.Repository
         public ICustomerRepository CustomerRepository { get; private set; }
         public IEmailTemplateRepository EmailTemplateRepository { get; private set; }
         public ICustomerOrderRepository CustomerOrderRepository { get; private set; }
-        public IContractTemplateRepository ContractTemplateRepository { get; private set; }
         public IDealerRepository DealerRepository { get; private set; }
         public IElectricVehicleColorRepository ElectricVehicleColorRepository { get; private set; }
         public IElectricVehicleModelRepository ElectricVehicleModelRepository { get; private set; }
@@ -28,11 +27,10 @@ namespace SWP391Web.Infrastructure.Repository
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
 
-            UserManagerRepository = new UserManagerRepository(userManagerRepository);
+            UserManagerRepository = new UserManagerRepository(userManagerRepository, _context);
             CustomerRepository = new CustomerRepository(_context);
             EmailTemplateRepository = new EmailTemplateRepository(_context);
             CustomerOrderRepository = new CustomerOrderRepository(_context);
-            ContractTemplateRepository = new ContractTemplateRepository(_context);
             DealerRepository = new DealerRepository(_context);
             ElectricVehicleColorRepository = new ElectricVehicleColorRepository(_context);
             ElectricVehicleModelRepository = new ElectricVehicleModelRepository(_context);

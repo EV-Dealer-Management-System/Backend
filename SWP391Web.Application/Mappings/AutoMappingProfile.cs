@@ -3,6 +3,8 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.BookingEV;
 using SWP391Web.Application.DTO.BookingEVDetail;
 using SWP391Web.Application.DTO.Customer;
+using SWP391Web.Application.DTO.EContract;
+using SWP391Web.Application.DTO.EContractTemplate;
 using SWP391Web.Application.DTO.ElectricVehicle;
 using SWP391Web.Application.DTO.ElectricVehicleColor;
 using SWP391Web.Application.DTO.ElectricVehicleModel;
@@ -37,8 +39,8 @@ namespace SWP391Web.Application.Mappings
                 }));
             CreateMap<EVCInventory, GetEVCInventoryDTO>().ReverseMap();
             CreateMap<Warehouse, GetWarehouseDTO>().ReverseMap();
-
-
+            CreateMap<EContract, GetEContractDTO>().ReverseMap();
+            CreateMap<EContractTemplate, GetEContractTemplateDTO>().ReverseMap();
         }
     }
 }

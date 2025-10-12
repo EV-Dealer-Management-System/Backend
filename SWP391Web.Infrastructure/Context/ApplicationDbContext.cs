@@ -23,8 +23,6 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<ElectricVehicle> ElectricVehicles { get; set; }
         public DbSet<EContract> EContracts { get; set; }
         public DbSet<EContractTemplate> EContractTemplates { get; set; }
-        public DbSet<EContractTemplateVersion> EContractTemplateVersions { get; set; }
-        public DbSet<EContractAmendment> EContractAmendments { get; set; }
         public DbSet<EContractTerm> EContractTerms { get; set; }
         public DbSet<BookingEV> BookingEVs { get; set; }
         public DbSet<BookingEVDetail> BookingEVDetails { get; set; }
@@ -164,24 +162,6 @@ namespace SWP391Web.Infrastructure.Context
                 .OnDelete(DeleteBehavior.Restrict);
 
             /******************************************************************************/
-            // Configure EContractAmendment entity
-
-            modelBuilder.Entity<EContractAmendment>()
-                .HasOne(ea => ea.EContract)
-                .WithMany(e => e.Amendments)
-                .HasForeignKey(ea => ea.EContractId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            /******************************************************************************/
-            // Configure EContractTemplate entity
-
-            modelBuilder.Entity<EContractTemplate>()
-                .HasMany(et => et.Versions)
-                .WithOne()
-                .HasForeignKey("ContractTemplateId")  
-                .OnDelete(DeleteBehavior.Restrict);
-
-            /******************************************************************************/
             // Configure BookingEVDetail entity
 
             modelBuilder.Entity<BookingEVDetail>()
@@ -218,6 +198,12 @@ namespace SWP391Web.Infrastructure.Context
                 .HasOne(e => e.Ower)
                 .WithOne(o => o.EContract)
                 .HasForeignKey<EContract>(e => e.OwnerBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<EContract>()
+                .HasOne(e => e.EContractTemplate)
+                .WithMany(t => t.EContracts)
+                .HasForeignKey(e => e.TemplateId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             /******************************************************************************/

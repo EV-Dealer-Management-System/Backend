@@ -12,7 +12,7 @@ namespace SWP391Web.Domain.ValueObjects
         public bool Success { get; set; }
         public ResultCode Code { get; set; }
         public List<string> Messages { get; set; } = [];
-
+        public object? Result { get; set; }
         public VnptResult()
         {
         }

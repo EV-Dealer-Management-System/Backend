@@ -83,23 +83,9 @@ namespace SWP391Web.Infrastructure.Seeders
                     Id = DealerTemplateId,
                     Code = "DL-STD",
                     Name = "Hợp đồng Đại lý – Chuẩn",
+                    ContentHtml = DealerContractHtmlV1,
                     CreatedAt = new DateTime(2025, 10, 06, 00, 00, 00, DateTimeKind.Utc),
                     IsDeleted = false
-                });
-
-                // Version v1 (Published + Active) — dùng shadow FK ContractTemplateId
-                modelBuilder.Entity<EContractTemplateVersion>().HasData(new
-                {
-                    Id = DealerV1Id,
-                    ContractTemplateId = DealerTemplateId,      // shadow FK như mapping ở trên
-                    VersionNo = 1,
-                    ContentHtml = DealerContractHtmlV1,
-                    StyleCss = (string?)null,
-                    IsActive = true,
-                    CreatedBy = "System",
-                    Notes = "Seed v1",
-                    CreatedAt = new DateTime(2025, 10, 06, 00, 00, 00, DateTimeKind.Utc),
-                    Status = TemplateVersionStatus.Published   // enum lưu int
                 });
             }
         }

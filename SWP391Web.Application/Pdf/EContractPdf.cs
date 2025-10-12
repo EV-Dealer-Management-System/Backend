@@ -1,8 +1,9 @@
-﻿using Microsoft.Playwright;
-using QuestPDF.Fluent;
-using QuestPDF.Helpers;
-using SWP391Web.Domain.Entities;
+﻿using Aspose.Words;
+using Aspose.Words.Loading;
+using Aspose.Words.Saving;
+using Microsoft.Playwright;
 using SWP391Web.Domain.ValueObjects;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Reflection;
@@ -206,24 +207,5 @@ namespace SWP391Web.Application.Pdf
             var idx = html.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
             return idx >= 0 ? html.Insert(idx, style) : style + html;
         }
-
-        //public static string RenderHtml(string html, EContractTerm term)
-        //{
-        //    if (!string.IsNullOrWhiteSpace(term.AdditionalTerms))
-        //    {
-        //        html = html.Replace("{{ additional }}", term.AdditionalTerms);
-        //    }
-        //    else
-        //    {
-        //        html = Regex.Replace(
-        //            html,
-        //            @"\s*<div class=""section-title"">Điều Khoản Bổ Sung</div>\s*<p>\s*\{\{\s*additional\s*\}\}\s*</p>",
-        //            string.Empty,
-        //            RegexOptions.IgnoreCase | RegexOptions.Singleline
-        //        );
-        //    }
-
-        //    return html;
-        //}
     }
 }
