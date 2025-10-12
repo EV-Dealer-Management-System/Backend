@@ -248,11 +248,8 @@ namespace SWP391Web.Application.Services
                 throw new Exception("The user is not login yet");
 
             var templateCode = _cfg["EContract:DealerTemplateCode"] ?? throw new ArgumentNullException("EContract:DealerTemplateCode is not exist");
-            var template = await _unitOfWork.EContractTemplateRepository.GetByCodeAsync(templateCode, ct);
+            var template = await _unitOfWork.EContractTemplateRepository.GetbyCodeAsync(templateCode, ct);
             if (template is null) throw new Exception($"Template with code '{templateCode}' is not exist");
-
-            var templateActive = template.GetActive();
-            if (templateActive is null) throw new Exception($"Template with code '{templateCode}' has not active version");
 
             var term = await _unitOfWork.EContractTermRepository.GetByLevelAsync(dealer.DealerLevel, ct);
             if (term is null) throw new Exception($"Term for dealer level '{dealer.DealerLevel}' is not exist");
@@ -291,9 +288,7 @@ namespace SWP391Web.Application.Services
                 ["additional"] = additional == null ? "Không có điều khoản bổ sung" : additional
             };
 
-            var html = EContractPdf.ReplacePlaceholders(templateActive.ContentHtml, data, htmlEncode: false);
-            if (!string.IsNullOrWhiteSpace(templateActive.StyleCss))
-                html = EContractPdf.InjectStyle(html, templateActive.StyleCss);
+            var html = EContractPdf.ReplacePlaceholders(template.ContentHtml, data, htmlEncode: false);
 
             //html = EContractPdf.RenderHtml(html, term);
             var pdfBytes = await EContractPdf.RenderAsync(html);
@@ -321,14 +316,7 @@ namespace SWP391Web.Application.Services
 
             var createResult = await _vnpt.CreateDocumentAsync(token, request);
 
-            var EContract = new EContract
-                (
-                    Guid.Parse(createResult.Data!.Id),
-                    template,
-                    templateActive,
-                    userId,
-                    dealer.ManagerId
-                );
+            var EContract = new EContract(Guid.Parse(createResult.Data.Id), userId, user.Id);
 
             await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
 

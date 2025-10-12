@@ -17,11 +17,11 @@ namespace SWP391Web.Infrastructure.Repository
         {
             _context = context;
         }
-        public async Task<EContractTemplate?> GetByCodeAsync(string code, CancellationToken ct)
-        {
-            return await _context.EContractTemplates
-                .Include(et => et.Versions)
-                .SingleAsync(et => et.Code == code, ct);
-        }
+
+        public async Task<EContractTemplate?> GetbyCodeAsync(string code, CancellationToken token)
+            => await _context.EContractTemplates.FirstOrDefaultAsync(v => v.Code == code, token);
+
+        public async Task<EContractTemplate?> GetbyIdAsync(Guid id, CancellationToken token)
+            => await _context.EContractTemplates.FirstOrDefaultAsync(v => v.Id == id, token);
     }
 }
