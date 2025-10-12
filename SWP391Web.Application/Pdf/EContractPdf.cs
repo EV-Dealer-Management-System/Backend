@@ -219,7 +219,7 @@ namespace SWP391Web.Application.Pdf
             var psi = new ProcessStartInfo
             {
                 FileName = "docker",
-                Arguments = $"run --rm -v \"{workDir}:/pdf\" bwits/pdf2htmlex \"{Path.GetFileName(pdfPath)}\" \"{outputFile}\"",
+                Arguments = $"docker run --rm -v \"{Path.GetDirectoryName(pdfPath)}:/pdf\" bwits/pdf2htmlex /pdf/{Path.GetFileName(pdfPath)} /pdf/output.html",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
