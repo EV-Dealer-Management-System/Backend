@@ -121,6 +121,43 @@ namespace SWP391Web.Application.Services
             }
         }
 
+        public async Task<ResponseDTO> GetAvailableQuantityByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId)
+        {
+            try
+            {
+
+
+                var quantity = await _unitOfWork.ElectricVehicleRepository
+                    .GetAvailableQuantityByModelVersionColorAsync(modelId, versionId, colorId);
+
+                if(quantity == 0)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No available vehicles for the selected model, version, and color.",
+                        StatusCode = 400
+                    };
+                }
+
+                return new ResponseDTO()
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Available quantity retrieved successfully",
+                    Result = quantity
+                };
+
+            } catch (Exception ex) {
+                return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
         public async Task<ResponseDTO> GetVehicleByIdAsync(Guid vehicleId)
         {
             try
