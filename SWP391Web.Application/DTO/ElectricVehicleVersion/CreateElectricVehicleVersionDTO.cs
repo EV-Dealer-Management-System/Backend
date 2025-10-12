@@ -20,6 +20,7 @@ namespace SWP391Web.Application.DTO.ElectricVehicleVersion
         public decimal Height { get; set; }
         public int ProductionYear { get; set; }
         public string Description { get; set; }
+        public bool IsActive { get; set; } = true;
 
     }
 }

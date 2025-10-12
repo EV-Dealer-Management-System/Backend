@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.IRepository;
 using System;
@@ -18,10 +19,32 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public async Task<ElectricVehicle?> GetByIdsAsync(Guid vehicleId)
+        public async Task<int> GetAvailableQuantityByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId)
         {
             return await _context.ElectricVehicles
-                .FirstOrDefaultAsync(v => v.Id == vehicleId);
+                .Where(ev =>ev.Version.ModelId == modelId
+                            && ev.VersionId == versionId
+                            && ev.ColorId == colorId
+                            && ev.Status == StatusVehicle.Available
+                            && ev.Warehouse.EVCInventoryId != null)
+                .CountAsync();
+        }
+
+        public async Task<List<ElectricVehicle?>> GetAvailableVehicleByModelIdAsync(Guid modelId)
+        {
+            return await _context.ElectricVehicles
+                .Where(ev => ev.Version.ModelId == modelId
+                     && ev.Status == StatusVehicle.Available
+                     && ev.Warehouse.EVCInventoryId != null)
+                .Include(ev => ev.Version)
+                .Include(ev => ev.Color)
+                .Include(ev => ev.Warehouse)
+                .ToListAsync();
+        }
+
+        public Task<ElectricVehicle?> GetByIdsAsync(Guid vehicleId)
+        {
+            throw new NotImplementedException();
         }
 
         public async Task<ElectricVehicle?> GetByVINAsync(string vin)

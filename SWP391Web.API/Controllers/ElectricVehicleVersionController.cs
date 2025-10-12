@@ -21,10 +21,10 @@ namespace SWP391Web.API.Controllers
             var response = await _electricVehicleVersionService.CreateVersionAsync(createElectricVehicleVersionDTO);
             return StatusCode(response.StatusCode, response);
         }
-        [HttpGet("get-all-versions-by-modelid/{modelId}")]
-        public async Task<ActionResult<ResponseDTO>> GetAllVersionsByModelIdAsync(Guid modelId)
+        [HttpGet("get-all-versions")]
+        public async Task<ActionResult<ResponseDTO>> GetAllVersionsByModelIdAsync()
         {
-            var response = await _electricVehicleVersionService.GetAllVersionsByModelIdAsync(modelId);
+            var response = await _electricVehicleVersionService.GetAllVersionsAsync();
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-version-by-id/{versionId}")]
@@ -43,6 +43,12 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult<ResponseDTO>> UpdateVersionAsync(Guid versionId, [FromBody] UpdateElectricVehicleVersionDTO updateElectricVehicleVersionDTO)
         {
             var response = await _electricVehicleVersionService.UpdateVersionAsync(versionId, updateElectricVehicleVersionDTO);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet("get-all-available-versions-by-model-id/{modelId}")]
+        public async Task<ActionResult<ResponseDTO>> GetAllAvailableVersionsByModelIdAsync([FromRoute] Guid modelId)
+        {
+            var response = await _electricVehicleVersionService.GetAllAvailableVersionsByModelIdAsync(modelId);
             return StatusCode(response.StatusCode, response);
         }
 

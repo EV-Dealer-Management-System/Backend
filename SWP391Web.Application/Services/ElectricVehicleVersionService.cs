@@ -3,6 +3,7 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.ElectricVehicleVersion;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
@@ -51,6 +52,7 @@ namespace SWP391Web.Application.Services
                     Height = createElectricVehicleVersionDTO.Height,
                     ProductionYear = createElectricVehicleVersionDTO.ProductionYear,
                     Description = createElectricVehicleVersionDTO.Description,
+                    IsActive = true,
                 };
 
                 if (electricVehicleVersion is null)
@@ -85,16 +87,101 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public Task<ResponseDTO> DeleteVersionAsync(Guid versionId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public async Task<ResponseDTO> GetAllVersionsByModelIdAsync(Guid modelId)
+        public async Task<ResponseDTO> DeleteVersionAsync(Guid versionId)
         {
             try
             {
-                var versions = await _unitOfWork.ElectricVehicleVersionRepository.GetAllAsync(v => v.ModelId == modelId);
+                var version = await _unitOfWork.ElectricVehicleVersionRepository.GetByIdsAsync(versionId);
+                if (version == null)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "Version not found.",
+                        StatusCode = 404
+                    };
+                }
+
+                version.IsActive = false;//soft delete by setting IsActive to false
+                _unitOfWork.ElectricVehicleVersionRepository.Update(version);
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO()
+                {
+                    IsSuccess = true,
+                    Message = "Delete version successfully.",
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetAllAvailableVersionsByModelIdAsync(Guid modelId)
+        {
+            try
+            {
+                var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAvailableVehicleByModelIdAsync(modelId);
+                if (!vehicles.Any())
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "No available versions found for the specified model.",
+                        StatusCode = 404
+                    };
+                }
+
+                var availableVersions = vehicles
+                    .Select(ev => ev.Version)
+                    .DistinctBy(v => v.Id)
+                    .Select(v => _mapper.Map<GetElectricVehicleVersionDTO>(v))
+                    .ToList();
+
+
+                if (!availableVersions.Any())
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "No available versions found for the specified model.",
+                        StatusCode = 404
+                    };
+                }
+
+                return new ResponseDTO()
+                {
+                    IsSuccess = true,
+                    Message = "Get all available versions by model successfully.",
+                    StatusCode = 200,
+                    Result = availableVersions
+                };
+
+
+            }
+            catch(Exception ex)
+            {
+                return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetAllVersionsAsync()
+        {
+            try
+            {
+                var versions = await _unitOfWork.ElectricVehicleVersionRepository.GetAllAsync();
                 var getVersions = _mapper.Map<List<GetElectricVehicleVersionDTO>>(versions);
                 return new ResponseDTO()
                 {

@@ -9,6 +9,8 @@ using SWP391Web.Application.DTO.ElectricVehicle;
 using SWP391Web.Application.DTO.ElectricVehicleColor;
 using SWP391Web.Application.DTO.ElectricVehicleModel;
 using SWP391Web.Application.DTO.ElectricVehicleVersion;
+using SWP391Web.Application.DTO.EVCInventory;
+using SWP391Web.Application.DTO.Warehouse;
 using SWP391Web.Domain.Entities;
 
 namespace SWP391Web.Application.Mappings
@@ -35,7 +37,8 @@ namespace SWP391Web.Application.Mappings
                     VersionId = src.VersionId,
                     ModelId = src.Version.ModelId
                 }));
-                
+            CreateMap<EVCInventory, GetEVCInventoryDTO>().ReverseMap();
+            CreateMap<Warehouse, GetWarehouseDTO>().ReverseMap();
             CreateMap<EContract, GetEContractDTO>().ReverseMap();
             CreateMap<EContractTemplate, GetEContractTemplateDTO>().ReverseMap();
         }

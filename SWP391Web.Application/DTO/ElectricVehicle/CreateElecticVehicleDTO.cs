@@ -17,7 +17,6 @@ namespace SWP391Web.Application.DTO.ElectricVehicle
         public DateTime? ManufactureDate { get; set; }
         public DateTime? ImportDate { get; set; }
         public DateTime? WarrantyExpiryDate { get; set; }
-        public string CurrentLocation { get; set; }
         public decimal CostPrice { get; set; }
         public string ImageUrl { get; set; }
     }

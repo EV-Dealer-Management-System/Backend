@@ -11,11 +11,11 @@ namespace SWP391Web.Domain.Entities
     {
         public Guid Id { get; set; }
         public Guid? DealerId { get; set; }
-        public Guid? EVInventoryId { get; set; }
+        public Guid? EVCInventoryId { get; set; }
         public WarehouseType WarehouseType { get; set; }
 
         public ICollection<ElectricVehicle> ElectricVehicles { get; set; } = new List<ElectricVehicle>();
         public Dealer? Dealer { get; set; }
-        public EVInventory? EVInventory { get; set; }
+        public EVCInventory? EVCInventory { get; set; }
     }
 }
