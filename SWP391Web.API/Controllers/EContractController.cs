@@ -158,12 +158,20 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpGet]
-        [Route("get-econtract-list")]
+        [Route("get-all-econtract-list")]
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default)
         {
-            var r = await _svc.GetEContractList(pageNumber, pageSize, eContractStatus);
+            var r = await _svc.GetAllEContractList(pageNumber, pageSize, eContractStatus);
             return Ok(r);
+        }
+
+        [HttpPost]
+        [Route("get-all-vnpt-econtract-by-id")]
+        public async Task<ActionResult<ResponseDTO>> GetVnptEContractByIdPost([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default)
+        {
+            var r = await _svc.GetAllVnptEContractList(pageNumber, pageSize, eContractStatus);
+            return StatusCode((int)r.Code, r);
         }
 
         [HttpGet]

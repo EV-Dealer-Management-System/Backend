@@ -625,7 +625,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO<EContract>> GetEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus = default)
+        public async Task<ResponseDTO<EContract>> GetAllEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus = default)
         {
             try
             {
@@ -722,6 +722,25 @@ namespace SWP391Web.Application.Services
             catch (Exception ex)
             {
                 return new VnptResult<VnptDocumentDto>($"Exception when get EContract by id: {ex.Message}");
+            }
+        }
+
+        public async Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetAllVnptEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus)
+        {
+            try
+            {
+                var token = await GetAccessTokenAsync();
+                var response = await _vnpt.GetEContractList(token, pageNumber, pageSize, eContractStatus);
+                if (!response.Success)
+                {
+                    var errors = string.Join(", ", response.Messages);
+                    throw new Exception($"Error to get all vnpt EContract: {errors}");
+                }
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return new VnptResult<GetEContractResponse<DocumentListItemDto>>($"Exception when get all vnpt EContract: {ex.Message}");
             }
         }
     }
