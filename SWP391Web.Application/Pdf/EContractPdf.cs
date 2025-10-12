@@ -1,7 +1,7 @@
-﻿using Microsoft.Playwright;
-using QuestPDF.Fluent;
-using QuestPDF.Helpers;
-using SWP391Web.Domain.Entities;
+﻿using Aspose.Words;
+using Aspose.Words.Loading;
+using Aspose.Words.Saving;
+using Microsoft.Playwright;
 using SWP391Web.Domain.ValueObjects;
 using System.Diagnostics;
 using System.Globalization;
@@ -206,37 +206,6 @@ namespace SWP391Web.Application.Pdf
             var style = $"<style>\n{css}\n</style>\n";
             var idx = html.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
             return idx >= 0 ? html.Insert(idx, style) : style + html;
-        }
-
-        public static async Task<string> ConvertPdfToHtmlAsync(string pdfPath)
-        {
-            if (!File.Exists(pdfPath))
-                throw new FileNotFoundException("PDF file not found", pdfPath);
-
-            var workDir = Path.GetDirectoryName(pdfPath)!;
-            var outputFile = Path.GetFileNameWithoutExtension(pdfPath) + ".html";
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = "docker",
-                Arguments = $"docker run --rm -v \"{Path.GetDirectoryName(pdfPath)}:/pdf\" bwits/pdf2htmlex /pdf/{Path.GetFileName(pdfPath)} /pdf/output.html",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(psi);
-            string stdOut = await process.StandardOutput.ReadToEndAsync();
-            string stdErr = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0)
-            {
-                throw new Exception($"pdf2htmlEX docker conversion failed: {stdErr}");
-            }
-
-            return Path.Combine(workDir, outputFile);
         }
     }
 }

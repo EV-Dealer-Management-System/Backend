@@ -1,6 +1,7 @@
 ﻿using EVManagementSystem.Application.DTO.EContract;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.EContract;
+using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
 using System.Security.Claims;
@@ -20,8 +21,10 @@ namespace SWP391Web.Application.IServices
         Task<VnptResult<VnptFullUserData>> GetSmartCAInformation(int userId);
         Task<VnptResult<VnptSmartCAResponse>> UpdateSmartCA(UpdateSmartDTO updateSmartDTO);
         Task<VnptResult<UpdateEContractResponse>> UpdateEContract(UpdateEContractDTO updateEContractDTO);
-        Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus);
+        Task<ResponseDTO<EContract>> GetEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus);
         Task<ResponseDTO> CreateDraftEContractAsync(ClaimsPrincipal userClaim, CreateDealerDTO createDealerDTO, CancellationToken ct);
-        Task<HttpResponseMessage> GetHtmtEContractAsync(string eContractId, CancellationToken ct);
+        Task<string> ChangeWordToHtml(string downloadUrl, CancellationToken ct);
+        Task<VnptResult<VnptDocumentDto>> GetVnptEContractByIdAsync(string eContractId, CancellationToken ct);
+        Task<ResponseDTO<EContract>> GetEContractByIdAsync(string eContractId, CancellationToken ct);
     }
 }

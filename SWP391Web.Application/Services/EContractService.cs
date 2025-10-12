@@ -17,6 +17,7 @@ using System.Text;
 using System.Text.Json;
 using System.Web;
 using UglyToad.PdfPig;
+using AutoMapper;
 
 namespace SWP391Web.Application.Services
 {
@@ -27,13 +28,15 @@ namespace SWP391Web.Application.Services
         private readonly IVnptEContractClient _vnpt;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
-        public EContractService(IConfiguration cfg, HttpClient http, IUnitOfWork unitOfWork, IVnptEContractClient vnpt, IEmailService emailService)
+        private readonly IMapper _mapper;
+        public EContractService(IConfiguration cfg, HttpClient http, IUnitOfWork unitOfWork, IVnptEContractClient vnpt, IEmailService emailService, IMapper mapper)
         {
             _cfg = cfg;
             _http = http;
             _unitOfWork = unitOfWork;
             _vnpt = vnpt;
             _emailService = emailService;
+            _mapper = mapper;
         }
 
         public async Task<string> GetAccessTokenAsync()
@@ -633,38 +636,88 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus)
+        public async Task<ResponseDTO<EContract>> GetEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus = default)
         {
             try
             {
-                var token = await GetAccessTokenAsync();
-                var response = await _vnpt.GetEContractList(token, pageNumber, pageSize, eContractStatus);
-                if (!response.Success)
+                var eContractList = await _unitOfWork.EContractRepository.GetAllAsync();
+
+                if (eContractStatus != default)
                 {
-                    var errors = string.Join(", ", response.Messages);
-                    throw new Exception($"Error to get EContract list: {errors}");
+                    eContractList = eContractList.Where(ec => ec.Status == eContractStatus);
                 }
-                return response;
+
+                if (pageNumber > 0 && pageSize > 0)
+                {
+                    eContractList = eContractList.Skip(((int)pageNumber - 1) * (int)pageSize).Take((int)pageSize).ToList();
+                }
+                else
+                {
+                    return new ResponseDTO<EContract>
+                    {
+                        IsSuccess = false,
+                        StatusCode = 400,
+                        Message = "pageNumber and pageSize must be greater than 0"
+                    };
+                }
+
+                var getList = _mapper.Map<List<GetEContractDTO>>(eContractList);
+                return new ResponseDTO<EContract>
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Get EContract list successfully",
+                    Result = getList
+                };
             }
             catch (Exception ex)
             {
-                return new VnptResult<GetEContractResponse<DocumentListItemDto>>($"Exception when get EContract list: {ex.Message}");
+                return new ResponseDTO<EContract>
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to get EContract list: {ex.Message}"
+                };
             }
         }
 
-        public async Task<HttpResponseMessage> GetHtmtEContractAsync(string downloadUrl, CancellationToken ct)
+        public async Task<ResponseDTO<EContract>> GetEContractByIdAsync(string eContractId, CancellationToken ct)
         {
             try
             {
-               return await _vnpt.GetDownloadResponseAsync(downloadUrl, null, ct);
+                var eContract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(eContractId), ct);
+                if (eContract is null)
+                {
+                    return new ResponseDTO<EContract>
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "EContract not found"
+                    };
+                }
+
+
+                var getEContract = _mapper.Map<GetEContractDTO>(eContract);
+                return new ResponseDTO<EContract>
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Get EContract successfully",
+                    Result = getEContract
+                };
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error to get HTMT EContract: {ex.Message}");
+                return new ResponseDTO<EContract>
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to get EContract by id: {ex.Message}"
+                };
             }
         }
 
-        public async Task<VnptResult<VnptDocumentDto>> GetEContractByIdAsync(string eContractId, CancellationToken ct)
+        public async Task<VnptResult<VnptDocumentDto>> GetVnptEContractByIdAsync(string eContractId, CancellationToken ct)
         {
             try
             {

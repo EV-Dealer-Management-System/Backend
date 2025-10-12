@@ -42,7 +42,7 @@ namespace SWP391Web.API.Controllers
             var r = await _svc.GetAccessTokenAsync();
             return Ok(r);
         }
-        
+
         [HttpPost]
         [Route("ready-dealer-contracts")]
         [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
@@ -125,29 +125,7 @@ namespace SWP391Web.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> PreviewHtml([FromQuery] string downloadUrl, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(downloadUrl))
-                return BadRequest("Missing downloadUrl");
-
-            // 1. Download PDF từ VNPT
-            var upstream = await _svc.GetHtmtEContractAsync(downloadUrl, ct);
-            if (!upstream.IsSuccessStatusCode)
-            {
-                var err = await upstream.Content.ReadAsStringAsync(ct);
-                return StatusCode((int)upstream.StatusCode, err);
-            }
-
-            // 2. Lưu tệp PDF tạm
-            var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            Directory.CreateDirectory(tempDir);
-            var pdfPath = Path.Combine(tempDir, "input.pdf");
-            await using (var fs = System.IO.File.Create(pdfPath))
-                await upstream.Content.CopyToAsync(fs, ct);
-
-            // 3. Convert PDF → HTML qua Docker
-            var htmlPath = await EContractPdf.ConvertPdfToHtmlAsync(pdfPath);
-
-            // 4. Trả về HTML
-            var html = await System.IO.File.ReadAllTextAsync(htmlPath, Encoding.UTF8);
+            var html = await _svc.ChangeWordToHtml(downloadUrl, ct);
             return Content(html, "text/html", Encoding.UTF8);
         }
 
@@ -191,11 +169,28 @@ namespace SWP391Web.API.Controllers
         [HttpGet]
         [Route("get-econtract-list")]
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
-        public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber, [FromQuery] int? pageSize, [FromQuery] EContractStatus eContractStatus)
+        public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default)
         {
             var r = await _svc.GetEContractList(pageNumber, pageSize, eContractStatus);
             return Ok(r);
         }
 
+        [HttpGet]
+        [Route("get-vnpt-econtract-by-id/{eContractId}")]
+        //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
+        public async Task<ActionResult<ResponseDTO>> GetVnptEContractById([FromRoute] string eContractId, CancellationToken ct)
+        {
+            var r = await _svc.GetVnptEContractByIdAsync(eContractId, ct);
+            return StatusCode((int)r.Code, r);
+        }
+
+        [HttpGet]
+        [Route("get-econtract-by-id/{eContractId}")]
+        //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
+        public async Task<ActionResult<ResponseDTO>> GetEContractById([FromRoute] string eContractId, CancellationToken ct)
+        {
+            var r = await _svc.GetEContractByIdAsync(eContractId, ct);
+            return StatusCode((int)r.StatusCode, r);
+        }
     }
 }
