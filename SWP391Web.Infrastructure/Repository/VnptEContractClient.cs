@@ -8,6 +8,7 @@ using System.Text;
 using Newtonsoft.Json;
 using SWP391Web.Domain.Enums;
 using System.Net.Http;
+using Microsoft.AspNetCore.Http;
 
 namespace SWP391Web.Infrastructure.Repository
 {
@@ -156,53 +157,43 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<VnptResult<VnptSmartCAResponse>> UpdateSmartCA(string token, UpdateSmartDTO updateSmartDTO)
             => await PostAsync<VnptSmartCAResponse>(token, "/api/users/smart-ca/update", updateSmartDTO);
 
-        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContractAsync(string token, UpdateEContractDTO updateEContractDTO)
+        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContractAsync(string token, string id, string subject, IFormFile file)
         {
             var httpRequest = new HttpRequestMessage(HttpMethod.Post, _baseUrl + "/api/documents/update");
             Bearer(httpRequest, token);
 
             var content = new MultipartFormDataContent
            {
-               { new StringContent(updateEContractDTO.Id), "Id" },
-                { new StringContent(updateEContractDTO.Subject ?? ""), "Subject" }
+               { new StringContent(id), "Id" },
+                { new StringContent(subject ?? ""), "Subject" }
            };
 
-            using var fileStream = updateEContractDTO.File.OpenReadStream();
+            using var fileStream = file.OpenReadStream();
             var streamContent = new StreamContent(fileStream);
             streamContent.Headers.ContentType = new MediaTypeHeaderValue(
-                string.IsNullOrWhiteSpace(updateEContractDTO.File.ContentType) ? "application/pdf" : updateEContractDTO.File.ContentType);
+                string.IsNullOrWhiteSpace(file.ContentType) ? "application/pdf" : file.ContentType);
 
-            content.Add(streamContent, "File", updateEContractDTO.File.FileName);
+            content.Add(streamContent, "File", file.FileName);
 
             httpRequest.Content = content;
 
             return await SendAsync<UpdateEContractResponse>(httpRequest);
         }
 
-        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContract(string token, UpdateEContractDTO updateEContractDTO)
+        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContract(string token, string id, string subject, IFormFile file)
         {
-            var result = await UpdateEContractAsync(token, updateEContractDTO);
-            var pdfBytes = await GetPdfBytesFromDownloadUrlAsync(result.Data?.DownloadUrl, token);
+            var result = await UpdateEContractAsync(token, id, subject, file);
+            //var pdfBytes = await GetPdfBytesFromDownloadUrlAsync(result.Data?.DownloadUrl, token);
 
-            result.Data!.FileBytes = pdfBytes;
+            //result.Data!.FileBytes = pdfBytes;
             return result;
         }
 
-        private async Task<byte[]> GetPdfBytesFromDownloadUrlAsync(string downloadUrl, string token)
-        {
-            if (string.IsNullOrWhiteSpace(downloadUrl))
-                throw new InvalidOperationException("DownloadUrl is empty. The API did not return a file URL.");
+        public async Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetEContractList(string token, int? pageNumber, int? pageSize, EContractStatus eContractStatus)
+            => await GetAsync<GetEContractResponse<DocumentListItemDto>>(token, $"/api/documents?page={pageNumber ?? 1}&pageSize={pageSize ?? 10}&status={(int)eContractStatus}");
 
-            using var req = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
-            Bearer(req, token);
-
-            using var httpResp = await _http.SendAsync(req);
-            httpResp.EnsureSuccessStatusCode();
-
-            return await httpResp.Content.ReadAsByteArrayAsync();
-        }
-
-        public Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetEContractList(string token, int? pageNumber, int? pageSize, EContractStatus eContractStatus)
-            => GetAsync<GetEContractResponse<DocumentListItemDto>>(token, $"/api/documents?page={pageNumber ?? 1}&pageSize={pageSize ?? 10}&status={(int)eContractStatus}");
+        public async Task<VnptResult<VnptDocumentDto>> GetEContractByIdAsync(string token, string eContractId)
+            => await GetAsync<VnptDocumentDto>(token, $"/api/documents/{eContractId}");
+        
     }
 }

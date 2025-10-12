@@ -22,5 +22,6 @@ namespace SWP391Web.Application.IServices
         Task<VnptResult<UpdateEContractResponse>> UpdateEContract(UpdateEContractDTO updateEContractDTO);
         Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus);
         Task<ResponseDTO> CreateDraftEContractAsync(ClaimsPrincipal userClaim, CreateDealerDTO createDealerDTO, CancellationToken ct);
+        Task<HttpResponseMessage> GetHtmtEContractAsync(string eContractId, CancellationToken ct);
     }
 }

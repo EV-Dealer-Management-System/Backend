@@ -3,6 +3,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.ValueObjects;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Reflection;
@@ -207,23 +208,35 @@ namespace SWP391Web.Application.Pdf
             return idx >= 0 ? html.Insert(idx, style) : style + html;
         }
 
-        //public static string RenderHtml(string html, EContractTerm term)
-        //{
-        //    if (!string.IsNullOrWhiteSpace(term.AdditionalTerms))
-        //    {
-        //        html = html.Replace("{{ additional }}", term.AdditionalTerms);
-        //    }
-        //    else
-        //    {
-        //        html = Regex.Replace(
-        //            html,
-        //            @"\s*<div class=""section-title"">Điều Khoản Bổ Sung</div>\s*<p>\s*\{\{\s*additional\s*\}\}\s*</p>",
-        //            string.Empty,
-        //            RegexOptions.IgnoreCase | RegexOptions.Singleline
-        //        );
-        //    }
+        public static async Task<string> ConvertPdfToHtmlAsync(string pdfPath)
+        {
+            if (!File.Exists(pdfPath))
+                throw new FileNotFoundException("PDF file not found", pdfPath);
 
-        //    return html;
-        //}
+            var workDir = Path.GetDirectoryName(pdfPath)!;
+            var outputFile = Path.GetFileNameWithoutExtension(pdfPath) + ".html";
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = "docker",
+                Arguments = $"run --rm -v \"{workDir}:/pdf\" bwits/pdf2htmlex \"{Path.GetFileName(pdfPath)}\" \"{outputFile}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(psi);
+            string stdOut = await process.StandardOutput.ReadToEndAsync();
+            string stdErr = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
+            {
+                throw new Exception($"pdf2htmlEX docker conversion failed: {stdErr}");
+            }
+
+            return Path.Combine(workDir, outputFile);
+        }
     }
 }
