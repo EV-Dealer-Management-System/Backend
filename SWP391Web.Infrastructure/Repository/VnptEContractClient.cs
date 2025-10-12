@@ -6,6 +6,9 @@ using SWP391Web.Infrastructure.IRepository;
 using System.Net.Http.Headers;
 using System.Text;
 using Newtonsoft.Json;
+using SWP391Web.Domain.Enums;
+using System.Net.Http;
+using Microsoft.AspNetCore.Http;
 
 namespace SWP391Web.Infrastructure.Repository
 {
@@ -127,12 +130,12 @@ namespace SWP391Web.Infrastructure.Repository
             => await PostAsync<ProcessRespone>(token, "/api/documents/process", vnptProcessDTO);
 
 
-        public async Task<HttpResponseMessage> GetDownloadResponseAsync(string token, string? rangeHeader = null, CancellationToken ct = default)
+        public async Task<HttpResponseMessage> GetDownloadResponseAsync(string downloadURL, string? rangeHeader = null, CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(token))
-                throw new ArgumentException("downloadToken is required", nameof(token));
+            if (string.IsNullOrWhiteSpace(downloadURL))
+                throw new ArgumentException("downloadURL is required", nameof(downloadURL));
 
-            var url = $"{_baseUrl}/Api/Download?token={token}";
+            var url = $"{downloadURL}";
             var req = new HttpRequestMessage(HttpMethod.Get, url);
 
             if (!string.IsNullOrWhiteSpace(rangeHeader))
@@ -151,26 +154,46 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<VnptResult<VnptFullUserData>> GetSmartCAInformation(string token, int userId)
             => await GetAsync<VnptFullUserData>(token, $"/api/users/{userId}");
 
-        //public async Task<VnptDocumentDto> UpdateProcessAsync(string token, VnptUpdateProcessReq reqMedel, CancellationToken ct)
-        //{
-        //    var req = JsonReq(HttpMethod.Post, $"{_cfg["SmartCA:BaseUrl"]}/api/documents/update-process", reqMedel);
-        //    Bearer(req, token);
+        public async Task<VnptResult<VnptSmartCAResponse>> UpdateSmartCA(string token, UpdateSmartDTO updateSmartDTO)
+            => await PostAsync<VnptSmartCAResponse>(token, "/api/users/smart-ca/update", updateSmartDTO);
 
-        //    using var res = await _http.SendAsync(req, ct);
-        //    return await ReadOrThrowAsync<VnptDocumentDto>(res, ct);
-        //}
+        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContractAsync(string token, string id, string subject, IFormFile file)
+        {
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, _baseUrl + "/api/documents/update");
+            Bearer(httpRequest, token);
 
-        //private async Task<T> ReadOrThrowAsync<T>(HttpResponseMessage res, CancellationToken ct)
-        //{
-        //    var body = await res.Content.ReadAsStringAsync(ct);
-        //    if (!res.IsSuccessStatusCode)
-        //        throw new HttpRequestException($"HTTP {(int)res.StatusCode} {res.ReasonPhrase}\n{res.RequestMessage?.Method} {res.RequestMessage?.RequestUri}\n{body}");
+            var content = new MultipartFormDataContent
+           {
+               { new StringContent(id), "Id" },
+                { new StringContent(subject ?? ""), "Subject" }
+           };
 
-        //    var env = Newtonsoft.Json.JsonSerializer.Deserialize<VnptEnvelope<T>>(body, _jon);
-        //    if (env is null || !env.Success || env.Data is null)
-        //        throw new HttpRequestException($"VNPT returned success=false or data=null\n{res.RequestMessage?.Method} {res.RequestMessage?.RequestUri}\n{body}");
+            using var fileStream = file.OpenReadStream();
+            var streamContent = new StreamContent(fileStream);
+            streamContent.Headers.ContentType = new MediaTypeHeaderValue(
+                string.IsNullOrWhiteSpace(file.ContentType) ? "application/pdf" : file.ContentType);
 
-        //    return env.Data;
-        //}
+            content.Add(streamContent, "File", file.FileName);
+
+            httpRequest.Content = content;
+
+            return await SendAsync<UpdateEContractResponse>(httpRequest);
+        }
+
+        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContract(string token, string id, string subject, IFormFile file)
+        {
+            var result = await UpdateEContractAsync(token, id, subject, file);
+            //var pdfBytes = await GetPdfBytesFromDownloadUrlAsync(result.Data?.DownloadUrl, token);
+
+            //result.Data!.FileBytes = pdfBytes;
+            return result;
+        }
+
+        public async Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetEContractList(string token, int? pageNumber, int? pageSize, EContractStatus eContractStatus)
+            => await GetAsync<GetEContractResponse<DocumentListItemDto>>(token, $"/api/documents?page={pageNumber ?? 1}&pageSize={pageSize ?? 10}&status={(int)eContractStatus}");
+
+        public async Task<VnptResult<VnptDocumentDto>> GetEContractByIdAsync(string token, string eContractId)
+            => await GetAsync<VnptDocumentDto>(token, $"/api/documents/{eContractId}");
+        
     }
 }

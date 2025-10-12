@@ -7,6 +7,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Aspose.Words" Version="25.10.0" />
 		<PackageReference Include="AutoMapper" Version="15.0.1" />
 		<PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
 		<PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.14.0" />
@@ -18,6 +19,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\SWP391Web.Domain\SWP391Web.Domain.csproj" />
 		<ProjectReference Include="..\SWP391Web.Infrastructure\SWP391Web.Infrastructure.csproj" />
 	</ItemGroup>
 

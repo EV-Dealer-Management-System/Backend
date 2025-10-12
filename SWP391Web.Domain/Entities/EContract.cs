@@ -15,11 +15,11 @@ namespace SWP391Web.Domain.Entities
         public int TemplateVersionNo { get; private set; }
 
         // Snapshot
-        public string BaseHtmlKey { get; private set; } = null!;
+        public string? BaseHtmlKey { get; private set; }
         public string? FinalPdfKey { get; private set; }
-        public string ManifestKey { get; private set; } = null!;
+        public string? ManifestKey { get; private set; }
 
-        public string BaseHtmlSha256 { get; private set; } = null!;
+        public string? BaseHtmlSha256 { get; private set; }
         public string? FinalPdfSha256 { get; private set; }
         public string? ManifestSha256 { get; private set; }
         public string? BaseHtmlTag { get; private set; }
@@ -37,12 +37,26 @@ namespace SWP391Web.Domain.Entities
         private readonly List<EContractAmendment> _amendments = new();
         public IReadOnlyCollection<EContractAmendment> Amendments => _amendments.AsReadOnly();
 
-        private EContract() { } 
-        public EContract(EContractTemplate contractTemplate, EContractTemplateVersion templateVersion, string baseHtmlKey, string manifestKey, string baseHtmlSha256, string manifestSha256, string? baseHtmlTag, string? manifestTag, string createdBy)
+        private EContract() { }
+        public EContract(Guid Id, EContractTemplate contractTemplate, EContractTemplateVersion templateVersion, string createdBy, string ownerBy)
         {
             if (!templateVersion.IsActive)
                 throw new InvalidOperationException("Only active template version can be used to create contract.");
 
+            this.Id = Id;
+            TemplateId = contractTemplate.Id;
+            TemplateVersionId = templateVersion.Id;
+            TemplateVersionNo = templateVersion.VersionNo;
+
+            CreatedBy = createdBy;
+            OwnerBy = ownerBy;
+        }
+        public EContract(Guid Id, EContractTemplate contractTemplate, EContractTemplateVersion templateVersion, string? baseHtmlKey, string? manifestKey, string? baseHtmlSha256, string? manifestSha256, string? baseHtmlTag, string? manifestTag, string createdBy)
+        {
+            if (!templateVersion.IsActive)
+                throw new InvalidOperationException("Only active template version can be used to create contract.");
+
+            this.Id = Id;
             TemplateId = contractTemplate.Id;
             TemplateVersionId = templateVersion.Id;
             TemplateVersionNo = templateVersion.VersionNo;
@@ -59,42 +73,12 @@ namespace SWP391Web.Domain.Entities
 
         public EContractAmendment AddAmendment(Guid eContractId, string title, string s3HtmlKey, string htmlSha256, string? htmlTag, string? notes, string createdBy)
         {
-            if (Status is not (EContractStatus.Draft or EContractStatus.Sent))
+            if (Status is not (EContractStatus.Draft or EContractStatus.Ready))
                 throw new InvalidOperationException("Only draft or sent contract can be amended.");
 
             var amendment = new EContractAmendment(eContractId, title, s3HtmlKey, htmlSha256, htmlTag, notes, createdBy);
             _amendments.Add(amendment);
             return amendment;
-        }
-
-        public void MarkSent()
-        {
-            if (Status != EContractStatus.Draft)
-                throw new InvalidOperationException("Only draft contract can be sent.");
-            Status = EContractStatus.Sent;
-        }
-
-        public void LockForSigning(string finalPdfKey, string finalPdfSha256, string? finalPdfTag)
-        {
-            if (Status != EContractStatus.Sent)
-                throw new InvalidOperationException("Send before locking.");
-            Status = EContractStatus.LockedForSigning;
-        }
-
-        public void AttachFinalPdf(string finalPdfKey, string finalPdfSha256, string? finalPdfTag)
-        {
-            if (Status != EContractStatus.LockedForSigning)
-                throw new InvalidOperationException("Only locked contract can attach final PDF.");
-            FinalPdfKey = finalPdfKey;
-            FinalPdfSha256 = finalPdfSha256;
-            FinalPdfTag = finalPdfTag;
-        }
-
-        public void MarkCompleted()
-        {
-            if (Status != EContractStatus.LockedForSigning)
-                throw new InvalidOperationException("Only locked contract can be completed.");
-            Status = EContractStatus.Completed;
         }
     }
 }
