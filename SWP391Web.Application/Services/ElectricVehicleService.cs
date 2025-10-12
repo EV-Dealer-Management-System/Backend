@@ -39,13 +39,26 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
+                var warehouse = await _unitOfWork.WarehouseRepository
+                    .GetWarehouseByIdAsync(createElectricVehicleDTO.WarehouseId);
+                if(warehouse is null || warehouse.WarehouseType != WarehouseType.EVInventory 
+                    || !warehouse.EVCInventory.IsActive)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "Warehouse not found or not an EV Inventory warehouse.",
+                        StatusCode = 404
+                    };
+                }
+
                 ElectricVehicle electricVehicle = new ElectricVehicle
                 {
                     WarehouseId = createElectricVehicleDTO.WarehouseId,
                     VersionId = createElectricVehicleDTO.VersionId,
                     ColorId = createElectricVehicleDTO.ColorId,
                     VIN = createElectricVehicleDTO.VIN,
-                    Status = createElectricVehicleDTO.Status,
+                    Status = StatusVehicle.Available,
                     ManufactureDate = createElectricVehicleDTO.ManufactureDate,
                     ImportDate = createElectricVehicleDTO.ImportDate,
                     WarrantyExpiryDate = createElectricVehicleDTO.WarrantyExpiryDate,
@@ -99,6 +112,43 @@ namespace SWP391Web.Application.Services
             }
             catch (Exception ex)
             {
+                return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetAvailableQuantityByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId)
+        {
+            try
+            {
+
+
+                var quantity = await _unitOfWork.ElectricVehicleRepository
+                    .GetAvailableQuantityByModelVersionColorAsync(modelId, versionId, colorId);
+
+                if(quantity == 0)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No available vehicles for the selected model, version, and color.",
+                        StatusCode = 400
+                    };
+                }
+
+                return new ResponseDTO()
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Available quantity retrieved successfully",
+                    Result = quantity
+                };
+
+            } catch (Exception ex) {
                 return new ResponseDTO()
                 {
                     IsSuccess = false,

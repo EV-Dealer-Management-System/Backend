@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.IRepository;
 using System;
@@ -18,18 +19,15 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public async Task<List<ElectricVehicleColor?>> GetAllByModelIdAndVersionIdAsync(Guid modelId, Guid versionId)
+        public async Task<List<ElectricVehicleColor?>> GetAvailableColorsByModelIdAndVersionIdAsync(Guid modelId, Guid versionId)
         {
             var colors = await _context.ElectricVehicles
-                .Where(ev => ev.Version.ModelId == modelId &&
-                             ev.VersionId == versionId)
-                .Include(ev => ev.Color)
-                .GroupBy(ev => new
-                {
-                    ev.Color.Id,
-                    ev.Color.ColorName,
-                })
-                .Select(g => g.First().Color)// take the first color from each group
+                .Where(ev => ev.Version.ModelId == modelId
+                     && ev.VersionId == versionId
+                     && ev.Status == StatusVehicle.Available
+                     && ev.Warehouse.EVCInventoryId != null)
+                .Select(ev => ev.Color)
+                .Distinct()
                 .ToListAsync();
             return colors;
         }

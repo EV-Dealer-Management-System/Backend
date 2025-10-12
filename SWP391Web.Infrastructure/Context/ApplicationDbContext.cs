@@ -230,9 +230,9 @@ namespace SWP391Web.Infrastructure.Context
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Warehouse>()
-                .HasOne(w => w.EVInventory)
+                .HasOne(w => w.EVCInventory)
                 .WithOne(d => d.Warehouse)
-                .HasForeignKey<Warehouse>(w => w.EVInventoryId)
+                .HasForeignKey<Warehouse>(w => w.EVCInventoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
         }
