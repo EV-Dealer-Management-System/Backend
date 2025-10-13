@@ -3,18 +3,18 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Configuration;
 using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Application.DTO.S3;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Infrastructure.IRepository;
 
 namespace SWP391Web.Application.Services
 {
     public class S3Service : IS3Service
     {
-        private readonly IUnitOfWork _unitOfWork;
         private readonly string _bucketName;
-        public S3Service(IUnitOfWork unitOfWork, IConfiguration config)
+        public S3Service(IConfiguration config)
         {
-            _unitOfWork = unitOfWork;
             _bucketName = config["S3Bucket:bucketName"] ?? throw new ArgumentNullException("S3Bucket:bucketName");
         }
 
@@ -60,6 +60,13 @@ namespace SWP391Web.Application.Services
                     ObjectKey = objectKey
                 }
             };
+        }
+
+
+        public ResponseDTO GenerateUploadElectricVehicle(PreSignedUploadDTO preSignedUploadDTO)
+        {
+            var objectKey = $"{StaticBucketName.ElectricVehicleBucket}/{Guid.NewGuid()}_{preSignedUploadDTO.FileName}";
+            return GenerateUploadUrl(objectKey, preSignedUploadDTO.ContentType);
         }
     }
 }
