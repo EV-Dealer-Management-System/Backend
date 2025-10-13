@@ -62,7 +62,7 @@ namespace SWP391Web.Application.Services
             };
         }
 
-
+        // Generate Upload Url for ElectricVehicle
         public ResponseDTO GenerateUploadElectricVehicle(PreSignedUploadDTO preSignedUploadDTO)
         {
             var objectKey = $"{StaticBucketName.ElectricVehicleBucket}/{Guid.NewGuid()}_{preSignedUploadDTO.FileName}";
