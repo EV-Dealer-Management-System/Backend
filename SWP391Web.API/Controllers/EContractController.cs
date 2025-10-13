@@ -149,7 +149,7 @@ namespace SWP391Web.API.Controllers
 
         [HttpPost]
         [Route("update-econtract")]
-        [Consumes("multipart/form-data")]
+        [Consumes("application/json")]
         [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> UpdateEContract([FromBody] UpdateEContractDTO dto)
         {
