@@ -101,7 +101,7 @@ app.UseRouting();
 
 app.UseCors("FrontEnd");
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
