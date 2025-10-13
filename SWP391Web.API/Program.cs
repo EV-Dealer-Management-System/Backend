@@ -69,11 +69,6 @@ builder.Services.AddCors(opt =>
 
 var app = builder.Build();
 
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
-
 // Seed Roles
 using (var scope = app.Services.CreateScope())
 {
@@ -96,6 +91,13 @@ if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDev
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+app.MapGet("/health", () => Results.Ok("Healthy"));
 
 app.UseRouting();
 
