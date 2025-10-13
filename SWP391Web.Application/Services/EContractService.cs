@@ -18,6 +18,7 @@ using System.Text.Json;
 using System.Web;
 using UglyToad.PdfPig;
 using AutoMapper;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace SWP391Web.Application.Services
 {
@@ -119,19 +120,6 @@ namespace SWP391Web.Application.Services
                 var created = await CreateDocumentPlusAsync(userClaim, token, dealer, user, createDealerDTO.AdditionalTerm, createDealerDTO.RegionDealer, ct);
 
                 var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(created.Data!.Id), ct);
-                if (econtract is null) throw new Exception("Cannot find created EContract");
-
-                if (!Enum.IsDefined(typeof(EContractStatus), created.Data.Status.Value))
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        StatusCode = 400,
-                        Message = "Invalid EContract status value.",
-                    };
-                }
-
-                econtract.UpdateStatus((EContractStatus)created.Data.Status.Value);
 
                 await _unitOfWork.UserManagerRepository.CreateAsync(user, "ChangeMe@" + Guid.NewGuid().ToString()[..5]);
                 await _unitOfWork.DealerRepository.AddAsync(dealer, ct);
@@ -356,7 +344,15 @@ namespace SWP391Web.Application.Services
 
             var createResult = await _vnpt.CreateDocumentAsync(token, request);
 
-            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.Id, fileName, userId, user.Id);
+
+            if (!Enum.IsDefined(typeof(EContractStatus), createResult.Data.Status.Value))
+            {
+                throw new Exception("Invalid EContract status value.");
+            }
+
+            var status = (EContractStatus)createResult.Data.Status.Value;
+
+            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.Id, fileName, userId, user.Id, status);
 
             await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
 
