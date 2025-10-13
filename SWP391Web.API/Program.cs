@@ -80,7 +80,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
-if (app.Configuration.GetValue<bool>("Swagger__Enabled") || app.Environment.IsDevelopment())
+if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDevelopment())
 {
     app.Use(async (context, next) =>
     {
