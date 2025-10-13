@@ -28,6 +28,8 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<BookingEVDetail> BookingEVDetails { get; set; }
         public DbSet<EVCInventory> EVCInventories { get; set; } 
         public DbSet<Warehouse> Warehouses { get; set; }
+        public DbSet<Quote> Quotes { get; set; }
+        public DbSet<Promotion> Promotions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
