@@ -1,4 +1,5 @@
 ﻿using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Application.DTO.S3;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,5 +12,6 @@ namespace SWP391Web.Application.IServices
     {
         ResponseDTO GenerateUploadUrl(string objectKey, string contentType);
         string GenerateDownloadUrl(string objectKey);
+        ResponseDTO GenerateUploadElectricVehicle(PreSignedUploadDTO preSignedUploadDTO);
     }
 }
