@@ -71,14 +71,27 @@ public static class WebApplicationBuilderExtensions
         return builder;
     }
 
-    public static WebApplicationBuilder AddHttpSmartCA(this WebApplicationBuilder builder)
+    public static WebApplicationBuilder AddHttpVNPT(this WebApplicationBuilder builder)
     {
         builder.Services.AddHttpClient<IEContractService, EContractService>(client =>
         {
-            client.BaseAddress = new Uri(builder.Configuration["SmartCA:BaseUrl"] ?? throw new Exception("Cannot find base url in SmartCA"));
+            client.BaseAddress = new Uri(
+                builder.Configuration["SmartCA:BaseUrl"]
+                ?? throw new Exception("Cannot find base url in SmartCA"));
+
             client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-        });
+
+            client.DefaultRequestHeaders.Accept.Add(
+                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.ConnectionClose = true;
+        })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        MaxConnectionsPerServer = 1,
+        AllowAutoRedirect = true,
+        AutomaticDecompression = System.Net.DecompressionMethods.All,
+        SslProtocols = System.Security.Authentication.SslProtocols.Tls12,
+    });
 
         return builder;
     }

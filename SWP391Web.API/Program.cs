@@ -47,7 +47,7 @@ builder.AddSwaggerGen();
 
 builder.AddRedisCacheService();
 
-builder.AddHttpSmartCA();
+builder.AddHttpVNPT();
 
 var allowedOrigins = new[] {
     "http://localhost:5173",
