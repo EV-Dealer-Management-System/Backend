@@ -1,4 +1,5 @@
 using Amazon.Extensions.NETCore.Setup;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Infrastructure;
@@ -50,7 +51,8 @@ builder.AddHttpSmartCA();
 
 var allowedOrigins = new[] {
     "http://localhost:5173",
-    "https://metrohcmc.xyz"
+    "https://metrohcmc.xyz",
+    "https://electricvehiclesystem.click"
 };
 
 builder.Services.AddCors(opt =>
@@ -73,9 +75,23 @@ using (var scope = app.Services.CreateScope())
     await RoleSeeder.SeedRolesAsync(roleManager);
 }
 
-// Configure the HTTP request pipeline.
-if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDevelopment())
+app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+if (app.Configuration.GetValue<bool>("Swagger__Enabled") || app.Environment.IsDevelopment())
+{
+    app.Use(async (context, next) =>
+    {
+        if (context.Request.Method == HttpMethods.Head &&
+            context.Request.Path.StartsWithSegments("/swagger"))
+        {
+            context.Request.Method = HttpMethods.Get;
+        }
+        await next();
+    });
+
     app.UseSwagger();
     app.UseSwaggerUI();
 }
