@@ -118,6 +118,21 @@ namespace SWP391Web.Application.Services
 
                 var created = await CreateDocumentPlusAsync(userClaim, token, dealer, user, createDealerDTO.AdditionalTerm, createDealerDTO.RegionDealer, ct);
 
+                var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(created.Data!.Id), ct);
+                if (econtract is null) throw new Exception("Cannot find created EContract");
+
+                if (!Enum.IsDefined(typeof(EContractStatus), created.Data.Status.Value))
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 400,
+                        Message = "Invalid EContract status value.",
+                    };
+                }
+
+                econtract.UpdateStatus((EContractStatus)created.Data.Status.Value);
+
                 await _unitOfWork.UserManagerRepository.CreateAsync(user, "ChangeMe@" + Guid.NewGuid().ToString()[..5]);
                 await _unitOfWork.DealerRepository.AddAsync(dealer, ct);
 
@@ -203,6 +218,30 @@ namespace SWP391Web.Application.Services
                 var uProcess = await UpdateProcessAsync(token, eContractId.ToString(), companyApproverUserCode, dealerManagerId, createEContractDTO.positionA, createEContractDTO.positionB, createEContractDTO.pageSign);
 
                 var sent = await SendProcessAsync(token, eContractId.ToString());
+
+
+                if (!Enum.IsDefined(typeof(EContractStatus), sent.Data.Status.Value))
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 400,
+                        Message = "Invalid EContract status value.",
+                    };
+                }
+
+                var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(eContractId, ct);
+                if (econtract is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "EContract not found.",
+                    };
+                }
+
+                econtract.UpdateStatus((EContractStatus)sent.Data.Status.Value);
 
                 return new ResponseDTO
                 {

@@ -171,7 +171,7 @@ namespace SWP391Web.Infrastructure.Repository
             using var fileStream = file.OpenReadStream();
             var streamContent = new StreamContent(fileStream);
             streamContent.Headers.ContentType = new MediaTypeHeaderValue(
-                string.IsNullOrWhiteSpace(file.ContentType) ? "application/pdf" : file.ContentType);
+                string.IsNullOrWhiteSpace(file.ContentType) ? "application/json" : file.ContentType);
 
             content.Add(streamContent, "File", file.FileName);
 
