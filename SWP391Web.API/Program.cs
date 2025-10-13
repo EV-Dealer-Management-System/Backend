@@ -69,12 +69,16 @@ builder.Services.AddCors(opt =>
 
 var app = builder.Build();
 
-// Seed Roles
-using (var scope = app.Services.CreateScope())
+var forwardOptions = new ForwardedHeadersOptions
 {
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    await RoleSeeder.SeedRolesAsync(roleManager);
-}
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+forwardOptions.KnownNetworks.Clear();
+forwardOptions.KnownProxies.Clear();
+
+app.UseForwardedHeaders(forwardOptions);
+
+app.UseHttpsRedirection();
 
 if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDevelopment())
 {
@@ -91,15 +95,6 @@ if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDev
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-var forwardOptions = new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-};
-forwardOptions.KnownNetworks.Clear();
-forwardOptions.KnownProxies.Clear();
-
-app.UseForwardedHeaders(forwardOptions);
 
 app.MapGet("/health", () => Results.Ok("Healthy"));
 
@@ -120,11 +115,16 @@ app.Use(async (context, next) =>
 
 app.UseCors("FrontEnd");
 
-app.UseHttpsRedirection();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Seed Roles
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    await RoleSeeder.SeedRolesAsync(roleManager);
+}
 
 app.Run();
