@@ -231,6 +231,7 @@ namespace SWP391Web.Application.Services
 
                 econtract.UpdateStatus((EContractStatus)sent.Data.Status.Value);
 
+                await _unitOfWork.SaveAsync();
                 return new ResponseDTO
                 {
                     IsSuccess = true,
