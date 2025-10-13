@@ -52,7 +52,8 @@ builder.AddHttpSmartCA();
 var allowedOrigins = new[] {
     "http://localhost:5173",
     "https://metrohcmc.xyz",
-    "https://electricvehiclesystem.click"
+    "https://electricvehiclesystem.click",
+    "https://api.electricvehiclesystem.click"
 };
 
 builder.Services.AddCors(opt =>

@@ -166,8 +166,8 @@ namespace SWP391Web.API.Controllers
             return Ok(r);
         }
 
-        [HttpPost]
-        [Route("get-all-vnpt-econtract-by-id")]
+        [HttpGet]
+        [Route("get-all-vnpt-econtract")]
         public async Task<ActionResult<ResponseDTO>> GetVnptEContractByIdPost([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default)
         {
             var r = await _svc.GetAllVnptEContractList(pageNumber, pageSize, eContractStatus);
