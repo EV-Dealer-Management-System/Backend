@@ -9,8 +9,10 @@ namespace SWP391Web.Domain.Enums
     public enum StatusVehicle
     {
         Available = 1,
-        Sold = 2,
-        InTransit = 3,
-        Mantainance = 4,
+        Booked = 2,
+        Sold = 3,
+        InTransit = 4,
+        Maintenance = 5,
+        AtDealer = 6,
     }
 }

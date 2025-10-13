@@ -27,45 +27,6 @@ namespace SWP391Web.Application.Services
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
 
-        public async Task<ResponseDTO> CancelBookingEVAsync(Guid bookingId)
-        {
-            try
-            {
-                var bookingEV = await _unitOfWork.BookingEVRepository
-                    .GetBookingWithIdAsync(bookingId);
-                if (bookingEV == null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Booking not found",
-                        StatusCode = 404,
-                    };
-                }
-
-                bookingEV.Status = BookingStatus.Cancelled;
-
-                _unitOfWork.BookingEVRepository.Update(bookingEV);
-                await _unitOfWork.SaveAsync();
-
-                return new ResponseDTO
-                {
-                    IsSuccess = true,
-                    Message = "Booking cancelled successfully",
-                    StatusCode = 200,
-                };
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO()
-                {
-                    IsSuccess = false,
-                    Message = ex.Message,
-                    StatusCode = 500,
-                };
-            }
-        }
-
         public async Task<ResponseDTO> CreateBookingEVAsync(ClaimsPrincipal user, CreateBookingEVDTO createBookingEVDTO)
         {
             try
@@ -238,6 +199,63 @@ namespace SWP391Web.Application.Services
                         Message = "Cannot update status to pending",
                         StatusCode = 400,
                     };
+                }
+
+                //ktra chi khi dang pending moi duoc cancel
+                if (newStatus == BookingStatus.Cancelled && bookingEV.Status != BookingStatus.Pending)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = " Can only  cancel a pending booking",
+                        StatusCode = 400
+                    };
+                }
+
+                // Neu duyet thi tru xe trong kho
+                if (newStatus == BookingStatus.Approved)
+                {
+                    foreach (var dt in bookingEV.BookingEVDetails)
+                    {
+                        // lay xe dang kha dung (status = available)
+                        var availableVehicles = await _unitOfWork.ElectricVehicleRepository
+                            .GetAvailableVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+                        if (availableVehicles == null || !availableVehicles.Any())
+                        {
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                Message = "No available vehicles",
+                                StatusCode = 400
+                            };
+                        }
+
+                        //ktra soluong xe
+
+                        if(availableVehicles.Count() < dt.Quantity)
+                        {
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                Message = "Not enough vehicles available",
+                                StatusCode = 400
+                            };
+                        }
+
+                        //lay xe nhap kho lau nhat
+
+                        var selectedVehicles = availableVehicles
+                            .OrderBy(ev => ev.ImportDate)
+                            .Take(dt.Quantity)
+                            .ToList();
+
+                        // cap nhat sang booked
+
+                        foreach (var ev in selectedVehicles) {
+                            ev.Status = StatusVehicle.Booked;
+                            _unitOfWork.ElectricVehicleRepository.Update(ev);
+                        }
+                    }
                 }
 
                 bookingEV.Status = newStatus;
