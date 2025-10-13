@@ -32,6 +32,11 @@ namespace SWP391Web.Domain.Entities
             OwnerBy = ownerBy;
         }
 
+        public void UpdateStatus(EContractStatus status)
+        {
+            Status = status;
+        }
+
         public EContractTemplate EContractTemplate = null!;
     }
 }

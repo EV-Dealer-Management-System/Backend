@@ -379,6 +379,39 @@ namespace SWP391Web.Application.Services
 
                 var signResult = await _vnpt.SignProcess(token, request);
 
+                if (signResult.Data?.Status is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 500,
+                        Message = "Sign process failed: Missing status in response.",
+                    };
+                }
+
+                var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(signResult.Data.Id, ct);
+                if (econtract is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "EContract not found.",
+                    };
+                }
+
+                if (!Enum.IsDefined(typeof(EContractStatus), signResult.Data.Status.Value))
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 400,
+                        Message = "Invalid EContract status value.",
+                    };
+                }
+
+                econtract.UpdateStatus((EContractStatus)signResult.Data.Status.Value);
+
                 if (!signResult.Success)
                 {
                     return new ResponseDTO

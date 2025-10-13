@@ -68,17 +68,17 @@ builder.Services.AddCors(opt =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
 // Seed Roles
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     await RoleSeeder.SeedRolesAsync(roleManager);
 }
-
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
 
 if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDevelopment())
 {
@@ -99,8 +99,6 @@ if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDev
 app.UseRouting();
 
 app.UseCors("FrontEnd");
-
-app.UseForwardedHeaders();
 
 app.UseHttpsRedirection();
 
