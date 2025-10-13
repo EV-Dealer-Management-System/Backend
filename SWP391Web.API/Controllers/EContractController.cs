@@ -166,12 +166,12 @@ namespace SWP391Web.API.Controllers
             return Ok(r);
         }
 
-        [HttpGet]
+        [HttpPost]
         [Route("get-all-vnpt-econtract")]
         public async Task<ActionResult<ResponseDTO>> GetVnptEContractByIdPost([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default)
         {
             var r = await _svc.GetAllVnptEContractList(pageNumber, pageSize, eContractStatus);
-            return StatusCode((int)r.Code, r);
+            return Ok(r);
         }
 
         [HttpGet]
@@ -180,7 +180,7 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult<ResponseDTO>> GetVnptEContractById([FromRoute] string eContractId, CancellationToken ct)
         {
             var r = await _svc.GetVnptEContractByIdAsync(eContractId, ct);
-            return StatusCode((int)r.Code, r);
+            return Ok(r);
         }
 
         [HttpGet]
