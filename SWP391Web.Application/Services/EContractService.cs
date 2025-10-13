@@ -679,10 +679,9 @@ namespace SWP391Web.Application.Services
                     throw new Exception($"Error to update EContract: {errors}");
                 }
 
-                byte[] pdfBytes = response.Data!.FileBytes;
-                var anchors = EContractPdf.FindAnchors(pdfBytes, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
-                var positionA = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
-                var positionB = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_B"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: 0);
+                var anchors = EContractPdf.FindAnchors(filePdf, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
+                var positionA = GetVnptEContractPosition(filePdf, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
+                var positionB = GetVnptEContractPosition(filePdf, anchors["ĐẠI_DIỆN_BÊN_B"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: 0);
                 response.Data.PositionA = positionA.Item1;
                 response.Data.PositionB = positionB.Item1;
                 response.Data.PageSign = positionA.Item2;
