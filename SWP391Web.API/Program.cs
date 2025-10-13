@@ -92,18 +92,35 @@ if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDev
     app.UseSwaggerUI();
 }
 
-app.UseForwardedHeaders(new ForwardedHeadersOptions
+var forwardOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
+};
+forwardOptions.KnownNetworks.Clear();
+forwardOptions.KnownProxies.Clear();
+
+app.UseForwardedHeaders(forwardOptions);
 
 app.MapGet("/health", () => Results.Ok("Healthy"));
 
 app.UseRouting();
 
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Pipeline error: {ex.Message}");
+        throw;
+    }
+});
+
 app.UseCors("FrontEnd");
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
