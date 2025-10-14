@@ -23,6 +23,8 @@ namespace SWP391Web.Infrastructure.IRepository
         public IBookingEVRepository BookingEVRepository { get; }
         public IEVCInventoryRepository EVCInventoryRepository { get; }
         public IWarehouseRepository WarehouseRepository { get; }
+        public IQuoteRepository QuoteRepository { get; }
+        public IPromotionRepository PromotionRepository { get; }
         Task<int> SaveAsync();
     }
 }

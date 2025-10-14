@@ -6,13 +6,9 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Domain.Enums
 {
-    public enum StatusVehicle
+    public enum DiscountType
     {
-        Available = 1,
-        Booked = 2,
-        Sold = 3,
-        InTransit = 4,
-        Maintenance = 5,
-        AtDealer = 6,
+        FixAmount = 0,
+        Percentage = 1,
     }
 }

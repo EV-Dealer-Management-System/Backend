@@ -58,7 +58,7 @@ namespace SWP391Web.API.Controllers
             var response = await _electricVehicleService.UpdateVehicleAsync(vehicleId, updateElectricVehicleDTO);
             return StatusCode(response.StatusCode, response);
         }
-        [HttpPut("update-vehicle-status/{vehicleId}/{status}")]
+        [HttpPut("update-vehicle-status/{vehicleId}")]
         public async Task<ActionResult> UpdateVehicleStatusAsync([FromRoute] Guid vehicleId, [FromRoute] StatusVehicle status)
         {
             var response = await _electricVehicleService.UpdateVehicleStatusAsync(vehicleId, status);
