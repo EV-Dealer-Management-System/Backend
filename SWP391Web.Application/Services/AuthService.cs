@@ -117,7 +117,7 @@ namespace SWP391Web.Application.Service
                 var token = await _unitOfWork.UserManagerRepository.GeneratePasswordResetTokenAsync(user);
 
                 var encodedToken = Uri.EscapeDataString(token);
-                var resetLink = $"http://localhost:5173/api/reset-password?userId={user.Id}&token={encodedToken}";
+                var resetLink = $"{StaticLinkUrl.WebUrl}/api/reset-password?userId={user.Id}&token={encodedToken}";
 
                 var isSendSuccess = await _emailService.SendResetPassword(user.Email, resetLink);
                 if (!isSendSuccess)
@@ -170,7 +170,7 @@ namespace SWP391Web.Application.Service
                 {
                     return new ResponseDTO
                     {
-                        Message = "Password reset failed",
+                        Message = "Password reset failed, Token not correct",
                         IsSuccess = false,
                         StatusCode = 400
                     };
@@ -188,6 +188,72 @@ namespace SWP391Web.Application.Service
                 return new ResponseDTO
                 {
                     Message = $"An error occurred at ResetPassword in AuthService: {ex.Message}",
+                    IsSuccess = false,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> ChangePassword(ChangePasswordDTO changePasswordDTO, ClaimsPrincipal userClaims)
+        {
+            try
+            {
+                var userId = userClaims.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "User not found",
+                        IsSuccess = false,
+                        StatusCode = 404
+                    };
+                }
+
+                var user = await _unitOfWork.UserManagerRepository.GetByIdAsync(userId);
+                if (user is null)
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "User not found",
+                        IsSuccess = false,
+                        StatusCode = 404
+                    };
+                }
+
+                var isOldPasswordValid = await _unitOfWork.UserManagerRepository.CheckPasswordAsync(user, changePasswordDTO.CurrentPassword);
+                if (!isOldPasswordValid)
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "Current password is incorrect",
+                        IsSuccess = false,
+                        StatusCode = 400
+                    };
+                }
+
+                var isSuccess = await _unitOfWork.UserManagerRepository.ChangePasswordAsync(user, changePasswordDTO.CurrentPassword, changePasswordDTO.NewPassword);
+                if (!isSuccess.Succeeded)
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "Change password failed",
+                        IsSuccess = false,
+                        StatusCode = 400
+                    };
+                }
+
+                return new ResponseDTO
+                {
+                    Message = "Change password successfully",
+                    IsSuccess = true,
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    Message = $"An error occurred at ChangePassword in AuthService: {ex.Message}",
                     IsSuccess = false,
                     StatusCode = 500
                 };
