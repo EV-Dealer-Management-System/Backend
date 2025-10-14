@@ -474,7 +474,7 @@ namespace SWP391Web.Application.Services
                 ["FullName"] = dealerManager.FullName,
                 ["UserName"] = dealerManager.Email,
                 ["Password"] = password,
-                ["LoginUrl"] = "https://metrohcmc.xyz", // để tạm thời, config sau
+                ["LoginUrl"] = "https://electricvehiclesystem.click", // để tạm thời, config sau
                 ["Company"] = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist"),
                 ["SupportEmail"] = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist")
             };
