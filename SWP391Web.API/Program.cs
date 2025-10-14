@@ -1,4 +1,5 @@
 using Amazon.Extensions.NETCore.Setup;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Infrastructure;
@@ -10,6 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 //builder.WebHost.ConfigureKestrel(options =>
 //{
+//    options.ListenAnyIP(5000);
 //    options.ListenAnyIP(5000);
 //});
 
@@ -46,11 +48,13 @@ builder.AddSwaggerGen();
 
 builder.AddRedisCacheService();
 
-builder.AddHttpSmartCA();
+builder.AddHttpVNPT();
 
 var allowedOrigins = new[] {
     "http://localhost:5173",
-    "https://metrohcmc.xyz"
+    "https://metrohcmc.xyz",
+    "https://electricvehiclesystem.click",
+    "https://api.electricvehiclesystem.click"
 };
 
 builder.Services.AddCors(opt =>
@@ -66,31 +70,62 @@ builder.Services.AddCors(opt =>
 
 var app = builder.Build();
 
+var forwardOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+forwardOptions.KnownNetworks.Clear();
+forwardOptions.KnownProxies.Clear();
+
+app.UseForwardedHeaders(forwardOptions);
+
+app.UseHttpsRedirection();
+
+if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDevelopment())
+{
+    app.Use(async (context, next) =>
+    {
+        if (context.Request.Method == HttpMethods.Head &&
+            context.Request.Path.StartsWithSegments("/swagger"))
+        {
+            context.Request.Method = HttpMethods.Get;
+        }
+        await next();
+    });
+
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.MapGet("/health", () => Results.Ok("Healthy"));
+
+app.UseRouting();
+
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Pipeline error: {ex.Message}");
+        throw;
+    }
+});
+
+app.UseCors("FrontEnd");
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+
 // Seed Roles
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     await RoleSeeder.SeedRolesAsync(roleManager);
 }
-
-// Configure the HTTP request pipeline.
-if (app.Configuration.GetValue<bool>("Swagger:Enabled") || app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseRouting();
-
-app.UseCors("FrontEnd");
-
-app.UseForwardedHeaders();
-
-app.UseHttpsRedirection();
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapControllers();
 
 app.Run();

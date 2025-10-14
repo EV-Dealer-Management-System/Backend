@@ -149,7 +149,7 @@ namespace SWP391Web.API.Controllers
 
         [HttpPost]
         [Route("update-econtract")]
-        [Consumes("multipart/form-data")]
+        [Consumes("application/json")]
         [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> UpdateEContract([FromBody] UpdateEContractDTO dto)
         {
@@ -167,11 +167,11 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPost]
-        [Route("get-all-vnpt-econtract-by-id")]
+        [Route("get-all-vnpt-econtract")]
         public async Task<ActionResult<ResponseDTO>> GetVnptEContractByIdPost([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default)
         {
             var r = await _svc.GetAllVnptEContractList(pageNumber, pageSize, eContractStatus);
-            return StatusCode((int)r.Code, r);
+            return Ok(r);
         }
 
         [HttpGet]
@@ -180,7 +180,7 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult<ResponseDTO>> GetVnptEContractById([FromRoute] string eContractId, CancellationToken ct)
         {
             var r = await _svc.GetVnptEContractByIdAsync(eContractId, ct);
-            return StatusCode((int)r.Code, r);
+            return Ok(r);
         }
 
         [HttpGet]
