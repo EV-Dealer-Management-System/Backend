@@ -41,7 +41,7 @@ namespace SWP391Web.Application.Services
 
                 var warehouse = await _unitOfWork.WarehouseRepository
                     .GetWarehouseByIdAsync(createElectricVehicleDTO.WarehouseId);
-                if(warehouse is null || warehouse.WarehouseType != WarehouseType.EVInventory 
+                if (warehouse is null || warehouse.WarehouseType != WarehouseType.EVInventory
                     || !warehouse.EVCInventory.IsActive)
                 {
                     return new ResponseDTO()
@@ -63,7 +63,6 @@ namespace SWP391Web.Application.Services
                     ImportDate = createElectricVehicleDTO.ImportDate,
                     WarrantyExpiryDate = createElectricVehicleDTO.WarrantyExpiryDate,
                     CostPrice = createElectricVehicleDTO.CostPrice,
-                    ImageUrl = createElectricVehicleDTO.ImageUrl,
                 };
                 if (electricVehicle is null)
                 {
@@ -73,6 +72,16 @@ namespace SWP391Web.Application.Services
                         Message = "Vehicle is null.",
                         StatusCode = 404
                     };
+                }
+
+                foreach (var key in createElectricVehicleDTO.AttachmentKeys)
+                {
+                    var fileName = Path.GetFileName(key);
+                    electricVehicle.EVAttachments.Add(new EVAttachment
+                    {
+                        FileName = fileName,
+                        Key = key
+                    });
                 }
 
                 await _unitOfWork.ElectricVehicleRepository.AddAsync(electricVehicle, CancellationToken.None);
@@ -130,7 +139,7 @@ namespace SWP391Web.Application.Services
                 var quantity = await _unitOfWork.ElectricVehicleRepository
                     .GetAvailableQuantityByModelVersionColorAsync(modelId, versionId, colorId);
 
-                if(quantity == 0)
+                if (quantity == 0)
                 {
                     return new ResponseDTO
                     {
@@ -148,7 +157,9 @@ namespace SWP391Web.Application.Services
                     Result = quantity
                 };
 
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 return new ResponseDTO()
                 {
                     IsSuccess = false,
@@ -267,9 +278,6 @@ namespace SWP391Web.Application.Services
 
                 if (dto.DealerReceivedDate.HasValue && dto.DealerReceivedDate.Value != default)
                     vehicle.DealerReceivedDate = dto.DealerReceivedDate.Value;
-
-                if (!string.IsNullOrWhiteSpace(dto.ImageUrl))
-                    vehicle.ImageUrl = dto.ImageUrl;
 
                 // Không set: DealerId, ColorId, VersionId
                 _unitOfWork.ElectricVehicleRepository.Update(vehicle);

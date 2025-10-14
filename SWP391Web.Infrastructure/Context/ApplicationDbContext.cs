@@ -223,6 +223,14 @@ namespace SWP391Web.Infrastructure.Context
                 .HasForeignKey<Warehouse>(w => w.EVCInventoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            /******************************************************************************/
+            // Configure EVAttachment entity
+
+            modelBuilder.Entity<EVAttachment>()
+                .HasOne(eva => eva.ElectricVehicle)
+                .WithMany(ev => ev.EVAttachments)
+                .HasForeignKey(eva => eva.ElectricVehicleId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

@@ -21,10 +21,10 @@ namespace SWP391Web.Domain.Entities
         public DateTime? DeliveryDate { get; set; }
         public decimal CostPrice { get; set; }
         public DateTime? DealerReceivedDate { get; set; }
-        public string? ImageUrl { get; set; }
 
         public ElectricVehicleVersion Version { get; set; } = null!;
         public ElectricVehicleColor Color { get; set; } = null!;
         public Warehouse Warehouse { get; set; } = null!;
+        public ICollection<EVAttachment> EVAttachments { get; set; } = new List<EVAttachment>();
     }
 }
