@@ -8,5 +8,6 @@ namespace SWP391Web.Application.IService
         Task<ResponseDTO> LoginUser(LoginUserDTO loginUserDTO);
         Task<ResponseDTO> ForgotPassword(ForgotPasswordDTO forgotPasswordDTO);
         Task<ResponseDTO> ResetPassword(ResetPasswordDTO resetPasswordDTO);
+        Task<ResponseDTO> ChangePassword(ChangePasswordDTO changePasswordDTO, ClaimsPrincipal userClaims);
     }
 }

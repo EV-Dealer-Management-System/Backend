@@ -35,5 +35,13 @@ namespace SWP391Web.API.Controllers
             var response = await _authService.ResetPassword(resetPasswordDTO);
             return StatusCode(response.StatusCode, response);
         }
+
+        [HttpPost]
+        [Route("change-password")]
+        public async Task<ActionResult<ResponseDTO>> ChangePassword([FromBody] ChangePasswordDTO changePasswordDTO)
+        {
+            var response = await _authService.ChangePassword(changePasswordDTO, User);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }
