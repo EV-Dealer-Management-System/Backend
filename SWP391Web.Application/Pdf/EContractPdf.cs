@@ -56,7 +56,7 @@ namespace SWP391Web.Application.Pdf
                 {
                     Locale = "vi-VN",
                     ViewportSize = new ViewportSize { Width = 1240, Height = 1754 },
-                    DeviceScaleFactor = 1.25f
+                    DeviceScaleFactor = 1.0f
                 });
 
                 var page = await context.NewPageAsync();
@@ -66,6 +66,37 @@ namespace SWP391Web.Application.Pdf
                     WaitUntil = WaitUntilState.NetworkIdle
                 });
 
+                await page.AddStyleTagAsync(new PageAddStyleTagOptions
+                {
+                    Content = @"
+                @page {
+                    size: A4;
+                    margin: 15mm 12mm 12mm 12mm;
+                }
+                body {
+                    font-family: 'Times New Roman', DejaVu Serif, serif;
+                    font-size: 13pt;
+                    line-height: 1.5;
+                    color: #000;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    background: white;
+                }
+                h1, h2, h3 {
+                    text-align: center;
+                    font-weight: bold;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                td, th {
+                    padding: 4px 6px;
+                    vertical-align: top;
+                }
+                "
+                });
+
                 var pdf = await page.PdfAsync(new PagePdfOptions
                 {
                     Format = "A4",
@@ -73,11 +104,18 @@ namespace SWP391Web.Application.Pdf
                     PreferCSSPageSize = true,
                     Margin = new Margin
                     {
-                        Top = "20mm",
-                        Bottom = "15mm",
-                        Left = "15mm",
-                        Right = "15mm"
-                    }
+                        Top = "15mm",
+                        Bottom = "12mm",
+                        Left = "12mm",
+                        Right = "12mm"
+                    },
+                    DisplayHeaderFooter = true,
+                    HeaderTemplate = @"<div style='font-size:10px; text-align:center; width:100%;'>
+                                    <span class='title'></span>
+                                </div>",
+                    FooterTemplate = @"<div style='font-size:10px; text-align:center; width:100%; color:#666;'>
+                                    <span class='pageNumber'></span> / <span class='totalPages'></span>
+                               </div>"
                 });
 
                 return pdf;
@@ -88,6 +126,8 @@ namespace SWP391Web.Application.Pdf
                 return await RenderAsync(html);
             }
         }
+
+
 
         public static string ReplacePlaceholders(string html, Object values, bool htmlEncode = false)
         {
