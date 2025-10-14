@@ -19,6 +19,7 @@ using System.Web;
 using UglyToad.PdfPig;
 using AutoMapper;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Playwright;
 
 namespace SWP391Web.Application.Services
 {
@@ -269,6 +270,31 @@ namespace SWP391Web.Application.Services
             return (pos, lastPage);
         }
 
+        private Dictionary<string, object?> BuildPlaceholders(
+            string dealerName, string dealerAddress, string dealerTax,
+            string dealerContact, string companyRole, string dealerRole,
+            string companyRepresentative, string dealerRepresentative
+            )
+        {
+
+            var data = new Dictionary<string, object?>
+            {
+                ["company.name"] = _cfg["Company:Name"] ?? "N/A",
+                ["company.address"] = _cfg["Company:Address"] ?? "N/A",
+                ["company.taxNo"] = _cfg["Company:TaxNo"] ?? "N/A",
+                ["dealer.name"] = dealerName,
+                ["dealer.address"] = dealerAddress,
+                ["dealer.taxNo"] = dealerTax,
+                ["dealer.contact"] = dealerContact,
+                ["roles.A.representative"] = companyRepresentative,
+                ["roles.A.title"] = companyRole,
+                ["roles.B.representative"] = dealerRepresentative,
+                ["roles.B.title"] = dealerRole,
+            };
+
+            return data;
+        }
+
         private async Task<VnptResult<VnptDocumentDto>> CreateDocumentPlusAsync(ClaimsPrincipal userClaim, string token, Dealer dealer, ApplicationUser user, string? additional, string? regionDealer, CancellationToken ct)
         {
             var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -283,6 +309,7 @@ namespace SWP391Web.Application.Services
             if (term is null) throw new Exception($"Term for dealer level '{dealer.DealerLevel}' is not exist");
 
             var companyName = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist");
+
             var data = new Dictionary<string, object?>
             {
                 ["company.name"] = companyName,
@@ -697,12 +724,58 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContract(UpdateEContractDTO updateEContractDTO)
+        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContract(UpdateEContractDTO updateEContractDTO, CancellationToken ct)
         {
             try
             {
                 var token = await GetAccessTokenAsync();
-                var filePdf = await EContractPdf.RenderAsync(updateEContractDTO.HtmlFile);
+                var contract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(updateEContractDTO.Id), ct);
+                if (contract is null)
+                    return new VnptResult<UpdateEContractResponse>($"Cannot find EContract with id '{updateEContractDTO.Id}'");
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(contract.OwnerBy, ct);
+                if (dealer is null)
+                    return new VnptResult<UpdateEContractResponse>($"Cannot find dealer with manager id '{contract.OwnerBy}'");
+
+                var dealerManager = await _unitOfWork.UserManagerRepository.GetByIdAsync(contract.OwnerBy);
+                if (dealerManager is null)
+                    return new VnptResult<UpdateEContractResponse>($"Cannot find dealer manager with id '{contract.OwnerBy}'");
+
+                var term = await _unitOfWork.EContractTermRepository.GetByLevelAsync(dealer.DealerLevel, ct);
+
+                var data = new Dictionary<string, object?>
+                {
+                    ["company.name"] = _cfg["Company:Name"] ?? "N/A",
+                    ["company.address"] = _cfg["Company:Address"] ?? "N/A",
+                    ["company.taxNo"] = _cfg["Company:TaxNo"] ?? "N/A",
+                    ["dealer.name"] = dealer.Name,
+                    ["dealer.address"] = dealer.Address,
+                    ["dealer.taxNo"] = dealer.TaxNo,
+                    ["dealer.contact"] = $"{dealerManager.Email}, {dealerManager.PhoneNumber}",
+                    ["contract.date"] = DateTime.UtcNow.ToString("dd/MM/yyyy"),
+                    ["contract.effectiveDate"] = DateTime.UtcNow.ToString("dd/MM/yyyy"),
+                    ["contract.expiryDate"] = DateTime.UtcNow.AddDays(365).ToString("dd/MM/yyyy"),
+                    ["term.scope"] = term.Scope,
+                    ["terms.pricing"] = term.Pricing,
+                    ["terms.payment"] = term.Payment,
+                    ["terms.commitments"] = term.Commitment,
+                    ["terms.noticeDays"] = term.NoticeDay,
+                    ["terms.orderConfirmDays"] = term.OrderConfirmDays,
+                    ["terms.deliveryLocation"] = term.DeliveryLocation,
+                    ["terms.paymentMethod"] = term.PaymentMethod,
+                    ["terms.paymentDueDays"] = term.PaymentDueDays,
+                    ["terms.penaltyRate"] = term.PenaltyRate,
+                    ["terms.claimDays"] = term.ClaimDays,
+                    ["terms.terminationNoticeDays"] = term.TerminationNoticeDays,
+                    ["terms.disputeLocation"] = term.DisputeLocation,
+                    ["roles.A.representative"] = term.RoleRepresentative,
+                    ["roles.A.title"] = term.RoleTitle,
+                    ["roles.B.representative"] = dealerManager.FullName,
+                    ["roles.B.title"] = "Khách hàng"
+                };
+
+                var html = EContractPdf.ReplacePlaceholders(updateEContractDTO.HtmlFile, data, htmlEncode: false);
+                var filePdf = await EContractPdf.RenderAsync(html);
 
                 var formFile = new FormFile(
                     new MemoryStream(filePdf), 0, filePdf.Length, "file", updateEContractDTO.Subject + ".pdf"

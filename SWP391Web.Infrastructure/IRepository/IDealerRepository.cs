@@ -15,5 +15,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<bool> IsExistByNameAsync(string name, CancellationToken ct);
         Task<bool> IsExistByIdAsync(Guid id, CancellationToken ct);
         Task<ApplicationUser?> GetManagerByDealerId(Guid dealerId, CancellationToken ct);
+        Task<Dealer?> GetDealerByUserIdAsync(string userId, CancellationToken ct);
     }
 }
