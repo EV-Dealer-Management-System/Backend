@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Aspose.Words.XAttr;
+using AutoMapper;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.BookingEV;
 using SWP391Web.Application.DTO.BookingEVDetail;
@@ -31,7 +32,17 @@ namespace SWP391Web.Application.Mappings
             CreateMap<ElectricVehicleColor, GetElectricVehicleColorDTO>().ReverseMap();
             CreateMap<ElectricVehicleModel, GetElectricVehicleModelDTO>().ReverseMap();
             CreateMap<ElectricVehicleVersion, GetElectricVehicleVersionDTO>().ReverseMap();
-            CreateMap<ElectricVehicle, GetElecticVehicleDTO>().ReverseMap();
+            CreateMap<ElectricVehicle, GetElecticVehicleDTO>()
+                .ForMember(dest => dest.Color, opt => opt.MapFrom(src => new ViewColorName
+                {
+                    ColorId = src.Color.Id,
+                    ColorName = src.Color.ColorName,
+                }))
+                .ForMember(dest => dest.Version, opt => opt.MapFrom(src => new ViewVersionName
+                {
+                    VersionId = src.Version.Id,
+                    VersionName = src.Version.VersionName
+                }));
             CreateMap<BookingEV, GetBookingEVDTO>()
                 .ForMember(dest => dest.BookingEVDetails, opt => opt.MapFrom(src => src.BookingEVDetails)).ReverseMap();
             CreateMap<BookingEVDetail, GetBookingEVDetailDTO>()

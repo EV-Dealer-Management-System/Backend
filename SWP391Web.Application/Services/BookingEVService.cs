@@ -99,11 +99,40 @@ namespace SWP391Web.Application.Services
 
         }
 
-        public async Task<ResponseDTO> GetAllBookingEVsAsync()
+        public async Task<ResponseDTO> GetAllBookingEVsAsync(ClaimsPrincipal user)
         {
             try
             {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if(userId == null)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId,CancellationToken.None);
+                if(dealer == null)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found",
+                        StatusCode = 404
+                    };
+                }
+
                 var bookingEVs = await _unitOfWork.BookingEVRepository.GetAllAsync();
+
+                if(dealer != null)
+                {
+                    bookingEVs = bookingEVs.Where(b => b.DealerId == dealer.Id).ToList();
+                }
+
                 var getBookingEVs = _mapper.Map<List<GetBookingEVDTO>>(bookingEVs);
                 return new ResponseDTO
                 {
@@ -124,10 +153,32 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetBookingEVByIdAsync(Guid bookingId)
+        public async Task<ResponseDTO> GetBookingEVByIdAsync(ClaimsPrincipal user , Guid bookingId)
         {
             try
             {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+                if (dealer == null)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found",
+                        StatusCode = 404
+                    };
+                }
+
                 var bookingEV = await _unitOfWork.BookingEVRepository
                     .GetBookingWithIdAsync(bookingId);
                 if (bookingEV == null)
