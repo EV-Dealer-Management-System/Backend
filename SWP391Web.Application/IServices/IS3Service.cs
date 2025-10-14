@@ -13,5 +13,6 @@ namespace SWP391Web.Application.IServices
         ResponseDTO GenerateUploadUrl(string objectKey, string contentType);
         string GenerateDownloadUrl(string objectKey);
         ResponseDTO GenerateUploadElectricVehicle(PreSignedUploadDTO preSignedUploadDTO);
+        ResponseDTO GenerateUploadEcontract(PreSignedUploadDTO preSignedUploadDTO);
     }
 }

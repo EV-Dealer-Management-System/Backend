@@ -26,5 +26,6 @@ namespace SWP391Web.Application.IServices
         Task<VnptResult<VnptDocumentDto>> GetVnptEContractByIdAsync(string eContractId, CancellationToken ct);
         Task<ResponseDTO<EContract>> GetEContractByIdAsync(string eContractId, CancellationToken ct);
         Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetAllVnptEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus);
+        Task<ResponseDTO> SnapshotEcontract(Guid EcontractId, string key, CancellationToken ct);
     }
 }

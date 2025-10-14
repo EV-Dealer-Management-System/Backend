@@ -13,7 +13,7 @@ namespace SWP391Web.Domain.Entities
         public Guid TemplateId { get; private set; }
         public string? Name { get; set; }
         // Snapshot
-        public string? StorageUrl { get; private set; }
+        public string? SnapshotKey { get; private set; }
         public EContractStatus Status { get; private set; } = EContractStatus.Draft;
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
         public string CreatedBy { get; private set; } = null!;
@@ -36,6 +36,11 @@ namespace SWP391Web.Domain.Entities
         public void UpdateStatus(EContractStatus status)
         {
             Status = status;
+        }
+
+        public void UpdateSnapshotKey(string snapshotKey)
+        {
+            SnapshotKey = snapshotKey;
         }
 
         public EContractTemplate EContractTemplate = null!;

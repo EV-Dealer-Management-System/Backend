@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.EContract;
+using SWP391Web.Application.DTO.S3;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Pdf;
 using SWP391Web.Domain.Constants;
@@ -18,10 +19,12 @@ namespace SWP391Web.API.Controllers
     [ApiController]
     public class EContractController : ControllerBase
     {
-        private readonly IEContractService _svc;
-        public EContractController(IEContractService svc)
+        private readonly IEContractService _econtractService;
+        private readonly IS3Service _s3Service;
+        public EContractController(IEContractService econtractService, IS3Service s3Service)
         {
-            _svc = svc;
+            _econtractService = econtractService;
+            _s3Service = s3Service;
         }
 
 
@@ -30,7 +33,7 @@ namespace SWP391Web.API.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<ResponseDTO>> GetInfoSignProcess([FromQuery] string processCode)
         {
-            var r = await _svc.GetAccessTokenAsyncByCode(processCode);
+            var r = await _econtractService.GetAccessTokenAsyncByCode(processCode);
             return Ok(r);
         }
 
@@ -39,7 +42,7 @@ namespace SWP391Web.API.Controllers
         //[Authorize(Roles = StaticUserRole.Admin)]
         public async Task<ActionResult<ResponseDTO>> GetAccessToken()
         {
-            var r = await _svc.GetAccessTokenAsync();
+            var r = await _econtractService.GetAccessTokenAsync();
             return Ok(r);
         }
 
@@ -48,7 +51,7 @@ namespace SWP391Web.API.Controllers
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> CreateEContractAsync([FromBody] CreateEContractDTO dto, CancellationToken ct)
         {
-            var r = await _svc.CreateEContractAsync(User, dto, ct);
+            var r = await _econtractService.CreateEContractAsync(User, dto, ct);
             return StatusCode(r.StatusCode, r);
         }
 
@@ -57,7 +60,7 @@ namespace SWP391Web.API.Controllers
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> CreateDraftDealerContract([FromBody] CreateDealerDTO dto, CancellationToken ct)
         {
-            var r = await _svc.CreateDraftEContractAsync(User, dto, ct);
+            var r = await _econtractService.CreateDraftEContractAsync(User, dto, ct);
             return StatusCode(r.StatusCode, r);
         }
 
@@ -67,7 +70,7 @@ namespace SWP391Web.API.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<ResponseDTO>> SignProcess([FromQuery] string token, [FromBody] VnptProcessDTO dto, CancellationToken ct)
         {
-            var r = await _svc.SignProcess(token, dto, ct);
+            var r = await _econtractService.SignProcess(token, dto, ct);
             return StatusCode(r.StatusCode, r);
         }
 
@@ -82,7 +85,7 @@ namespace SWP391Web.API.Controllers
 
             Request.Headers.TryGetValue("Range", out var rangeHeader);
 
-            var upstream = await _svc.GetPreviewResponseAsync(downloadURL, rangeHeader.ToString(), ct);
+            var upstream = await _econtractService.GetPreviewResponseAsync(downloadURL, rangeHeader.ToString(), ct);
             HttpContext.Response.RegisterForDispose(upstream);
 
             if (!upstream.IsSuccessStatusCode)
@@ -125,7 +128,7 @@ namespace SWP391Web.API.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<ResponseDTO>> AddSmartCA([FromBody] AddNewSmartCADTO dto)
         {
-            var r = await _svc.AddSmartCA(dto);
+            var r = await _econtractService.AddSmartCA(dto);
             return Ok(r);
         }
 
@@ -134,7 +137,7 @@ namespace SWP391Web.API.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<ResponseDTO>> GetSmartCAInformation([FromRoute] int userId)
         {
-            var r = await _svc.GetSmartCAInformation(userId);
+            var r = await _econtractService.GetSmartCAInformation(userId);
             return Ok(r);
         }
 
@@ -143,7 +146,7 @@ namespace SWP391Web.API.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<ResponseDTO>> UpdateSmartCA([FromBody] UpdateSmartDTO dto)
         {
-            var r = await _svc.UpdateSmartCA(dto);
+            var r = await _econtractService.UpdateSmartCA(dto);
             return Ok(r);
         }
 
@@ -153,7 +156,7 @@ namespace SWP391Web.API.Controllers
         [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> UpdateEContract([FromBody] UpdateEContractDTO dto)
         {
-            var r = await _svc.UpdateEContract(dto);
+            var r = await _econtractService.UpdateEContract(dto);
             return Ok(r);
         }
 
@@ -162,7 +165,7 @@ namespace SWP391Web.API.Controllers
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default)
         {
-            var r = await _svc.GetAllEContractList(pageNumber, pageSize, eContractStatus);
+            var r = await _econtractService.GetAllEContractList(pageNumber, pageSize, eContractStatus);
             return Ok(r);
         }
 
@@ -170,7 +173,7 @@ namespace SWP391Web.API.Controllers
         [Route("get-all-vnpt-econtract")]
         public async Task<ActionResult<ResponseDTO>> GetVnptEContractByIdPost([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default)
         {
-            var r = await _svc.GetAllVnptEContractList(pageNumber, pageSize, eContractStatus);
+            var r = await _econtractService.GetAllVnptEContractList(pageNumber, pageSize, eContractStatus);
             return Ok(r);
         }
 
@@ -179,7 +182,7 @@ namespace SWP391Web.API.Controllers
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> GetVnptEContractById([FromRoute] string eContractId, CancellationToken ct)
         {
-            var r = await _svc.GetVnptEContractByIdAsync(eContractId, ct);
+            var r = await _econtractService.GetVnptEContractByIdAsync(eContractId, ct);
             return Ok(r);
         }
 
@@ -188,8 +191,24 @@ namespace SWP391Web.API.Controllers
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> GetEContractById([FromRoute] string eContractId, CancellationToken ct)
         {
-            var r = await _svc.GetEContractByIdAsync(eContractId, ct);
+            var r = await _econtractService.GetEContractByIdAsync(eContractId, ct);
             return StatusCode((int)r.StatusCode, r);
+        }
+
+        [HttpPost]
+        [Route("upload-file-url-econtract")]
+        public ActionResult<ResponseDTO> GenerateUploadEContract([FromBody] PreSignedUploadDTO preSignedUploadDTO)
+        {
+            var response = _s3Service.GenerateUploadEcontract(preSignedUploadDTO);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost]
+        [Route("snapshot-econtract-by-key")]
+        public async Task<ActionResult<ResponseDTO>> SnapshotEcontractByKey([FromQuery] Guid econtractId, [FromForm] string key, CancellationToken ct)
+        {
+            var response = await _econtractService.SnapshotEcontract(econtractId, key, ct);
+            return StatusCode(response.StatusCode, response);
         }
     }
 }
