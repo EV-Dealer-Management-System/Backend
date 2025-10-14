@@ -454,7 +454,7 @@ namespace SWP391Web.Application.Services
                     {
                         IsSuccess = false,
                         StatusCode = signResult.Code == 0 ? 500 : 200,
-                        Message = $"Lỗi ký số: {string.Join(", ", signResult.Messages)}",
+                        Message = $"Error to digital sign: {string.Join(", ", signResult.Messages)}",
                         Result = signResult
                     };
                 }
@@ -470,7 +470,7 @@ namespace SWP391Web.Application.Services
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    Message = "Ký số thành công.",
+                    Message = "Success to digital sign",
                     Result = signResult
                 };
             }
@@ -480,10 +480,45 @@ namespace SWP391Web.Application.Services
                 {
                     IsSuccess = false,
                     StatusCode = 500,
-                    Message = $"Lỗi ký số: {ex.Message}"
+                    Message = $"Error to digital sign: {ex.Message}"
                 };
             }
         }
+
+        public async Task<ResponseDTO> SnapshotEcontract(Guid EcontractId, string key, CancellationToken ct)
+        {
+            try
+            {
+                var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(EcontractId, ct);
+                if (econtract is null)
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "EContract not found."
+                    };
+
+                econtract.UpdateSnapshotKey(key);
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Snapshot key is updated"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to update snapshot key: {ex.Message}"
+                };
+            }
+        }
+
 
         private async Task CreateDealerAccount(string documentId, CancellationToken ct)
         {
@@ -510,7 +545,7 @@ namespace SWP391Web.Application.Services
                 ["FullName"] = dealerManager.FullName,
                 ["UserName"] = dealerManager.Email,
                 ["Password"] = password,
-                ["LoginUrl"] = "https://electricvehiclesystem.click", // để tạm thời, config sau
+                ["LoginUrl"] = StaticLinkUrl.WebUrl,
                 ["Company"] = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist"),
                 ["SupportEmail"] = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist")
             };

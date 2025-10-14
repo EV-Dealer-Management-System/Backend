@@ -6,9 +6,8 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Domain.Constants
 {
-    public class StaticBucketName
+    public class StaticLinkUrl
     {
-        public const string ElectricVehicleBucket = "electric-vehicle";
-        public const string EContractBucket = "e-contract";
+        public const string WebUrl = "https://electricvehiclesystem.click";
     }
 }
