@@ -30,6 +30,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<Warehouse> Warehouses { get; set; }
         public DbSet<Quote> Quotes { get; set; }
         public DbSet<Promotion> Promotions { get; set; }
+        public DbSet<EVAttachment> EVAttachments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
