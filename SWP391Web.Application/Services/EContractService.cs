@@ -18,6 +18,7 @@ using System.Text.Json;
 using System.Web;
 using UglyToad.PdfPig;
 using AutoMapper;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace SWP391Web.Application.Services
 {
@@ -118,6 +119,8 @@ namespace SWP391Web.Application.Services
 
                 var created = await CreateDocumentPlusAsync(userClaim, token, dealer, user, createDealerDTO.AdditionalTerm, createDealerDTO.RegionDealer, ct);
 
+                var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(created.Data!.Id), ct);
+
                 await _unitOfWork.UserManagerRepository.CreateAsync(user, "ChangeMe@" + Guid.NewGuid().ToString()[..5]);
                 await _unitOfWork.DealerRepository.AddAsync(dealer, ct);
 
@@ -204,6 +207,31 @@ namespace SWP391Web.Application.Services
 
                 var sent = await SendProcessAsync(token, eContractId.ToString());
 
+
+                if (!Enum.IsDefined(typeof(EContractStatus), sent.Data.Status.Value))
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 400,
+                        Message = "Invalid EContract status value.",
+                    };
+                }
+
+                var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(eContractId, ct);
+                if (econtract is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "EContract not found.",
+                    };
+                }
+
+                econtract.UpdateStatus((EContractStatus)sent.Data.Status.Value);
+
+                await _unitOfWork.SaveAsync();
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -317,7 +345,15 @@ namespace SWP391Web.Application.Services
 
             var createResult = await _vnpt.CreateDocumentAsync(token, request);
 
-            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.Id, fileName, userId, user.Id);
+
+            if (!Enum.IsDefined(typeof(EContractStatus), createResult.Data.Status.Value))
+            {
+                throw new Exception("Invalid EContract status value.");
+            }
+
+            var status = (EContractStatus)createResult.Data.Status.Value;
+
+            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.Id, fileName, userId, user.Id, status);
 
             await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
 
@@ -644,10 +680,9 @@ namespace SWP391Web.Application.Services
                     throw new Exception($"Error to update EContract: {errors}");
                 }
 
-                byte[] pdfBytes = response.Data!.FileBytes;
-                var anchors = EContractPdf.FindAnchors(pdfBytes, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
-                var positionA = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
-                var positionB = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_B"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: 0);
+                var anchors = EContractPdf.FindAnchors(filePdf, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
+                var positionA = GetVnptEContractPosition(filePdf, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
+                var positionB = GetVnptEContractPosition(filePdf, anchors["ĐẠI_DIỆN_BÊN_B"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: 0);
                 response.Data.PositionA = positionA.Item1;
                 response.Data.PositionB = positionB.Item1;
                 response.Data.PageSign = positionA.Item2;

@@ -6,13 +6,11 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Domain.Enums
 {
-    public enum StatusVehicle
+    public enum QuoteStatus
     {
-        Available = 1,
-        Booked = 2,
-        Sold = 3,
-        InTransit = 4,
-        Maintenance = 5,
-        AtDealer = 6,
+        Pending = 0,
+        Accepted = 1,
+        Rejected = 2,
+
     }
 }

@@ -23,11 +23,12 @@ namespace SWP391Web.Domain.Entities
         public readonly ApplicationUser Ower = null!;
 
         private EContract() { }
-        public EContract(Guid id, Guid templateId, string? name, string createdBy, string ownerBy)
+        public EContract(Guid id, Guid templateId, string? name, string createdBy, string ownerBy, EContractStatus status)
         {
             Id = id;
             TemplateId = templateId;
             Name = name;
+            Status = status;
             CreatedBy = createdBy;
             OwnerBy = ownerBy;
         }

@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 //builder.WebHost.ConfigureKestrel(options =>
 //{
 //    options.ListenAnyIP(5000);
+//    options.ListenAnyIP(5000);
 //});
 
 //builder.Configuration.AddSystemsManager("/swp391/prod/", reloadAfter: TimeSpan.FromMinutes(5));

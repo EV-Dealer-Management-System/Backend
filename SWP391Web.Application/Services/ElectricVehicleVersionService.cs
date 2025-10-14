@@ -343,5 +343,42 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
+
+        public async Task<ResponseDTO> UpdateVersionStatusAsync(Guid versionId, SupplyStatus newStatus)
+        {
+            try
+            {
+                var version = await _unitOfWork.ElectricVehicleVersionRepository.GetByIdsAsync(versionId);
+                if(version == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Version not found",
+                        StatusCode = 400
+                    };
+                }
+
+                version.SupplyStatus = newStatus;
+                _unitOfWork.ElectricVehicleVersionRepository.Update(version);
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Version status update successfully",
+                    StatusCode = 200,
+                };
+            }
+            catch(Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
     }
 }
