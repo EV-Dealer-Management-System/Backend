@@ -12,5 +12,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<Warehouse?> GetWarehouseByIdAsync(Guid warehouseId);
         Task<bool> IsWareHouseExistByDealerIdAsync(Guid dealerId);
         Task<bool> IsWareHouseExistByEVCInventoryIdAsync(Guid evcInventoryId);
+        Task<Warehouse?> GetWarehouseByDealerIdAsync(Guid dealerId);
     }
 }

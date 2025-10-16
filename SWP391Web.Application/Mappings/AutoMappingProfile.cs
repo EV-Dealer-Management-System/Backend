@@ -41,7 +41,9 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.Version, opt => opt.MapFrom(src => new ViewVersionName
                 {
                     VersionId = src.Version.Id,
-                    VersionName = src.Version.VersionName
+                    VersionName = src.Version.VersionName,
+                    ModelId = src.Version.Model.Id,
+                    ModelName = src.Version.Model.ModelName,
                 }));
             CreateMap<BookingEV, GetBookingEVDTO>()
                 .ForMember(dest => dest.BookingEVDetails, opt => opt.MapFrom(src => src.BookingEVDetails)).ReverseMap();

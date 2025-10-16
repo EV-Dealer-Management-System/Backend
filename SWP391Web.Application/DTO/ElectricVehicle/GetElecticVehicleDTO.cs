@@ -24,10 +24,12 @@ namespace SWP391Web.Application.DTO.ElectricVehicle
         public string? ImageUrl { get; set; }
     }
     public class ViewVersionName
-        {
-           public Guid VersionId { get; set; }
-            public string? VersionName { get; set; }
-        }
+    {
+        public Guid VersionId { get; set; }
+        public string? VersionName { get; set; }
+        public Guid ModelId { get; set; }
+        public string? ModelName { get; set; }
+    }
 
     public class ViewColorName
     {

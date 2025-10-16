@@ -2,12 +2,14 @@
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.ElectricVehicle;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -109,8 +111,8 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllAsync();
-                var getVehicles = _mapper.Map<List<GetElecticVehicleDTO>>(vehicles);
+                var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllVehicleWithDetailAsync();
+                var getVehicles = _mapper.Map<List<GetElecticVehicleDTO>>(vehicles); 
                 return new ResponseDTO()
                 {
                     IsSuccess = true,
@@ -161,6 +163,96 @@ namespace SWP391Web.Application.Services
             catch (Exception ex)
             {
                 return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetDealerInventoryAsync(ClaimsPrincipal user)
+        {
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
+
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var vehicles = new List<ElectricVehicle>();
+
+                if (role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
+                {
+                    vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllVehicleWithDetailAsync();
+                }
+                else
+                {
+                    var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+                    if (dealer == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer not found",
+                            StatusCode = 404
+                        };
+                    }
+
+                    vehicles = await _unitOfWork.ElectricVehicleRepository.GetDealerInventoryAsync(dealer.Id);
+                }
+                if (vehicles == null)
+                {
+                    return new ResponseDTO
+                    {
+                         IsSuccess = false,
+                         Message = "No vehicle in inventory",
+                         StatusCode = 404
+                    };
+                }
+                
+
+                var getDealerInventory = vehicles.GroupBy(ev => new
+                {
+                    ev.Version.Model.ModelName,
+                    ev.Version.VersionName,
+                    ev.Color.ColorName
+                })
+                    .Select(g => new
+                    {
+                        ModelName = g.Key.ModelName,
+                        VersionName = g.Key.VersionName,
+                        ColorName = g.Key.ColorName,
+                        Quantity = g.Count()
+                    })
+                    .OrderBy(x => x.ModelName)
+                    .ThenBy(x => x.VersionName)
+                    .ThenBy(x => x.ColorName)
+                    .ToList();
+
+                return new ResponseDTO
+                {
+
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Get Dealer Inventory successfully",
+                    Result = getDealerInventory
+                };
+
+                    
+            }
+            catch(Exception ex)
+            {
+                return new ResponseDTO
                 {
                     IsSuccess = false,
                     Message = ex.Message,
