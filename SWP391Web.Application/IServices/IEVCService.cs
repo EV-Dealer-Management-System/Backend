@@ -11,5 +11,6 @@ namespace SWP391Web.Application.IServices
     public interface IEVCService
     {
         Task<ResponseDTO> CreateEVMStaff(CreateEVMStaffDTO createEVMStaffDTO);
+        Task<ResponseDTO> GetAllEVMStaff(string? filterOn, string? filterQuery, string? sortBy, bool? isAcsending, int pageNumber, int pageSize);
     }
 }
