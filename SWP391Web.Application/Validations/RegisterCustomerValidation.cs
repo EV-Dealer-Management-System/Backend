@@ -8,7 +8,7 @@ using System.Xml.Linq;
 
 namespace SWP391Web.Application.Validations
 {
-    public class RegisterCustomerValidation : AbstractValidator<RegisterCustomerDTO>
+    public class RegisterCustomerValidation : AbstractValidator<RegisterUserDTO>
     {
         public RegisterCustomerValidation()
         {

@@ -8,6 +8,7 @@ namespace SWP391Web.Application.IService
 {
     public interface IEmailService
     {
+        Task<bool> SendEmployeeAaccountEmail(string to, string fullName, string password);
         Task<bool> SendEmailAsync(string to, string subject, string body);
         Task<bool> SendEmailFromTemplate(string to, string templateName, Dictionary<string, string> placeholders);
         Task<bool> SendVerifyEmail(string to, string verifyLink);
