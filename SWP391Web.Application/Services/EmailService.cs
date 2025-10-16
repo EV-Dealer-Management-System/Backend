@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Amazon.Runtime.Internal.Transform;
+using Microsoft.Extensions.Configuration;
 using SWP391Web.Application.IService;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Infrastructure.IRepository;
 using System.Net;
 using System.Net.Mail;
@@ -157,6 +159,17 @@ namespace SWP391Web.Application.Service
             return await SendEmailFromTemplate(to, "SendVerifyEmail", new Dictionary<string, string>
             {
                 { "{Login}", verifyLink }
+            });
+        }
+
+        public async Task<bool> SendEmployeeAaccountEmail(string to, string fullName, string password)
+        {
+            return await SendEmailFromTemplate(to, "SendEmployeeAccount", new Dictionary<string, string>
+            {
+                { "{EmployeeName}", fullName },
+                { "{Email}" , to },
+                { "{TempPassword}", password },
+                { "{LoginLink}", StaticLinkUrl.WebUrl }
             });
         }
     }

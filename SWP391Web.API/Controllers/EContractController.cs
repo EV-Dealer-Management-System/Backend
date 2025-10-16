@@ -196,14 +196,6 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPost]
-        [Route("upload-file-url-econtract")]
-        public ActionResult<ResponseDTO> GenerateUploadEContract([FromBody] PreSignedUploadDTO preSignedUploadDTO)
-        {
-            var response = _s3Service.GenerateUploadEcontract(preSignedUploadDTO);
-            return StatusCode(response.StatusCode, response);
-        }
-
-        [HttpPost]
         [Route("snapshot-econtract-by-key")]
         public async Task<ActionResult<ResponseDTO>> SnapshotEcontractByKey([FromQuery] Guid econtractId, [FromForm] string key, CancellationToken ct)
         {
