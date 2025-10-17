@@ -20,7 +20,7 @@ namespace SWP391Web.Application.Services
 
         public string GenerateDownloadUrl(string objectKey)
         {
-            var s3Client = new AmazonS3Client(RegionEndpoint.APNortheast1);
+            var s3Client = new AmazonS3Client(RegionEndpoint.APSoutheast1);
 
             var request = new GetPreSignedUrlRequest
             {
