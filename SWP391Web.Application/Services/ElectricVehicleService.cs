@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Amazon.Runtime.Internal.Endpoints.StandardLibrary;
+using AutoMapper;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.ElectricVehicle;
 using SWP391Web.Application.IServices;
@@ -17,12 +18,14 @@ namespace SWP391Web.Application.Services
 {
     public class ElectricVehicleService : IElectricVehicleService
     {
-        public readonly IUnitOfWork _unitOfWork;
-        public readonly IMapper _mapper;
-        public ElectricVehicleService(IUnitOfWork unitOfWork, IMapper mapper)
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
+        private readonly IS3Service _s3Service;
+        public ElectricVehicleService(IUnitOfWork unitOfWork, IMapper mapper, IS3Service s3Service)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _s3Service = s3Service ?? throw new ArgumentNullException(nameof(s3Service));
         }
 
         public async Task<ResponseDTO> CreateVehicleAsync(CreateElecticVehicleDTO createElectricVehicleDTO)
@@ -112,7 +115,21 @@ namespace SWP391Web.Application.Services
             try
             {
                 var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllVehicleWithDetailAsync();
-                var getVehicles = _mapper.Map<List<GetElecticVehicleDTO>>(vehicles); 
+                var getVehicles = _mapper.Map<List<GetElecticVehicleDTO>>(vehicles);
+
+                foreach (var vehicle in getVehicles)
+                {
+                    var keyList = _unitOfWork.EVAttachmentRepository.GetAttachmentsByElectricVehicleId(vehicle.Id);
+                    var urlList = new List<string>();
+                    foreach (var key in keyList)
+                    {
+                        var url = _s3Service.GenerateDownloadUrl(key.Key);
+                        urlList.Add(url);
+                    }
+
+                    vehicle.ImgUrl = urlList;
+                }
+
                 return new ResponseDTO()
                 {
                     IsSuccess = true,
@@ -346,7 +363,6 @@ namespace SWP391Web.Application.Services
                         StatusCode = 404
                     };
 
-                // Chỉ update các trường thông tin, không động đến khóa ngoại
                 if (!string.IsNullOrWhiteSpace(dto.VIN))
                     vehicle.VIN = dto.VIN;
 
@@ -371,7 +387,6 @@ namespace SWP391Web.Application.Services
                 if (dto.DealerReceivedDate.HasValue && dto.DealerReceivedDate.Value != default)
                     vehicle.DealerReceivedDate = dto.DealerReceivedDate.Value;
 
-                // Không set: DealerId, ColorId, VersionId
                 _unitOfWork.ElectricVehicleRepository.Update(vehicle);
                 await _unitOfWork.SaveAsync();
 
