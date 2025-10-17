@@ -92,5 +92,10 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
         }
+
+        public async Task<IList<ApplicationUser>?> GetUsersInRoleAsync(string roleName)
+        {
+            return await _userManager.GetUsersInRoleAsync(roleName);
+        }
     }
 }

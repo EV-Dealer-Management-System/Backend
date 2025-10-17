@@ -20,6 +20,7 @@ using UglyToad.PdfPig;
 using AutoMapper;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Playwright;
+using SWP391Web.Application.DTO.S3;
 
 namespace SWP391Web.Application.Services
 {
@@ -31,7 +32,8 @@ namespace SWP391Web.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
         private readonly IMapper _mapper;
-        public EContractService(IConfiguration cfg, HttpClient http, IUnitOfWork unitOfWork, IVnptEContractClient vnpt, IEmailService emailService, IMapper mapper)
+        private readonly IS3Service _s3Service;
+        public EContractService(IConfiguration cfg, HttpClient http, IUnitOfWork unitOfWork, IVnptEContractClient vnpt, IEmailService emailService, IMapper mapper, IS3Service s3Service)
         {
             _cfg = cfg;
             _http = http;
@@ -39,6 +41,7 @@ namespace SWP391Web.Application.Services
             _vnpt = vnpt;
             _emailService = emailService;
             _mapper = mapper;
+            _s3Service = s3Service;
         }
 
         public async Task<string> GetAccessTokenAsync()
@@ -448,7 +451,7 @@ namespace SWP391Web.Application.Services
                     {
                         IsSuccess = false,
                         StatusCode = 500,
-                        Message = "Sign process failed: Missing status in response.",
+                        Message = string.Join("; ", signResult.Messages)
                     };
                 }
 
@@ -569,12 +572,12 @@ namespace SWP391Web.Application.Services
 
             var data = new Dictionary<string, string>
             {
-                ["FullName"] = dealerManager.FullName,
-                ["UserName"] = dealerManager.Email,
-                ["Password"] = password,
-                ["LoginUrl"] = StaticLinkUrl.WebUrl,
-                ["Company"] = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist"),
-                ["SupportEmail"] = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist")
+                ["{FullName}"] = dealerManager.FullName,
+                ["{UserName}"] = dealerManager.Email,
+                ["{Password}"] = password,
+                ["{LoginUrl}"] = StaticLinkUrl.WebUrl,
+                ["{Company}"] = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist"),
+                ["{SupportEmail}"] = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist")
             };
             await _emailService.SendEmailFromTemplate(dealerManager.Email, "DealerWelcome", data);
         }
@@ -620,7 +623,8 @@ namespace SWP391Web.Application.Services
                 {
                     var msgs = string.Join("; ", msgsEl.EnumerateArray()
                                                        .Select(m => m.ValueKind == JsonValueKind.String ? m.GetString() : m.ToString()));
-                    throw new HttpRequestException($"HTTP {(int)res.StatusCode} {res.ReasonPhrase}\n{req.Method} {req.RequestUri}\n{body}");
+                    //throw new HttpRequestException($"HTTP {(int)res.StatusCode} {res.ReasonPhrase}\n{req.Method} {req.RequestUri}\n{body}");
+                    throw new Exception("The code is used");
                 }
             }
 
@@ -645,6 +649,8 @@ namespace SWP391Web.Application.Services
             string? waitingProcessId = null;
             int? processedByUserId = null;
             string? downloadUrl = null;
+            string? position = null;
+            int? pageSign = null;
 
             if (docEl.TryGetProperty("waitingProcess", out var waitingEl))
             {
@@ -653,6 +659,12 @@ namespace SWP391Web.Application.Services
 
                 if (waitingEl.TryGetProperty("processedByUserId", out var pEl) && pEl.ValueKind == JsonValueKind.Number)
                     processedByUserId = pEl.GetInt32();
+
+                if (waitingEl.TryGetProperty("position", out var psEl) && psEl.ValueKind == JsonValueKind.String)
+                    position = psEl.GetString();
+
+                if (waitingEl.TryGetProperty("pageSign", out var pageEl) && pageEl.ValueKind == JsonValueKind.Number)
+                    pageSign = pageEl.GetInt32();
             }
 
             if (docEl.TryGetProperty("downloadUrl", out var down) && down.ValueKind == JsonValueKind.String)
@@ -663,7 +675,9 @@ namespace SWP391Web.Application.Services
                 ProcessId = waitingProcessId,
                 DownloadUrl = downloadUrl,
                 ProcessedByUserId = processedByUserId,
-                AccessToken = accessToken
+                AccessToken = accessToken,
+                Position = position,
+                PageSign = pageSign
             };
         }
 

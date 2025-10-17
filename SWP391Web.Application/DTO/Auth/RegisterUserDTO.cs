@@ -2,7 +2,7 @@
 
 namespace SWP391Web.Application.DTO.Auth
 {
-    public class RegisterCustomerDTO
+    public class RegisterUserDTO
     {
         public string Email { get; set; } = default!;
         public string Password { get; set; } = default!;
