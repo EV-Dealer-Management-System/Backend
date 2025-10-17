@@ -51,58 +51,115 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                Quote qoute = new Quote
+                // get promotion 
+                var promotion = await _unitOfWork.PromotionRepository.GetPromotionByIdAsync(createQuoteDTO.PromotionId);
+                if (promotion == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Promotion not found",
+                        StatusCode = 404
+                    };
+                }
+
+                if (!promotion.IsActive || promotion.StartDate > DateTime.UtcNow || promotion.EndDate < DateTime.UtcNow)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Promotion not active",
+                        StatusCode = 404
+                    };
+                }
+
+                Quote quote = new Quote
                 {
                     DealerId = dealer.Id,
                     CreatedBy = dealer.Name,
                     CreatedAt = DateTime.UtcNow,
                     Status = QuoteStatus.Pending,
                     Note = createQuoteDTO.Note,
+                    PromotionId = promotion.Id,
+                    QuoteDetails = new List<QuoteDetail>()
                 };
 
                 decimal totalAmount = 0;
 
                 foreach( var dt in createQuoteDTO.QuoteDetails)
                 {
-                    //Get vehicle in dealer's inventory
-                    var availableVehicles = await _unitOfWork.ElectricVehicleRepository
-                        .GetAvailableVehicleByDealerAsync(dealer.Id, dt.VersionId, dt.ColorId);
-                    if(availableVehicles == null || !availableVehicles.Any())
+                    // take version
+                    var version = await _unitOfWork.ElectricVehicleVersionRepository.GetByIdsAsync(dt.VersionId);
+                    if (version == null)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
-                            Message = "No available in dealer 's inventory",
+                            Message = " No version found ",
                             StatusCode = 404
                         };
                     }
 
-                    if(availableVehicles.Count() < dt.Quantity)
+                    //take color
+
+                    var color = await _unitOfWork.ElectricVehicleColorRepository.GetByIdsAsync(dt.ColorId);
+                    if(color == null)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
-                            Message = " Not enough vehicle in dealer 's inventory",
+                            Message = " No color found ",
                             StatusCode = 404
                         };
                     }
 
-                    //Take vehicle with ImportDate latest
-                    var selectedVehicles = availableVehicles
-                        .OrderBy(ev => ev.ImportDate)
-                        .Take(dt.Quantity)
-                        .ToList();
+                    var vehicle = await _unitOfWork.ElectricVehicleRepository.GetByIdsAsync(dt.Id);
+                    if(vehicle == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "No vehicle found",
+                            StatusCode = 404
+                        };
+                    }
 
-                    var basePrice = selectedVehicles.First().CostPrice;
+                    decimal basePrice = vehicle.CostPrice;
+                    decimal extraPrice = color.ExtraCost;
+                    decimal unitPrice = basePrice + extraPrice;
                     decimal discount = 0;
 
-                    if (dt.PromotionId.HasValue)
+                    if ((promotion.ModelId == null && promotion.VersionId == null) 
+                        || (promotion.ModelId == version.ModelId && promotion.VersionId == version.Id))
                     {
-                        var promo = await _unitOfWork.PromotionRepository.GetPromotionByIdAsync(dt.PromotionId.Value);
+                        if(promotion.DiscountType == DiscountType.Percentage && promotion.Percentage.HasValue)
+                        {
+                            discount = (unitPrice * promotion.Percentage.Value) / 100;
+                        }
+                        else if(promotion.DiscountType == DiscountType.FixAmount && promotion.FixedAmount.HasValue)
+                        {
+                            discount = promotion.FixedAmount.Value;
+                        }
                     }
-                }
 
-                await _unitOfWork.QuoteRepository.AddAsync(qoute, CancellationToken.None);
+                    decimal totalPrice = (unitPrice - discount) * dt.Quantity;
+
+                    totalAmount += totalPrice;
+
+                    var quoteDetail = new QuoteDetail
+                    {
+                        VersionId = version.Id,
+                        ColorId = color.Id,
+                        Quantity = dt.Quantity,
+                        UnitPrice = unitPrice,
+                        Promotion = promotion,
+                        TotalPrice = totalPrice,
+                    };
+                    quote.QuoteDetails.Add(quoteDetail);
+                }
+                quote.TotalAmount = totalAmount;
+
+                await _unitOfWork.QuoteRepository.AddAsync(quote, CancellationToken.None);
                 await _unitOfWork.SaveAsync();
 
                 return new ResponseDTO
@@ -110,7 +167,7 @@ namespace SWP391Web.Application.Services
                     IsSuccess = true,
                     Message = "Create quote successfully",
                     StatusCode = 200,
-                    Result = qoute
+                    Result = quote
                 };
             }
             catch (Exception ex)

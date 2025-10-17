@@ -275,6 +275,12 @@ namespace SWP391Web.Infrastructure.Context
                 .WithMany(p => p.QuoteDetails)
                 .HasForeignKey(qd => qd.PromotionId)
                 .OnDelete(DeleteBehavior.Restrict);
+            //Add this
+            modelBuilder.Entity<QuoteDetail>()
+                .HasOne(qd => qd.ElectricVehicle)
+                .WithMany(p => p.QuoteDetails)
+                .HasForeignKey(qd => qd.VehicleId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             /******************************************************************************/
             // Configure Promotion entity

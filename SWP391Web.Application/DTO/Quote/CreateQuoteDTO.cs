@@ -10,6 +10,8 @@ namespace SWP391Web.Application.DTO.Quote
 {
     public class CreateQuoteDTO
     {
+        public Guid PromotionId { get; set; }
+
         public string? Note { get; set; }
         public List<GetQuoteDetailDTO> QuoteDetails { get; set; } = new();
     }
