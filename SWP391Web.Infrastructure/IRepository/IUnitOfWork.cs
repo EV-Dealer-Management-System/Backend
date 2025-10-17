@@ -25,6 +25,7 @@ namespace SWP391Web.Infrastructure.IRepository
         public IWarehouseRepository WarehouseRepository { get; }
         public IQuoteRepository QuoteRepository { get; }
         public IPromotionRepository PromotionRepository { get; }
+        public IEVAttachmentRepository EVAttachmentRepository { get; }
         Task<int> SaveAsync();
     }
 }

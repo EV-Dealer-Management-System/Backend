@@ -1,9 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using SWP391Web.Application.DTO.BookingEVDetail;
+using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -21,7 +23,7 @@ namespace SWP391Web.Application.DTO.ElectricVehicle
         public DateTime? ImportDate { get; set; }
         public DateTime? WarrantyExpiryDate { get; set; }
         public decimal CostPrice { get; set; }
-        public string? ImageUrl { get; set; }
+        public List<string> ImgUrl { get; set; } = new();
     }
     public class ViewVersionName
     {
