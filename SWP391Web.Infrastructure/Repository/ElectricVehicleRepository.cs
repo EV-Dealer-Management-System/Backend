@@ -38,6 +38,31 @@ namespace SWP391Web.Infrastructure.Repository
                             && ev.Warehouse.EVCInventoryId != null)
                 .CountAsync();
         }
+        // Count vehicle in dealer 's inventory
+        public async Task<int> GetAvailableVehicleAsync(Guid dealerId , Guid versionId , Guid colorId)
+        {
+            return await _context.ElectricVehicles
+                .Where(ev => ev.Warehouse.DealerId == dealerId
+                        && ev.VersionId == versionId
+                        && ev.ColorId == colorId
+                        && ev.Status == StatusVehicle.AtDealer)
+                .CountAsync();
+        }
+
+        public async Task<List<ElectricVehicle>> GetAvailableVehicleByDealerAsync(Guid dealerId , Guid versionId , Guid colorId)
+        {
+            return await _context.ElectricVehicles
+                .Include(ev => ev.Version)
+                    .ThenInclude(v => v.Model)
+                .Include(ev => ev.Color)
+                .Include(ev => ev.Warehouse)
+                .Where( ev => ev.Warehouse.DealerId == dealerId
+                        && ev.VersionId == versionId
+                        && ev.ColorId == colorId
+                        && ev.Status == StatusVehicle.AtDealer)
+                .OrderBy(ev => ev.ImportDate)
+                .ToListAsync();
+        }
 
         public async Task<List<ElectricVehicle>> GetAvailableVehicleByModelIdAsync(Guid modelId)
         {

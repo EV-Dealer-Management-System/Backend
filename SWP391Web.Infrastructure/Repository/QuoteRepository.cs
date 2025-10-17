@@ -21,7 +21,16 @@ namespace SWP391Web.Infrastructure.Repository
 
         public async Task<Quote?> GetQuoteByIdAsync(Guid quoteId)
         {
-            return await _context.Quotes.FirstOrDefaultAsync(q => q.Id == quoteId);
+            return await _context.Quotes
+                .Include(q => q.QuoteDetails)
+                    .ThenInclude(qd => qd.ElectricVehicleVersion)
+                        .ThenInclude(v => v.Model)
+                .Include(q => q.QuoteDetails)
+                    .ThenInclude(qd => qd.ElectricVehicleColor)
+                .Include(q => q.QuoteDetails)
+                    .ThenInclude(qd => qd.Promotion)
+                .Include(q => q.Dealer)
+                .FirstOrDefaultAsync(q => q.Id == quoteId);
         }
 
         public async Task<bool> IsQuoteExistByIdAsync(Guid quoteId)

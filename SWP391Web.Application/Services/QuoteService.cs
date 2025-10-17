@@ -9,6 +9,7 @@ using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -24,20 +25,82 @@ namespace SWP391Web.Application.Services
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
-        public async Task<ResponseDTO> CreateQuoteAsync(CreateQuoteDTO createQuoteDTO)
+        public async Task<ResponseDTO> CreateQuoteAsync(ClaimsPrincipal user, CreateQuoteDTO createQuoteDTO)
         {
             try
             {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+                if(dealer == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found",
+                        StatusCode = 404
+                    };
+                }
+
                 Quote qoute = new Quote
                 {
-                    WarehouseId = createQuoteDTO.WarehouseId,
-                    DealerId = createQuoteDTO.DealerId,
-                    CreatedById = createQuoteDTO.CreatedById,
+                    DealerId = dealer.Id,
+                    CreatedBy = dealer.Name,
                     CreatedAt = DateTime.UtcNow,
                     Status = QuoteStatus.Pending,
-                    TotalAmount = createQuoteDTO.TotalAmount,
                     Note = createQuoteDTO.Note,
                 };
+
+                decimal totalAmount = 0;
+
+                foreach( var dt in createQuoteDTO.QuoteDetails)
+                {
+                    //Get vehicle in dealer's inventory
+                    var availableVehicles = await _unitOfWork.ElectricVehicleRepository
+                        .GetAvailableVehicleByDealerAsync(dealer.Id, dt.VersionId, dt.ColorId);
+                    if(availableVehicles == null || !availableVehicles.Any())
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "No available in dealer 's inventory",
+                            StatusCode = 404
+                        };
+                    }
+
+                    if(availableVehicles.Count() < dt.Quantity)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = " Not enough vehicle in dealer 's inventory",
+                            StatusCode = 404
+                        };
+                    }
+
+                    //Take vehicle with ImportDate latest
+                    var selectedVehicles = availableVehicles
+                        .OrderBy(ev => ev.ImportDate)
+                        .Take(dt.Quantity)
+                        .ToList();
+
+                    var basePrice = selectedVehicles.First().CostPrice;
+                    decimal discount = 0;
+
+                    if (dt.PromotionId.HasValue)
+                    {
+                        var promo = await _unitOfWork.PromotionRepository.GetPromotionByIdAsync(dt.PromotionId.Value);
+                    }
+                }
 
                 await _unitOfWork.QuoteRepository.AddAsync(qoute, CancellationToken.None);
                 await _unitOfWork.SaveAsync();
@@ -62,7 +125,7 @@ namespace SWP391Web.Application.Services
 
             }
 
-        public async Task<ResponseDTO> GetAllAsync()
+        public async Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user)
         {
             try
             {
@@ -88,7 +151,7 @@ namespace SWP391Web.Application.Services
 
         }
 
-        public async Task<ResponseDTO> GetQuoteByIdAsync(Guid id)
+        public async Task<ResponseDTO> GetQuoteByIdAsync(ClaimsPrincipal user,  Guid id)
         {
             try
             {

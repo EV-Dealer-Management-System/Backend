@@ -4,6 +4,7 @@ using SWP391Web.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,9 +12,9 @@ namespace SWP391Web.Application.IServices
 {
     public interface IQuoteService
     {
-        Task<ResponseDTO> GetAllAsync();
-        Task<ResponseDTO> GetQuoteByIdAsync(Guid id);
-        Task<ResponseDTO> CreateQuoteAsync(CreateQuoteDTO createQuoteDTO);
+        Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user);
+        Task<ResponseDTO> GetQuoteByIdAsync(ClaimsPrincipal user , Guid id);
+        Task<ResponseDTO> CreateQuoteAsync(ClaimsPrincipal user , CreateQuoteDTO createQuoteDTO);
         Task<ResponseDTO> UpdateQuoteStatusAsync(Guid id, QuoteStatus newStatus);
 
     }

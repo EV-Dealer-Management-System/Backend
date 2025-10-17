@@ -46,10 +46,10 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
-        [HttpGet("get-promotion-by-code/{code}")]
-        public async Task<ActionResult<ResponseDTO>> GetPromotionByCode([FromRoute] string code)
+        [HttpGet("get-promotion-by-name/{name}")]
+        public async Task<ActionResult<ResponseDTO>> GetPromotionByName([FromRoute] string name)
         {
-            var response = await _promotionService.GetPromotionByNameAsync(code);
+            var response = await _promotionService.GetPromotionByNameAsync(name);
             return StatusCode(response.StatusCode, response);
         }
 
