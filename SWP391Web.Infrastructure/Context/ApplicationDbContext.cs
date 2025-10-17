@@ -31,6 +31,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<Quote> Quotes { get; set; }
         public DbSet<Promotion> Promotions { get; set; }
         public DbSet<EVAttachment> EVAttachments { get; set; }
+        public DbSet<QuoteDetail> QuoteDetails { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -231,6 +232,63 @@ namespace SWP391Web.Infrastructure.Context
                 .HasOne(eva => eva.ElectricVehicle)
                 .WithMany(ev => ev.EVAttachments)
                 .HasForeignKey(eva => eva.ElectricVehicleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure Quote entity
+
+            modelBuilder.Entity<Quote>()
+                .HasOne(q => q.Dealer)
+                .WithMany(d => d.Quotes)
+                .HasForeignKey(q => q.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Quote>()
+                .HasOne(q => q.CreatedByUser)
+                .WithOne(u => u.Quote)
+                .HasForeignKey<Quote>(q => q.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure QuoteDetail entity
+
+            modelBuilder.Entity<QuoteDetail>()
+                .HasOne(qd => qd.Quote)
+                .WithMany(q => q.QuoteDetails)
+                .HasForeignKey(qd => qd.QuoteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<QuoteDetail>()
+                .HasOne(qd => qd.ElectricVehicleVersion)
+                .WithMany(v => v.quoteDetails)
+                .HasForeignKey(qd => qd.VersionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<QuoteDetail>()
+                .HasOne(qd => qd.ElectricVehicleColor)
+                .WithMany(c => c.QuoteDetails)
+                .HasForeignKey(qd => qd.ColorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<QuoteDetail>()
+                .HasOne(qd => qd.Promotion)
+                .WithMany(p => p.QuoteDetails)
+                .HasForeignKey(qd => qd.PromotionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure Promotion entity
+
+            modelBuilder.Entity<Promotion>()
+                .HasOne(p => p.Model)
+                .WithOne(m => m.Promotion)
+                .HasForeignKey<Promotion>(p => p.ModelId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Promotion>()
+                .HasOne(p => p.Version)
+                .WithOne(v => v.Promotion)
+                .HasForeignKey<Promotion>(p => p.VersionId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

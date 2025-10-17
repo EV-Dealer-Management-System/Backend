@@ -30,9 +30,8 @@ namespace SWP391Web.Application.Services
             {
                 Quote qoute = new Quote
                 {
-                    WarehouseId = createQuoteDTO.WarehouseId,
                     DealerId = createQuoteDTO.DealerId,
-                    CreatedById = createQuoteDTO.CreatedById,
+                    CreatedBy = createQuoteDTO.CreatedById,
                     CreatedAt = DateTime.UtcNow,
                     Status = QuoteStatus.Pending,
                     TotalAmount = createQuoteDTO.TotalAmount,
