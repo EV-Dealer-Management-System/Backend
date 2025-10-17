@@ -26,5 +26,7 @@ namespace SWP391Web.Domain.Entities
         public ElectricVehicleModel Model { get; set; } = null!;
         public ICollection<ElectricVehicle> ElectricVehicles { get; set; } = new List<ElectricVehicle>();
         public ICollection<BookingEVDetail> BookingEVDetails { get; set; } = new List<BookingEVDetail>();
+        public Promotion? Promotion { get; set; }
+        public ICollection<QuoteDetail> quoteDetails { get; set; } = new List<QuoteDetail>();
     }
 }

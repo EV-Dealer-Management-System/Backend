@@ -16,5 +16,6 @@ namespace SWP391Web.Domain.Entities
         public ApplicationUser? Manager { get; set; }
         public Warehouse Warehouse { get; set; } = null!;
         public ICollection<BookingEV> BookingEVs { get; set; } = new List<BookingEV>();
+        public ICollection<Quote> Quotes { get; set; } = new List<Quote>();
     }
 }
