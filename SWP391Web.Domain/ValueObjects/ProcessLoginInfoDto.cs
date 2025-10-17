@@ -13,5 +13,7 @@ namespace SWP391Web.Domain.ValueObjects
         public string? DownloadUrl { get; set; }
         public int? ProcessedByUserId { get; set; }
         public string? AccessToken { get; set; }
+        public string? Position { get; set; }
+        public int? PageSign { get; set; }
     }
 }
