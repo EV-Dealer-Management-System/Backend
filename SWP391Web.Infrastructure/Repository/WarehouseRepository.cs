@@ -18,6 +18,12 @@ namespace SWP391Web.Infrastructure.Repository
         {
             _context = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         }
+
+        public async Task<Warehouse?> GetWarehouseByDealerIdAsync(Guid dealerId)
+        {
+            return await _context.Warehouses.FirstOrDefaultAsync(w => w.DealerId == dealerId);
+        }
+
         public async Task<Warehouse?> GetWarehouseByIdAsync(Guid warehouseId)
         {
             return await _context.Warehouses

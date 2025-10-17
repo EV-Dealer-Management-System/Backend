@@ -27,13 +27,13 @@ namespace SWP391Web.API.Controllers
         [HttpGet("get-all-bookings")]
         public async Task<ActionResult<ResponseDTO>> GetAllBookingEVs()
         {
-            var response = await _bookingEVService.GetAllBookingEVsAsync();
+            var response = await _bookingEVService.GetAllBookingEVsAsync(User);
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-booking-by-id/{bookingId}")]
         public async Task<ActionResult<ResponseDTO>> GetBookingEVById([FromRoute] Guid bookingId)
         {
-            var response = await _bookingEVService.GetBookingEVByIdAsync(bookingId);
+            var response = await _bookingEVService.GetBookingEVByIdAsync(User,bookingId);
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut("update-booking-status/{bookingId}")]

@@ -3,9 +3,11 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.BookingEV;
 using SWP391Web.Application.DTO.BookingEVDetail;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
+using SWP391Web.Infrastructure.Repository;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -99,11 +101,52 @@ namespace SWP391Web.Application.Services
 
         }
 
-        public async Task<ResponseDTO> GetAllBookingEVsAsync()
+        public async Task<ResponseDTO> GetAllBookingEVsAsync(ClaimsPrincipal user)
         {
             try
             {
-                var bookingEVs = await _unitOfWork.BookingEVRepository.GetAllAsync();
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if(userId == null)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
+
+                var bookingEVs = new List<BookingEV>();
+                if (role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
+                {
+                     bookingEVs = (await _unitOfWork.BookingEVRepository.GetAllAsync()).ToList();
+                }
+                else
+                {
+                    var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+
+                    if (dealer == null)
+                    {
+                        return new ResponseDTO()
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer not found",
+                            StatusCode = 404
+                        };
+                    }
+                     bookingEVs = (await _unitOfWork.BookingEVRepository.GetAllAsync()).ToList();
+
+                    if (dealer != null)
+                    {
+                        bookingEVs = bookingEVs.Where(b => b.DealerId == dealer.Id).ToList();
+                    }
+
+                    
+                }
+
                 var getBookingEVs = _mapper.Map<List<GetBookingEVDTO>>(bookingEVs);
                 return new ResponseDTO
                 {
@@ -124,10 +167,32 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetBookingEVByIdAsync(Guid bookingId)
+        public async Task<ResponseDTO> GetBookingEVByIdAsync(ClaimsPrincipal user , Guid bookingId)
         {
             try
             {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+                if (dealer == null)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found",
+                        StatusCode = 404
+                    };
+                }
+
                 var bookingEV = await _unitOfWork.BookingEVRepository
                     .GetBookingWithIdAsync(bookingId);
                 if (bookingEV == null)
@@ -215,6 +280,16 @@ namespace SWP391Web.Application.Services
                 // Neu duyet thi tru xe trong kho
                 if (newStatus == BookingStatus.Approved)
                 {
+                    var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(bookingEV.DealerId);
+                    if(warehouse == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer's warehouse not found",
+                            StatusCode = 404
+                        };
+                    }
                     foreach (var dt in bookingEV.BookingEVDetails)
                     {
                         // lay xe dang kha dung (status = available)
@@ -250,9 +325,10 @@ namespace SWP391Web.Application.Services
                             .ToList();
 
                         // cap nhat sang booked
-
+                        
                         foreach (var ev in selectedVehicles) {
                             ev.Status = StatusVehicle.Booked;
+                            ev.WarehouseId = warehouse.Id;
                             _unitOfWork.ElectricVehicleRepository.Update(ev);
                         }
                     }

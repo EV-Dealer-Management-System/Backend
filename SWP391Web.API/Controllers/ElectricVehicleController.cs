@@ -6,6 +6,7 @@ using SWP391Web.Application.DTO.S3;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Services;
 using SWP391Web.Domain.Enums;
+using System.Threading.Tasks;
 
 namespace SWP391Web.API.Controllers
 {
@@ -72,5 +73,13 @@ namespace SWP391Web.API.Controllers
             var response = _s3Service.GenerateUploadElectricVehicle(preSignedUploadDTO);
             return StatusCode(response.StatusCode, response);
         }
+
+        [HttpPost("get-dealer-inventory")]
+        public async Task<ActionResult<ResponseDTO>> GetDealerInventoryAsync()
+        {
+            var response = await _electricVehicleService.GetDealerInventoryAsync(User);
+            return StatusCode(response.StatusCode, response);
+        }
+
     }
 }

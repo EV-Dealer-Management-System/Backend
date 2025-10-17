@@ -16,46 +16,51 @@ namespace SWP391Web.API.Controllers
         public readonly IPromotionService _promotionService;
         public PromotionController(IPromotionService promotionService)
         {
-            _promotionService = promotionService;
+            _promotionService = promotionService ?? throw new ArgumentNullException(nameof(promotionService));
         }
-        [HttpPost]
-        [Route("create-promotion")]
+        [HttpPost("create-promotion")]
         public async Task<ActionResult<ResponseDTO>> CreatePromotion([FromBody] CreatePromotionDTO createPromotionDTO)
         {
             var response = await _promotionService.CreatePromotionAsync(createPromotionDTO);
             return StatusCode(response.StatusCode, response);
         }
 
-        [HttpPut]
-        [Route("update-promotion/{promotionId}")]
+        [HttpPut("update-promotion/{promotionId}")]
         public async Task<ActionResult<ResponseDTO>> UpdatePromotion(Guid promotionId, [FromBody] UpdatePromotionDTO updatePromotionDTO)
         {
             var response = await _promotionService.UpdatePromotionAsync(promotionId, updatePromotionDTO);
             return StatusCode(response.StatusCode, response);
         }
-        [HttpGet]
-        [Route("get-promotion/{promotionId}")]
+        [HttpGet("get-promotion/{promotionId}")]
         public async Task<ActionResult<ResponseDTO>> GetPromotionById([FromRoute] Guid promotionId)
         {
             var response = await _promotionService.GetPromotionByIdAsync(promotionId);
             return StatusCode(response.StatusCode, response);
         }
 
-        [HttpPut]
-        [Route("delete-promotion/{promotionId}")]
+        [HttpPut("delete-promotion/{promotionId}")]
+
         public async Task<ActionResult<ResponseDTO>> DeletePromotion([FromRoute] Guid promotionId)
         {
             var response = await _promotionService.DeletePromotionAsync(promotionId);
             return StatusCode(response.StatusCode, response);
         }
 
-        [HttpGet]
-        [Route("get-promotion-by-code/{code}")]
-        [Authorize]
+        [HttpGet("get-promotion-by-code/{code}")]
         public async Task<ActionResult<ResponseDTO>> GetPromotionByCode([FromRoute] string code)
         {
             var response = await _promotionService.GetPromotionByNameAsync(code);
             return StatusCode(response.StatusCode, response);
         }
+
+        [HttpGet("get-all-promotion")]
+        public async Task<ActionResult<ResponseDTO>> GetAllPromotion()
+        {
+            var response = await _promotionService.GetAllAsync();
+            return StatusCode(response.StatusCode, response);
+        }
+        
+
+        
     }
 }

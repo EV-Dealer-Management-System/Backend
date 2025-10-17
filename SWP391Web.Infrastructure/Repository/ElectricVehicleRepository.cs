@@ -19,6 +19,15 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
+        public async Task<List<ElectricVehicle>> GetAllVehicleWithDetailAsync()
+        {
+            return await _context.ElectricVehicles
+                .Include(ev => ev.Version)
+                    .ThenInclude(v => v.Model)
+                .Include(ev => ev.Color)
+                .ToListAsync();
+        }
+
         public async Task<int> GetAvailableQuantityByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId)
         {
             return await _context.ElectricVehicles
@@ -63,6 +72,17 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _context.ElectricVehicles
                 .FirstOrDefaultAsync(v => v.VIN == vin);
+        }
+
+        public async Task<List<ElectricVehicle>> GetDealerInventoryAsync(Guid dealerId)
+        {
+            return await _context.ElectricVehicles
+                .Include(ev => ev.Version)
+                    .ThenInclude(v => v.Model)
+                .Include(ev => ev.Color)
+                .Include(ev => ev.Warehouse)
+                .Where(ev => ev.Warehouse.DealerId == dealerId)
+                .ToListAsync();
         }
 
         public async Task<bool> IsVehicleExistsById(Guid vehicleId)

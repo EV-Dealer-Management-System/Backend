@@ -13,8 +13,8 @@ namespace SWP391Web.Application.IServices
     public interface IBookingEVService
     {
         Task <ResponseDTO> CreateBookingEVAsync(ClaimsPrincipal user, CreateBookingEVDTO createBookingEVDTO);
-        Task <ResponseDTO> GetAllBookingEVsAsync();
-        Task <ResponseDTO> GetBookingEVByIdAsync(Guid bookingId);
+        Task <ResponseDTO> GetAllBookingEVsAsync(ClaimsPrincipal user);
+        Task <ResponseDTO> GetBookingEVByIdAsync(ClaimsPrincipal user, Guid bookingId);
         Task <ResponseDTO> UpdateBookingStatusAsync(Guid bookingId, BookingStatus newStatus);
 
     }

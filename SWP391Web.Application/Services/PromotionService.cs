@@ -120,7 +120,7 @@ namespace SWP391Web.Application.Services
                 {
                     IsSuccess = false,
                     StatusCode = 500,
-                    Message = $"Lỗi khi tạo mã giảm giá: {ex.Message}"
+                    Message = ex.Message
                 };
             }
         }
@@ -368,7 +368,7 @@ namespace SWP391Web.Application.Services
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    Message = "Cập nhật mã giảm giá thành công",
+                    Message = "Update promotion successfully",
                     Result = promotion
                 };
             }
