@@ -1,4 +1,5 @@
-﻿using SWP391Web.Application.DTO.Auth;
+﻿using Microsoft.EntityFrameworkCore;
+using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Dealer;
 using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
@@ -9,9 +10,11 @@ using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SWP391Web.Application.Services
 {
@@ -105,7 +108,7 @@ namespace SWP391Web.Application.Services
                     }
 
                     user = staff;
-                    await _emailService.NotifyAddedToDealerExistingUser(createDealerStaffDTO.Email, createDealerStaffDTO.FullName, $"Nhân viên đại lý" , dealer.Name); // After can open more role
+                    await _emailService.NotifyAddedToDealerExistingUser(createDealerStaffDTO.Email, createDealerStaffDTO.FullName, $"Nhân viên đại lý", dealer.Name); // After can open more role
                 }
 
                 await _unitOfWork.UserManagerRepository.AddToRoleAsync(user, StaticUserRole.DealerStaff);
@@ -119,7 +122,7 @@ namespace SWP391Web.Application.Services
                 await _unitOfWork.DealerMemberRepository.AddAsync(dealerMember, ct);
 
                 await _unitOfWork.SaveAsync();
-    
+
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -138,9 +141,128 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public Task<ResponseDTO> GetAllDealerStaffAsync(string? filterOn, string? filterQuery, string? sortBy, bool? isAcsending, int pageNumber, int PageSize, CancellationToken ct)
+        public async Task<ResponseDTO> GetAllDealerStaffAsync(ClaimsPrincipal claimUser, string? filterOn, string? filterQuery, string? sortBy, bool? isAscending, int pageNumber, int pageSize, CancellationToken ct)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var userId = claimUser.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "User not login yet"
+                    };
+                }
+                var dealer = _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct).Result;
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Users do not own any dealers"
+                    };
+                }
+
+                Expression<Func<DealerMember, bool>> baseFilter = dm => dm.DealerId == dealer.Id;
+
+
+                if (!string.IsNullOrWhiteSpace(filterOn) && !string.IsNullOrWhiteSpace(filterQuery))
+                {
+                    var q = filterQuery.Trim().ToLower();
+                    baseFilter = filterOn.Trim().ToLower() switch
+                    {
+                        "fullname" => dm => dm.DealerId == dealer.Id &&
+                                            dm.ApplicationUser.FullName != null &&
+                                            dm.ApplicationUser.FullName.ToLower().Contains(q),
+                        "email" => dm => dm.DealerId == dealer.Id &&
+                                         dm.ApplicationUser.Email != null &&
+                                         dm.ApplicationUser.Email.ToLower().Contains(q),
+                        _ => dm => dm.DealerId == dealer.Id
+                    };
+                }
+
+                Func<IQueryable<DealerMember>, IQueryable<DealerMember>> includes =
+                    q => q.Include(dm => dm.ApplicationUser);
+
+                string sortField = (sortBy ?? "createdat").Trim().ToLower();
+                bool asc = isAscending ?? true;
+
+                (IReadOnlyList<DealerMember> items, int total) result;
+
+                switch (sortField)
+                {
+                    case "fullname":
+                        result = await _unitOfWork.DealerMemberRepository.GetPagedAsync(
+                            filter: baseFilter,
+                            includes: includes,
+                            orderBy: dm => dm.ApplicationUser.FullName!,
+                            ascending: asc,
+                            pageNumber: pageNumber,
+                            pageSize: pageSize,
+                            ct: ct);
+                        break;
+
+                    case "email":
+                        result = await _unitOfWork.DealerMemberRepository.GetPagedAsync(
+                            filter: baseFilter,
+                            includes: includes,
+                            orderBy: dm => dm.ApplicationUser.Email!,
+                            ascending: asc,
+                            pageNumber: pageNumber,
+                            pageSize: pageSize,
+                            ct: ct);
+                        break;
+
+                    default:
+                        result = await _unitOfWork.DealerMemberRepository.GetPagedAsync(
+                            filter: baseFilter,
+                            includes: includes,
+                            orderBy: dm => dm.ApplicationUser.CreatedAt,
+                            ascending: false,
+                            pageNumber: pageNumber,
+                            pageSize: pageSize,
+                            ct: ct);
+                        break;
+                }
+
+                var data = result.items.Select(dm => new
+                {
+                    dm.ApplicationUser.Id,
+                    dm.ApplicationUser.FullName,
+                    dm.ApplicationUser.Email,
+                    dm.ApplicationUser.PhoneNumber
+                });
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Get dealer staffs successfully.",
+                    Result = new
+                    {
+                        Data = data,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = pageSize,
+                            TotalItems = result.total,
+                            TotalPages = (int)Math.Ceiling((double)result.total / pageSize)
+                        }
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to get all dealer staffs at DealerService:  {ex.Message}"
+                };
+            }
         }
     }
 }
