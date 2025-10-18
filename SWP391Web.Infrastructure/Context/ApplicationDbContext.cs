@@ -32,6 +32,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<Promotion> Promotions { get; set; }
         public DbSet<EVAttachment> EVAttachments { get; set; }
         public DbSet<QuoteDetail> QuoteDetails { get; set; }
+        public DbSet<DealerMember> DealerMembers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -289,6 +290,21 @@ namespace SWP391Web.Infrastructure.Context
                 .HasOne(p => p.Version)
                 .WithOne(v => v.Promotion)
                 .HasForeignKey<Promotion>(p => p.VersionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure DealerMember entity
+
+            modelBuilder.Entity<DealerMember>()
+                .HasOne(dm => dm.Dealer)
+                .WithMany(d => d.DealerMembers)
+                .HasForeignKey(dm => dm.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DealerMember>()
+                .HasOne(dm => dm.ApplicationUser)
+                .WithMany(au => au.DealerMembers)
+                .HasForeignKey(dm => dm.ApplicationUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }
