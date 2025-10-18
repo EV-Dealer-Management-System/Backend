@@ -21,5 +21,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<IdentityResult> SetPassword(ApplicationUser user, string newPassword);
         Task<IdentityResult> ChangePasswordAsync(ApplicationUser user, string currentPassword, string newPassword);
         Task<IList<ApplicationUser>?> GetUsersInRoleAsync(string roleName);
+        Task<IdentityResult> RemoveAllRole(ApplicationUser user);
     }
 }
