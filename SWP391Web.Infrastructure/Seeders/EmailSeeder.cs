@@ -293,15 +293,15 @@ namespace SWP391Web.Infrastructure.Seeders
             modelBuilder.Entity<EmailTemplate>().HasData(
 new
 {
-Id = Guid.Parse("A89C8D8B-BA15-4E60-A74E-8A3B9C2B7A77"),
-TemplateName = "SendEmployeeCredentials",
-SenderName = "EVSystem Support",
-SenderEmail = "hoangtuzami@gmail.com",
-Category = "Onboarding",
-SubjectLine = "Chào mừng bạn đến với Hệ thống xe điện ABX – Thông tin tài khoản đăng nhập",
-PreHeaderText = "Tài khoản nhân viên đã được tạo. Đăng nhập ngay để kích hoạt và thay đổi mật khẩu.",
-PersonalizationTags = "{EmployeeName},{Username},{TempPassword},{LoginLink}",
-BodyContent = @"
+    Id = Guid.Parse("A89C8D8B-BA15-4E60-A74E-8A3B9C2B7A77"),
+    TemplateName = "SendEmployeeCredentials",
+    SenderName = "EVSystem Support",
+    SenderEmail = "hoangtuzami@gmail.com",
+    Category = "Onboarding",
+    SubjectLine = "Chào mừng bạn đến với Hệ thống xe điện ABX – Thông tin tài khoản đăng nhập",
+    PreHeaderText = "Tài khoản nhân viên đã được tạo. Đăng nhập ngay để kích hoạt và thay đổi mật khẩu.",
+    PersonalizationTags = "{EmployeeName},{Username},{TempPassword},{LoginLink}",
+    BodyContent = @"
 <!DOCTYPE html>
 <html lang='vi'>
 <head>
@@ -368,16 +368,238 @@ BodyContent = @"
     </div>
 </body>
 </html>",
-FooterContent = "EVSystem Team – Electric Vehicle Management System",
-CallToAction = "<a href=\"{LoginLink}\" class=\"btn\">Đăng nhập ngay</a>",
-Language = "Vietnamese",
-RecipientType = "Employee",
-CreatedBy = "System",
-CreatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
-UpdatedBy = "System",
-UpdatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
-Status = EmailStatus.Active
+    FooterContent = "EVSystem Team – Electric Vehicle Management System",
+    CallToAction = "<a href=\"{LoginLink}\" class=\"btn\">Đăng nhập ngay</a>",
+    Language = "Vietnamese",
+    RecipientType = "Employee",
+    CreatedBy = "System",
+    CreatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+    UpdatedBy = "System",
+    UpdatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+    Status = EmailStatus.Active
 });
+
+
+            modelBuilder.Entity<EmailTemplate>().HasData(
+new
+{
+    Id = Guid.Parse("9B2A78CF-5E46-4E56-AC42-91E4CFD012AB"),
+    TemplateName = "SendDealerStaffCredentials_Pro",
+    SenderName = "EVSystem Support",
+    SenderEmail = "hoangtuzami@gmail.com",
+    Category = "Onboarding",
+    SubjectLine = "[EVSystem] Cấp tài khoản nhân viên đại lý {DealerName}",
+    PreHeaderText = "Chào mừng bạn gia nhập hệ thống đại lý EVSystem – tài khoản nhân viên đã được khởi tạo.",
+    PersonalizationTags = "{EmployeeName},{DealerName},{Username},{TempPassword},{LoginLink}",
+    BodyContent = @"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Tài khoản nhân viên đại lý - EVSystem</title>
+    <style>
+        body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 0; background-color: #f3f4f6; color: #333; }
+        .container { padding: 40px 0; background: #f3f4f6; }
+        .card {
+            width: 640px; margin: auto; background: #fff; border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(90deg, #B71C1C, #E53935);
+            color: #fff; text-align: center; padding: 28px 20px;
+        }
+        .header h1 {
+            margin: 0; font-size: 26px; letter-spacing: 0.3px; font-weight: 700;
+        }
+        .header p {
+            margin-top: 8px; font-size: 15px; opacity: 0.9;
+        }
+        .content {
+            padding: 40px 45px; line-height: 1.75; color: #333;
+        }
+        .content p {
+            font-size: 15px; margin-bottom: 14px;
+        }
+        .info-box {
+            background: #f9fafb; border: 1px solid #e0e0e0;
+            border-radius: 10px; padding: 18px 22px; margin: 26px 0;
+        }
+        .info-box td { padding: 8px 0; font-size: 15px; }
+        .info-box td:first-child { width: 180px; font-weight: 600; color: #444; }
+        .btn {
+            display: inline-block; padding: 14px 32px; background: #E53935;
+            color: #fff; text-decoration: none; border-radius: 8px;
+            font-weight: 600; font-size: 16px; letter-spacing: 0.3px;
+            transition: all 0.3s ease;
+        }
+        .btn:hover { background: #C62828; transform: translateY(-2px); }
+        .note {
+            font-size: 13px; color: #666; margin-top: 28px;
+            line-height: 1.7; border-top: 1px dashed #ddd; padding-top: 18px;
+        }
+        .footer {
+            background: #fafafa; text-align: center; padding: 22px;
+            font-size: 13px; color: #777; border-top: 1px solid #eee;
+        }
+        .footer a { color: #E53935; text-decoration: none; }
+        @media (max-width: 640px) {
+            .card { width: 95%; }
+            .content { padding: 28px; }
+        }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='card'>
+            <div class='header'>
+                <h1>Electric Vehicle Management System</h1>
+                <p>Chào mừng bạn đến với hệ thống đại lý EVSystem</p>
+            </div>
+            <div class='content'>
+                <p>Xin chào <strong>{EmployeeName}</strong>,</p>
+                <p>Chúng tôi rất vui mừng thông báo rằng tài khoản nhân viên của bạn tại <strong>Đại lý {DealerName}</strong> đã được khởi tạo thành công trên <strong>Hệ thống xe điện EVSystem</strong>.</p>
+
+                <div class='info-box'>
+                    <table width='100%'>
+                        <tr>
+                            <td>Đại lý:</td>
+                            <td>{DealerName}</td>
+                        </tr>
+                        <tr>
+                            <td>Tên đăng nhập:</td>
+                            <td>{Username}</td>
+                        </tr>
+                        <tr>
+                            <td>Mật khẩu tạm thời:</td>
+                            <td>{TempPassword}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <p style='text-align:center; margin:32px 0;'>
+                    <a href='{LoginLink}' class='btn'>Đăng nhập và kích hoạt</a>
+                </p>
+
+                <p class='note'>
+                    🔐 <strong>Lưu ý bảo mật:</strong><br>
+                    • Vui lòng đăng nhập và đổi mật khẩu ngay trong lần đầu sử dụng.<br>
+                    • Không chia sẻ thông tin tài khoản của bạn với bất kỳ ai.<br>
+                    • Nếu bạn không yêu cầu tạo tài khoản này, vui lòng liên hệ quản trị viên hệ thống để được hỗ trợ ngay.
+                </p>
+            </div>
+            <div class='footer'>
+                <p>Trân trọng,<br><strong>EVSystem Support Team</strong></p>
+                <p>Website: <a href='https://electricvehiclesystem.click'>electricvehiclesystem.click</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>",
+    FooterContent = "EVSystem Team – Electric Vehicle Management System",
+    CallToAction = "<a href=\"{LoginLink}\" class=\"btn\">Đăng nhập và kích hoạt</a>",
+    Language = "Vietnamese",
+    RecipientType = "DealerEmployee",
+    CreatedBy = "System",
+    CreatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+    UpdatedBy = "System",
+    UpdatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+    Status = EmailStatus.Active
+});
+
+            modelBuilder.Entity<EmailTemplate>().HasData(
+new
+{
+    Id = Guid.Parse("D9C3C4C2-0A5A-4E2A-8D3C-9A3B4C5D6E7F"),
+    TemplateName = "NotifyAddedToDealerExistingUser",
+    SenderName = "EVSystem Support",
+    SenderEmail = "hoangtuzami@gmail.com",
+    Category = "Notification",
+    SubjectLine = "[EVSystem] Bạn đã được thêm vào Đại lý {DealerName}",
+    PreHeaderText = "Tài khoản của bạn đã được liên kết với đại lý. Đăng nhập để bắt đầu làm việc.",
+    PersonalizationTags = "{EmployeeName},{DealerName},{RoleInDealer},{LoginLink}",
+    BodyContent = @"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Thông báo thêm vào đại lý</title>
+  <style>
+    body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; margin:0; padding:0; background:#f3f4f6; color:#333; }
+    .wrap { padding:40px 0; }
+    .card { width:640px; margin:auto; background:#fff; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; }
+    .header { background:linear-gradient(90deg,#B71C1C,#E53935); color:#fff; text-align:center; padding:28px 20px; }
+    .header h1 { margin:0; font-size:26px; font-weight:700; }
+    .header p { margin:8px 0 0; font-size:15px; opacity:.95; }
+    .content { padding:40px 45px; line-height:1.75; }
+    .content p { font-size:15px; margin:0 0 12px; }
+    .box { background:#f9fafb; border:1px solid #e0e0e0; border-radius:10px; padding:18px 22px; margin:22px 0; }
+    .box table { width:100%; border-collapse:collapse; }
+    .box td { padding:8px 0; font-size:15px; vertical-align:top; }
+    .box td:first-child { width:190px; font-weight:600; color:#444; }
+    .btn { display:inline-block; padding:14px 32px; background:#E53935; color:#fff !important; text-decoration:none; border-radius:8px; font-weight:600; font-size:16px; letter-spacing:.3px; transition:.25s; }
+    .btn:hover { background:#C62828; transform:translateY(-2px); }
+    .note { font-size:13px; color:#666; margin-top:24px; border-top:1px dashed #ddd; padding-top:16px; }
+    .footer { background:#fafafa; text-align:center; padding:22px; font-size:13px; color:#777; border-top:1px solid #eee; }
+    .footer a { color:#E53935; text-decoration:none; }
+    @media (max-width:640px){ .card{width:95%} .content{padding:28px} }
+  </style>
+</head>
+<body>
+  <div class='wrap'>
+    <div class='card'>
+      <div class='header'>
+        <h1>Electric Vehicle Management System</h1>
+        <p>Thông báo: Liên kết tài khoản với đại lý</p>
+      </div>
+      <div class='content'>
+        <p>Xin chào <strong>{EmployeeName}</strong>,</p>
+        <p>Tài khoản EVSystem của bạn đã được thêm vào <strong>Đại lý {DealerName}</strong> với vai trò <strong>{RoleInDealer}</strong>.</p>
+
+        <div class='box'>
+          <table>
+            <tr>
+              <td>Đại lý:</td>
+              <td>{DealerName}</td>
+            </tr>
+            <tr>
+              <td>Vai trò của bạn:</td>
+              <td>{RoleInDealer}</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style='text-align:center; margin:28px 0;'>
+          <a href='{LoginLink}' class='btn'>Đăng nhập để bắt đầu</a>
+        </p>
+
+        <p class='note'>
+          🔐 <strong>Lưu ý bảo mật:</strong><br>
+          • Không chia sẻ tài khoản cho người khác.<br>
+          • Nếu bạn không mong đợi thay đổi này, vui lòng liên hệ quản trị hệ thống ngay.
+        </p>
+      </div>
+      <div class='footer'>
+        <p>Trân trọng,<br><strong>EVSystem Support Team</strong></p>
+        <p>Website: <a href='https://electricvehiclesystem.click'>electricvehiclesystem.click</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>",
+    FooterContent = "EVSystem Team – Electric Vehicle Management System",
+    CallToAction = "<a href=\"{LoginLink}\" class=\"btn\">Đăng nhập để bắt đầu</a>",
+    Language = "Vietnamese",
+    RecipientType = "DealerEmployee",
+    CreatedBy = "System",
+    CreatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+    UpdatedBy = "System",
+    UpdatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+    Status = EmailStatus.Active
+});
+
+
         }
     }
 }

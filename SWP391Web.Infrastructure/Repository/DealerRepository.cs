@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.IRepository;
 using System;
@@ -12,29 +13,37 @@ namespace SWP391Web.Infrastructure.Repository
 {
     public class DealerRepository : Repository<Dealer>, IDealerRepository
     {
-        private readonly ApplicationDbContext context;
+        private readonly ApplicationDbContext _context;
         public DealerRepository(ApplicationDbContext context) : base(context)
         {
-            this.context = context;
+            this._context = context;
         }
 
         public async Task<Dealer?> GetByIdAsync(Guid dealerId, CancellationToken ct)
         {
-            return await context.Dealers
+            return await _context.Dealers
                 .Where(dl => dl.Id == dealerId).FirstOrDefaultAsync(ct);
         }
 
         public async Task<Dealer?> GetDealerByUserIdAsync(string userId, CancellationToken ct)
         {
-            return await context.Dealers
+            return await _context.Dealers
                 .AsNoTracking()
-                .Where(dl => dl.ApplicationUsers.Any(au => au.Id == userId))
+                .Where(dl => dl.DealerMembers.Any(dm => dm.ApplicationUserId == userId && dm.IsActive == true))
+                .FirstOrDefaultAsync(ct);
+        }
+
+        public async Task<Dealer?> GetDealerByManagerIdAsync(string managerId, CancellationToken ct)
+        {
+            return await _context.Dealers
+                .AsNoTracking()
+                .Where(dl => dl.ManagerId == managerId)
                 .FirstOrDefaultAsync(ct);
         }
 
         public Task<ApplicationUser?> GetManagerByDealerId(Guid dealerId, CancellationToken ct)
         {
-            return context.Dealers
+            return _context.Dealers
                 .AsNoTracking()
                 .Where(dl => dl.Id == dealerId)
                 .Select(dl => dl.Manager)
@@ -43,19 +52,19 @@ namespace SWP391Web.Infrastructure.Repository
 
         public async Task<Dealer?> GetManagerByUserIdAsync(string userId, CancellationToken ct)
         {
-           return await context.Dealers.FirstOrDefaultAsync(dl => dl.ManagerId == userId, ct);
+           return await _context.Dealers.FirstOrDefaultAsync(dl => dl.ManagerId == userId, ct);
 
         }
 
         public async Task<bool> IsExistByIdAsync(Guid id, CancellationToken ct)
         {
-            return await context.Dealers
+            return await _context.Dealers
                 .AnyAsync(dl => dl.Id == id, ct);
         }
 
         public async Task<bool> IsExistByNameAsync(string name, CancellationToken ct)
         {
-            return await context.Dealers
+            return await _context.Dealers
                 .AnyAsync(dl => dl.Name == name, ct);
         }
     }
