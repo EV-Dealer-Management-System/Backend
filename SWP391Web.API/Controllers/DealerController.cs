@@ -25,5 +25,16 @@ namespace SWP391Web.API.Controllers
             var response = await _dealerService.CreateDealerStaffAsync(User, createDealerStaffDTO, ct);
             return StatusCode(response.StatusCode, response);
         }
+
+        [HttpGet]
+        [Route("get-all-dealer-staff")]
+        [Authorize(Roles = StaticUserRole.DealerManager)]
+        public async Task<IActionResult> GetAllDealerStaff([FromQuery] string? filterOn, [FromQuery] string? filterQuery,
+            [FromQuery] string? sortBy, [FromQuery] bool? isAcsending, [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10, CancellationToken ct = default)
+        {
+            var response = await _dealerService.GetAllDealerStaffAsync(User, filterOn, filterQuery, sortBy, isAcsending, pageNumber, pageSize, ct);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

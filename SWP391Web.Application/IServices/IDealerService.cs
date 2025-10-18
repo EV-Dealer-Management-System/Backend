@@ -12,6 +12,6 @@ namespace SWP391Web.Application.IServices
     public interface IDealerService
     {
         Task<ResponseDTO> CreateDealerStaffAsync(ClaimsPrincipal user, CreateDealerStaffDTO createDealerStaffDTO, CancellationToken ct);
-        Task<ResponseDTO> GetAllDealerStaffAsync(string? filterOn, string? filterQuery, string? sortBy, bool? isAcsending, int pageNumber, int PageSize, CancellationToken ct);
+        Task<ResponseDTO> GetAllDealerStaffAsync(ClaimsPrincipal claimUser, string? filterOn, string? filterQuery, string? sortBy, bool? isAcsending, int pageNumber, int PageSize, CancellationToken ct);
     }
 }
