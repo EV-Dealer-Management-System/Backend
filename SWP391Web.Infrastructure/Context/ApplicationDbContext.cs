@@ -66,60 +66,60 @@ namespace SWP391Web.Infrastructure.Context
                 b.ToTable("UserTokens"));
 
 
-            modelBuilder.Entity<Dealer>()
-                .HasMany(dl => dl.ApplicationUsers)
-                .WithMany(au => au.Dealers)
-                .UsingEntity<Dictionary<string, string>>(
-                    "DealerMembers",
-                    j => j
-                        .HasOne<ApplicationUser>()
-                        .WithMany()
-                        .HasForeignKey("ApplicationUserId")
-                        .HasConstraintName("FK_DealerMember_ApplicationUsers_ApplicationUserId")
-                        .OnDelete(DeleteBehavior.Restrict),
-                    j => j
-                        .HasOne<Dealer>()
-                        .WithMany()
-                        .HasForeignKey("DealerId")
-                        .HasConstraintName("FK_DealerMember_Dealers_DealerId")
-                        .OnDelete(DeleteBehavior.Restrict),
-                    j =>
-                    {
-                        j.HasKey("DealerId", "ApplicationUserId");
-                        j.ToTable("DealerMembers");
-                    });
+            //modelBuilder.Entity<Dealer>()
+            //    .HasMany(dl => dl.ApplicationUsers)
+            //    .WithMany(au => au.Dealers)
+            //    .UsingEntity<Dictionary<string, string>>(
+            //        "DealerMembers",
+            //        j => j
+            //            .HasOne<ApplicationUser>()
+            //            .WithMany()
+            //            .HasForeignKey("ApplicationUserId")
+            //            .HasConstraintName("FK_DealerMember_ApplicationUsers_ApplicationUserId")
+            //            .OnDelete(DeleteBehavior.Restrict),
+            //        j => j
+            //            .HasOne<Dealer>()
+            //            .WithMany()
+            //            .HasForeignKey("DealerId")
+            //            .HasConstraintName("FK_DealerMember_Dealers_DealerId")
+            //            .OnDelete(DeleteBehavior.Restrict),
+            //        j =>
+            //        {
+            //            j.HasKey("DealerId", "ApplicationUserId");
+            //            j.ToTable("DealerMembers");
+            //        });
 
             /******************************************************************************/
             // Configure Dealer entity
 
             // Dealer - ApplicationUser (many-to-many) relationship
-            modelBuilder.Entity<Dealer>()
-                .HasMany(d => d.ApplicationUsers)
-                .WithMany(u => u.Dealers)
-                .UsingEntity<Dictionary<string, object>>(
-                    "DealerMembers",
-                    j => j
-                        .HasOne<ApplicationUser>()
-                        .WithMany()
-                        .HasForeignKey("ApplicationUserId")
-                        .HasConstraintName("FK_DealerMembers_ApplicationUsers_ApplicationUserId")
-                        .OnDelete(DeleteBehavior.Restrict),
+            //modelBuilder.Entity<Dealer>()
+            //    .HasMany(d => d.ApplicationUsers)
+            //    .WithMany(u => u.Dealers)
+            //    .UsingEntity<Dictionary<string, object>>(
+            //        "DealerMembers",
+            //        j => j
+            //            .HasOne<ApplicationUser>()
+            //            .WithMany()
+            //            .HasForeignKey("ApplicationUserId")
+            //            .HasConstraintName("FK_DealerMembers_ApplicationUsers_ApplicationUserId")
+            //            .OnDelete(DeleteBehavior.Restrict),
 
-                    j => j
-                        .HasOne<Dealer>()
-                        .WithMany()
-                        .HasForeignKey("DealerId")
-                        .HasConstraintName("FK_DealerMembers_Dealers_DealerId")
-                        .OnDelete(DeleteBehavior.Restrict),
-                    j =>
-                    {
-                        j.HasKey("DealerId", "ApplicationUserId");
-                        j.Property<Guid>("DealerId");
-                        j.Property<string>("ApplicationUserId");
-                        j.ToTable("DealerMembers");
-                        j.HasIndex("DealerId");
-                        j.HasIndex("ApplicationUserId");
-                    });
+            //        j => j
+            //            .HasOne<Dealer>()
+            //            .WithMany()
+            //            .HasForeignKey("DealerId")
+            //            .HasConstraintName("FK_DealerMembers_Dealers_DealerId")
+            //            .OnDelete(DeleteBehavior.Restrict),
+            //        j =>
+            //        {
+            //            j.HasKey("DealerId", "ApplicationUserId");
+            //            j.Property<Guid>("DealerId");
+            //            j.Property<string>("ApplicationUserId");
+            //            j.ToTable("DealerMembers");
+            //            j.HasIndex("DealerId");
+            //            j.HasIndex("ApplicationUserId");
+            //        });
 
             // Dealer - Manager (ApplicationUser) one-to-many relationship
             modelBuilder.Entity<Dealer>()
@@ -294,6 +294,9 @@ namespace SWP391Web.Infrastructure.Context
 
             /******************************************************************************/
             // Configure DealerMember entity
+
+            modelBuilder.Entity<DealerMember>()
+                .HasKey(dm => new { dm.DealerId, dm.ApplicationUserId });
 
             modelBuilder.Entity<DealerMember>()
                 .HasOne(dm => dm.Dealer)
