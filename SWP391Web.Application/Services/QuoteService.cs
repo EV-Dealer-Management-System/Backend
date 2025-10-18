@@ -41,7 +41,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
                 if(dealer == null)
                 {
                     return new ResponseDTO
@@ -153,7 +153,7 @@ namespace SWP391Web.Application.Services
                     }
 
                     decimal totalPrice = (unitPrice - discount) * dt.Quantity;
-
+                    totalPrice = Math.Ceiling(totalPrice);
                     totalAmount += totalPrice;
 
                     var quoteDetail = new QuoteDetail
@@ -215,30 +215,26 @@ namespace SWP391Web.Application.Services
                 var role = user.FindFirst(ClaimTypes.Role)?.Value;
 
                 var quotes = new List<Quote>();
-                if(role == StaticUserRole.DealerManager || role == StaticUserRole.DealerStaff)
+                if (role == StaticUserRole.DealerManager || role == StaticUserRole.DealerStaff)
                 {
-                    quotes = (await _unitOfWork.QuoteRepository.GetAllAsync()).ToList();
-                }
-                else
-                {
-                    var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
-
-                    if(dealer == null)
+                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
+                    if (dealer == null)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
                             Message = "Dealer not found",
-                            StatusCode = 404,
+                            StatusCode = 404
                         };
                     }
 
+                    quotes = (await _unitOfWork.QuoteRepository.GetAllAsync())
+                                .Where(q => q.DealerId == dealer.Id)
+                                .ToList();
+                }
+                else
+                {
                     quotes = (await _unitOfWork.QuoteRepository.GetAllAsync()).ToList();
-                    
-                    if(dealer != null)
-                    {
-                        quotes = quotes.Where(q => q.DealerId == dealer.Id).ToList();
-                    }
                 }
 
                 var getQuotes = _mapper.Map<List<GetQuoteDTO>>(quotes);
@@ -277,7 +273,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId,CancellationToken.None);
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId,CancellationToken.None);
                 if (dealer == null)
                 {
                     {
@@ -322,10 +318,32 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> UpdateQuoteStatusAsync(Guid id, QuoteStatus newStatus)
+        public async Task<ResponseDTO> UpdateQuoteStatusAsync(ClaimsPrincipal user, Guid id, QuoteStatus newStatus)
         {
             try
             {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if(userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+                if(dealer == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found",
+                        StatusCode = 403
+                    };
+                }
+
                 var quote = await _unitOfWork.QuoteRepository.GetQuoteByIdAsync(id);
                 if (quote == null)
                 {
@@ -355,7 +373,7 @@ namespace SWP391Web.Application.Services
                     {
                         IsSuccess = false,
                         Message = " Cann't update to status pending",
-                        StatusCode = 404
+                        StatusCode = 400
                     };
                 }
 
@@ -399,8 +417,6 @@ namespace SWP391Web.Application.Services
                             ev.Status = StatusVehicle.InTransit;
                             _unitOfWork.ElectricVehicleRepository.Update(ev);
                         }
-
-
                     }
                 }
 

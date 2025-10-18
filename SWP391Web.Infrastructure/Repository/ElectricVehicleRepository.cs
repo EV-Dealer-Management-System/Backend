@@ -25,6 +25,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .Include(ev => ev.Version)
                     .ThenInclude(v => v.Model)
                 .Include(ev => ev.Color)
+                .Where(ev => ev.Status == StatusVehicle.AtDealer)
                 .ToListAsync();
         }
 
@@ -116,7 +117,8 @@ namespace SWP391Web.Infrastructure.Repository
                     .ThenInclude(v => v.Model)
                 .Include(ev => ev.Color)
                 .Include(ev => ev.Warehouse)
-                .Where(ev => ev.Warehouse.DealerId == dealerId)
+                .Where(ev => ev.Warehouse.DealerId == dealerId
+                            && ev.Status == StatusVehicle.AtDealer)
                 .ToListAsync();
         }
 

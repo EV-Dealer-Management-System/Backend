@@ -40,7 +40,7 @@ namespace SWP391Web.API.Controllers
         [HttpPut("Update-quote-status/{quoteId}")]
         public async Task<ActionResult<ResponseDTO>> UpdateQuoteStatusAsync(Guid quoteId , [FromQuery] QuoteStatus newStatus)
         {
-            var response = await _quoteService.UpdateQuoteStatusAsync(quoteId, newStatus);
+            var response = await _quoteService.UpdateQuoteStatusAsync(User, quoteId, newStatus);
             return StatusCode(response.StatusCode, response);
         }
     }

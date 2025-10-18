@@ -180,27 +180,36 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
-                if (dealer == null)
-                {
-                    return new ResponseDTO()
-                    {
-                        IsSuccess = false,
-                        Message = "Dealer not found",
-                        StatusCode = 404
-                    };
-                }
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
 
-                var bookingEV = await _unitOfWork.BookingEVRepository
-                    .GetBookingWithIdAsync(bookingId);
-                if (bookingEV == null)
+                var bookingEV = await _unitOfWork.BookingEVRepository.GetBookingWithIdAsync(bookingId);
+                if(bookingEV == null)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
                         Message = "Booking not found",
-                        StatusCode = 404,
+                        StatusCode = 404
                     };
+                }
+
+                if (role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
+                {
+                    
+                }
+                else
+                {
+                    var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+
+                    if (dealer == null)
+                    {
+                        return new ResponseDTO()
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer not found",
+                            StatusCode = 404
+                        };
+                    }
                 }
 
                 var getBookingEV = _mapper.Map<GetBookingEVDTO>(bookingEV);
@@ -224,10 +233,32 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> UpdateBookingStatusAsync(Guid bookingId, BookingStatus newStatus)
+        public async Task<ResponseDTO> UpdateBookingStatusAsync(ClaimsPrincipal user, Guid bookingId, BookingStatus newStatus)
         {
             try
             {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if(userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var role = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if(role != StaticUserRole.Admin || role != StaticUserRole.Admin)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No permission",
+                        StatusCode = 403
+                    };
+                }
+
                 var bookingEV = await _unitOfWork.BookingEVRepository
                     .GetBookingWithIdAsync(bookingId);
                 if (bookingEV == null)

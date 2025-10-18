@@ -26,6 +26,7 @@ namespace SWP391Web.Infrastructure.Repository
         public IQuoteRepository QuoteRepository { get; private set; }
         public IPromotionRepository PromotionRepository { get; private set; }
         public IEVAttachmentRepository EVAttachmentRepository { get; private set; }
+        public IDealerMemberRepository DealerMemberRepository { get; private set; }
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -48,6 +49,7 @@ namespace SWP391Web.Infrastructure.Repository
             QuoteRepository = new QuoteRepository(_context);
             PromotionRepository = new PromotionRepository(_context);
             EVAttachmentRepository = new EVAttachmentRepository(_context);
+            DealerMemberRepository = new DealerMemberRepository(_context);
         }
         public async Task<int> SaveAsync()
         {
