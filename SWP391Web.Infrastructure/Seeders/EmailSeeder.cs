@@ -507,6 +507,99 @@ new
     Status = EmailStatus.Active
 });
 
+            modelBuilder.Entity<EmailTemplate>().HasData(
+new
+{
+    Id = Guid.Parse("D9C3C4C2-0A5A-4E2A-8D3C-9A3B4C5D6E7F"),
+    TemplateName = "NotifyAddedToDealerExistingUser",
+    SenderName = "EVSystem Support",
+    SenderEmail = "hoangtuzami@gmail.com",
+    Category = "Notification",
+    SubjectLine = "[EVSystem] Bạn đã được thêm vào Đại lý {DealerName}",
+    PreHeaderText = "Tài khoản của bạn đã được liên kết với đại lý. Đăng nhập để bắt đầu làm việc.",
+    PersonalizationTags = "{EmployeeName},{DealerName},{RoleInDealer},{LoginLink}",
+    BodyContent = @"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Thông báo thêm vào đại lý</title>
+  <style>
+    body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; margin:0; padding:0; background:#f3f4f6; color:#333; }
+    .wrap { padding:40px 0; }
+    .card { width:640px; margin:auto; background:#fff; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; }
+    .header { background:linear-gradient(90deg,#B71C1C,#E53935); color:#fff; text-align:center; padding:28px 20px; }
+    .header h1 { margin:0; font-size:26px; font-weight:700; }
+    .header p { margin:8px 0 0; font-size:15px; opacity:.95; }
+    .content { padding:40px 45px; line-height:1.75; }
+    .content p { font-size:15px; margin:0 0 12px; }
+    .box { background:#f9fafb; border:1px solid #e0e0e0; border-radius:10px; padding:18px 22px; margin:22px 0; }
+    .box table { width:100%; border-collapse:collapse; }
+    .box td { padding:8px 0; font-size:15px; vertical-align:top; }
+    .box td:first-child { width:190px; font-weight:600; color:#444; }
+    .btn { display:inline-block; padding:14px 32px; background:#E53935; color:#fff !important; text-decoration:none; border-radius:8px; font-weight:600; font-size:16px; letter-spacing:.3px; transition:.25s; }
+    .btn:hover { background:#C62828; transform:translateY(-2px); }
+    .note { font-size:13px; color:#666; margin-top:24px; border-top:1px dashed #ddd; padding-top:16px; }
+    .footer { background:#fafafa; text-align:center; padding:22px; font-size:13px; color:#777; border-top:1px solid #eee; }
+    .footer a { color:#E53935; text-decoration:none; }
+    @media (max-width:640px){ .card{width:95%} .content{padding:28px} }
+  </style>
+</head>
+<body>
+  <div class='wrap'>
+    <div class='card'>
+      <div class='header'>
+        <h1>Electric Vehicle Management System</h1>
+        <p>Thông báo: Liên kết tài khoản với đại lý</p>
+      </div>
+      <div class='content'>
+        <p>Xin chào <strong>{EmployeeName}</strong>,</p>
+        <p>Tài khoản EVSystem của bạn đã được thêm vào <strong>Đại lý {DealerName}</strong> với vai trò <strong>{RoleInDealer}</strong>.</p>
+
+        <div class='box'>
+          <table>
+            <tr>
+              <td>Đại lý:</td>
+              <td>{DealerName}</td>
+            </tr>
+            <tr>
+              <td>Vai trò của bạn:</td>
+              <td>{RoleInDealer}</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style='text-align:center; margin:28px 0;'>
+          <a href='{LoginLink}' class='btn'>Đăng nhập để bắt đầu</a>
+        </p>
+
+        <p class='note'>
+          🔐 <strong>Lưu ý bảo mật:</strong><br>
+          • Không chia sẻ tài khoản cho người khác.<br>
+          • Nếu bạn không mong đợi thay đổi này, vui lòng liên hệ quản trị hệ thống ngay.
+        </p>
+      </div>
+      <div class='footer'>
+        <p>Trân trọng,<br><strong>EVSystem Support Team</strong></p>
+        <p>Website: <a href='https://electricvehiclesystem.click'>electricvehiclesystem.click</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>",
+    FooterContent = "EVSystem Team – Electric Vehicle Management System",
+    CallToAction = "<a href=\"{LoginLink}\" class=\"btn\">Đăng nhập để bắt đầu</a>",
+    Language = "Vietnamese",
+    RecipientType = "DealerEmployee",
+    CreatedBy = "System",
+    CreatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+    UpdatedBy = "System",
+    UpdatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+    Status = EmailStatus.Active
+});
+
+
         }
     }
 }
