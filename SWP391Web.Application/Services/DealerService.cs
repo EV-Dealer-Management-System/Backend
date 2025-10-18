@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Dealer;
 using SWP391Web.Application.IService;
@@ -22,10 +23,12 @@ namespace SWP391Web.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
-        public DealerService(IUnitOfWork unitOfWork, IEmailService emailService)
+        private readonly IMapper _mapper;
+        public DealerService(IUnitOfWork unitOfWork, IEmailService emailService, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
             _emailService = emailService;
+            _mapper = mapper;
         }
         public async Task<ResponseDTO> CreateDealerStaffAsync(ClaimsPrincipal claimUser, CreateDealerStaffDTO createDealerStaffDTO, CancellationToken ct)
         {
@@ -228,13 +231,7 @@ namespace SWP391Web.Application.Services
                         break;
                 }
 
-                var data = result.items.Select(dm => new
-                {
-                    dm.ApplicationUser.Id,
-                    dm.ApplicationUser.FullName,
-                    dm.ApplicationUser.Email,
-                    dm.ApplicationUser.PhoneNumber
-                });
+                var data = _mapper.Map<List<GetDealerStaffDTO>>(result.items);
 
                 return new ResponseDTO
                 {
