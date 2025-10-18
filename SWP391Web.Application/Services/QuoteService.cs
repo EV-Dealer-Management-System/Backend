@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Quote;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
@@ -199,14 +200,54 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var quote = await _unitOfWork.QuoteRepository.GetAllAsync();
-                var getQuote = _mapper.Map<List<GetQuoteDTO>>(quote);
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if(userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
+
+                var quotes = new List<Quote>();
+                if(role == StaticUserRole.DealerManager || role == StaticUserRole.DealerStaff)
+                {
+                    quotes = (await _unitOfWork.QuoteRepository.GetAllAsync()).ToList();
+                }
+                else
+                {
+                    var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+
+                    if(dealer == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer not found",
+                            StatusCode = 404,
+                        };
+                    }
+
+                    quotes = (await _unitOfWork.QuoteRepository.GetAllAsync()).ToList();
+                    
+                    if(dealer != null)
+                    {
+                        quotes = quotes.Where(q => q.DealerId == dealer.Id).ToList();
+                    }
+                }
+
+                var getQuotes = _mapper.Map<List<GetQuoteDTO>>(quotes);
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     Message = "Quotes retrieve successfully",
                     StatusCode = 200,
-                    Result = getQuote
+                    Result = getQuotes
                 };
             }
             catch (Exception ex)
@@ -225,6 +266,29 @@ namespace SWP391Web.Application.Services
         {
             try
             {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if(userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId,CancellationToken.None);
+                if (dealer == null)
+                {
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer not found",
+                            StatusCode = 404
+                        };
+                    }
+                }
                 var quote = await _unitOfWork.QuoteRepository.GetQuoteByIdAsync(id);
                 if (quote == null)
                 {
@@ -236,7 +300,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var getQuote = _mapper.Map<List<GetQuoteDTO>>(quote);
+                var getQuote = _mapper.Map<GetQuoteDTO>(quote);
 
                 return new ResponseDTO
                 {
@@ -273,10 +337,83 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
+                if(quote.Status == QuoteStatus.Accepted
+                    || quote.Status == QuoteStatus.Rejected)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Cannot update status of a approved or rejected quote",
+                        StatusCode = 404
+                    };
+                }
+
+                //Check logic before change status
+                if(newStatus == QuoteStatus.Pending)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = " Cann't update to status pending",
+                        StatusCode = 404
+                    };
+                }
+
+                if(newStatus == QuoteStatus.Accepted)
+                {
+                    var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(quote.DealerId);
+                    if(warehouse == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer's Warehouse not found",
+                            StatusCode = 404
+                        };
+                    }
+
+                    foreach(var dt in quote.QuoteDetails)
+                    {
+                        //Take Vehicle (Status = AtDealer)
+                        var availableVehicles = await _unitOfWork.ElectricVehicleRepository
+                            .GetAvailableVehicleByDealerAsync(dt.Quote.DealerId, dt.VersionId, dt.ColorId);
+                        if (availableVehicles.Count() < dt.Quantity)
+                        {
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                Message = "Not enough vehicle in dealer 's warehouse",
+                                StatusCode = 404,
+                            };
+                        }
+
+                        // Take ev with ImportDate oldest
+                        var selectedVehicle = availableVehicles
+                            .OrderBy(ev => ev.ImportDate)
+                            .Take(dt.Quantity)
+                            .ToList();
+
+                        //Change status to InTransit
+                        foreach( var ev in selectedVehicle)
+                        {
+                            ev.Status = StatusVehicle.InTransit;
+                            _unitOfWork.ElectricVehicleRepository.Update(ev);
+                        }
+
+
+                    }
+                }
+
                 quote.Status = newStatus;
                 _unitOfWork.QuoteRepository.Update(quote);
                 await _unitOfWork.SaveAsync();
 
+                string message = newStatus switch
+                {
+                    QuoteStatus.Accepted => "Booking approved successfully",
+                    QuoteStatus.Rejected => "Booking rejected successfully",
+                    _ => "Booking status updated successfully"
+                };
                 return new ResponseDTO
                 {
                     IsSuccess = true,

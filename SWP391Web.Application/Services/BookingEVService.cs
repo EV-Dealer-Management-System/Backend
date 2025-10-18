@@ -143,8 +143,6 @@ namespace SWP391Web.Application.Services
                     {
                         bookingEVs = bookingEVs.Where(b => b.DealerId == dealer.Id).ToList();
                     }
-
-                    
                 }
 
                 var getBookingEVs = _mapper.Map<List<GetBookingEVDTO>>(bookingEVs);
@@ -326,7 +324,8 @@ namespace SWP391Web.Application.Services
 
                         // cap nhat sang booked
                         
-                        foreach (var ev in selectedVehicles) {
+                        foreach (var ev in selectedVehicles)
+                        {
                             ev.Status = StatusVehicle.Booked;
                             ev.WarehouseId = warehouse.Id;
                             _unitOfWork.ElectricVehicleRepository.Update(ev);
