@@ -12,12 +12,11 @@ namespace SWP391Web.Application.DTO.Quote
     {
         public Guid Id { get; set; }
         public Guid DealerId { get; set; }
-        public Guid PromotionId { get; set; }
         public string CreatedBy { get; set; } = null!;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public QuoteStatus Status { get; set; }
         public decimal TotalAmount { get; set; }
         public string? Note { get; set; }
-        public List<GetQuoteDetailDTO> QuoteDetails { get; set; }
+        public List<GetQuoteDetailDTO> QuoteDetails { get; set; } = new List<GetQuoteDetailDTO>();
     }
 }

@@ -51,36 +51,13 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                // get promotion 
-                var promotion = await _unitOfWork.PromotionRepository.GetPromotionByIdAsync(createQuoteDTO.PromotionId);
-                if (promotion == null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Promotion not found",
-                        StatusCode = 404
-                    };
-                }
-
-                if (!promotion.IsActive || promotion.StartDate > DateTime.UtcNow || promotion.EndDate < DateTime.UtcNow)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Promotion not active",
-                        StatusCode = 404
-                    };
-                }
-
                 Quote quote = new Quote
                 {
                     DealerId = dealer.Id,
-                    CreatedBy = dealer.Name,
+                    CreatedBy = userId,
                     CreatedAt = DateTime.UtcNow,
                     Status = QuoteStatus.Pending,
                     Note = createQuoteDTO.Note,
-                    PromotionId = promotion.Id,
                     QuoteDetails = new List<QuoteDetail>()
                 };
 
@@ -101,7 +78,6 @@ namespace SWP391Web.Application.Services
                     }
 
                     //take color
-
                     var color = await _unitOfWork.ElectricVehicleColorRepository.GetByIdsAsync(dt.ColorId);
                     if(color == null)
                     {
@@ -113,13 +89,46 @@ namespace SWP391Web.Application.Services
                         };
                     }
 
-                    var vehicle = await _unitOfWork.ElectricVehicleRepository.GetByIdsAsync(dt.Id);
+                    var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(dealer.Id);
+                    if(warehouse == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Warehouse 's dealer is not found ",
+                            StatusCode = 404
+                        };
+                    }
+
+                    var vehicle = await _unitOfWork.ElectricVehicleRepository.GetByVersionColorAndWarehouseAsync(version.Id , color.Id , warehouse.Id);
                     if(vehicle == null)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
                             Message = "No vehicle found",
+                            StatusCode = 404
+                        };
+                    }
+
+                    // get promotion 
+                    var promotion = await _unitOfWork.PromotionRepository.GetPromotionByIdAsync(dt.PromotionId);
+                    if (promotion == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Promotion not found",
+                            StatusCode = 404
+                        };
+                    }
+
+                    if (!promotion.IsActive || promotion.StartDate > DateTime.UtcNow || promotion.EndDate < DateTime.UtcNow)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Promotion not active",
                             StatusCode = 404
                         };
                     }
@@ -151,6 +160,7 @@ namespace SWP391Web.Application.Services
                         VersionId = version.Id,
                         ColorId = color.Id,
                         Quantity = dt.Quantity,
+                        PromotionId = dt.PromotionId,
                         UnitPrice = unitPrice,
                         Promotion = promotion,
                         TotalPrice = totalPrice,
@@ -162,12 +172,15 @@ namespace SWP391Web.Application.Services
                 await _unitOfWork.QuoteRepository.AddAsync(quote, CancellationToken.None);
                 await _unitOfWork.SaveAsync();
 
+                var quoteDTO = await _unitOfWork.QuoteRepository.GetQuoteByIdAsync(quote.Id);
+                var getQuoteDTO = _mapper.Map<GetQuoteDTO>(quoteDTO);
+
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     Message = "Create quote successfully",
                     StatusCode = 200,
-                    Result = quote
+                    Result = getQuoteDTO
                 };
             }
             catch (Exception ex)

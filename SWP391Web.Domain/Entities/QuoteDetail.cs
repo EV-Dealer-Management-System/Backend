@@ -14,8 +14,6 @@ namespace SWP391Web.Domain.Entities
         public Guid VersionId { get; set; }
         public Guid ColorId { get; set; }
         public Guid PromotionId { get; set; }
-        //Add vehicleId
-        public Guid VehicleId { get; set; }
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
         public decimal TotalPrice { get; set; }
@@ -24,8 +22,7 @@ namespace SWP391Web.Domain.Entities
         public Quote Quote { get; set; } = null!;
         public ElectricVehicleVersion ElectricVehicleVersion { get; set; } = null!;
         public ElectricVehicleColor ElectricVehicleColor { get; set; } = null!;
-        //Add Vehicle entity
-        public ElectricVehicle ElectricVehicle { get; set; } = null!;  
+        
 
     }
 }

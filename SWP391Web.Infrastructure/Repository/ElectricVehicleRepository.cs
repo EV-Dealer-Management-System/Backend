@@ -88,9 +88,19 @@ namespace SWP391Web.Infrastructure.Repository
                 .ToListAsync();
         }
 
-        public Task<ElectricVehicle?> GetByIdsAsync(Guid vehicleId)
+        public async Task<ElectricVehicle?> GetByIdsAsync(Guid vehicleId)
         {
-            throw new NotImplementedException();
+            return await _context?.ElectricVehicles
+                .FirstOrDefaultAsync(v => v.Id == vehicleId);
+        }
+
+        public  async Task<ElectricVehicle?> GetByVersionColorAndWarehouseAsync(Guid versionId, Guid colorId, Guid warehouseId)
+        {
+            return await _context.ElectricVehicles
+                .Include(v => v.Warehouse)
+                .FirstOrDefaultAsync(v => v.VersionId == versionId
+                                       && v.ColorId == colorId
+                                       && v.Warehouse.Id == warehouseId);
         }
 
         public async Task<ElectricVehicle?> GetByVINAsync(string vin)

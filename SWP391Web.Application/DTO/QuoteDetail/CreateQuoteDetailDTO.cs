@@ -10,6 +10,7 @@ namespace SWP391Web.Application.DTO.QuoteDetail
     {
         public Guid VersionId { get; set; }
         public Guid ColorId { get; set; }
+        public Guid PromotionId { get; set; }
         public int Quantity { get; set; }
     }
 }
