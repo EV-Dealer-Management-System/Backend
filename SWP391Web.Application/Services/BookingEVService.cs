@@ -71,12 +71,60 @@ namespace SWP391Web.Application.Services
                     ColorId = detail.ColorId,
                     Quantity = detail.Quantity,
                 }).ToList();
+                // change status to pending
+                foreach(var dt in bookingEV.BookingEVDetails)
+                {
+                    var version = await _unitOfWork.ElectricVehicleVersionRepository.GetByIdsAsync(dt.VersionId);
+                    if (version == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = " Version not found ",
+                            StatusCode = 404
+                        };
+                    }
+
+                    var availableVehicles = (await _unitOfWork.ElectricVehicleRepository
+                        .GetAvailableVehicleByModelVersionColorAsync(version.ModelId, dt.VersionId, dt.ColorId))
+                        .Where(ev => ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
+                        .ToList();
+                    if(availableVehicles == null || !availableVehicles.Any())
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = " No available vehicles in EVM warehouse",
+                            StatusCode = 404
+                        };
+                    }
+
+                    if(availableVehicles.Count() < dt.Quantity)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = " Not enough vehicles for booking",
+                            StatusCode = 400
+                        };
+                    }
+
+                    var selectedVehicles = availableVehicles
+                        .OrderBy(ev => ev.ImportDate)
+                        .Take(dt.Quantity)
+                        .ToList();
+
+                    foreach( var ev in selectedVehicles)
+                    {
+                        ev.Status = StatusVehicle.Pending;
+                        _unitOfWork.ElectricVehicleRepository.Update(ev);
+                    }
+                }
 
                 await _unitOfWork.BookingEVRepository.AddAsync(bookingEV, CancellationToken.None);
                 await _unitOfWork.SaveAsync();
 
-                var bookingWithDetails = await _unitOfWork.BookingEVRepository
-                    .GetBookingWithIdAsync(bookingEV.Id);
+                var bookingWithDetails = await _unitOfWork.BookingEVRepository.GetBookingWithIdAsync(bookingEV.Id);
 
                 var getBookingEV = _mapper.Map<GetBookingEVDTO>(bookingWithDetails);
 
@@ -248,8 +296,8 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var role = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if(role != StaticUserRole.Admin || role != StaticUserRole.Admin)
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
+                if(role != StaticUserRole.Admin && role != StaticUserRole.EVMStaff)
                 {
                     return new ResponseDTO
                     {
@@ -271,7 +319,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                //khong cho phep update neu da bi huy, duyet hoac tu choi
+                //Can't update when status isn't pending
                 if (bookingEV.Status == BookingStatus.Cancelled
                     || bookingEV.Status == BookingStatus.Approved
                     || bookingEV.Status == BookingStatus.Rejected)
@@ -295,7 +343,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                //ktra chi khi dang pending moi duoc cancel
+                //Can only cancel a pending book
                 if (newStatus == BookingStatus.Cancelled && bookingEV.Status != BookingStatus.Pending)
                 {
                     return new ResponseDTO
@@ -306,7 +354,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                // Neu duyet thi tru xe trong kho
+                //approved => minus
                 if (newStatus == BookingStatus.Approved)
                 {
                     var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(bookingEV.DealerId);
@@ -321,10 +369,10 @@ namespace SWP391Web.Application.Services
                     }
                     foreach (var dt in bookingEV.BookingEVDetails)
                     {
-                        // lay xe dang kha dung (status = available)
-                        var availableVehicles = await _unitOfWork.ElectricVehicleRepository
-                            .GetAvailableVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
-                        if (availableVehicles == null || !availableVehicles.Any())
+                        // take vehicle (status = pending)
+                        var pendingVehicles = await _unitOfWork.ElectricVehicleRepository
+                            .GetPendingVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+                        if (pendingVehicles == null || !pendingVehicles.Any())
                         {
                             return new ResponseDTO
                             {
@@ -334,9 +382,9 @@ namespace SWP391Web.Application.Services
                             };
                         }
 
-                        //ktra soluong xe
+                        //check quantity
 
-                        if(availableVehicles.Count() < dt.Quantity)
+                        if(pendingVehicles.Count() < dt.Quantity)
                         {
                             return new ResponseDTO
                             {
@@ -346,9 +394,9 @@ namespace SWP391Web.Application.Services
                             };
                         }
 
-                        //lay xe nhap kho lau nhat
+                        //order by ImportDat
 
-                        var selectedVehicles = availableVehicles
+                        var selectedVehicles = pendingVehicles
                             .OrderBy(ev => ev.ImportDate)
                             .Take(dt.Quantity)
                             .ToList();
@@ -364,6 +412,35 @@ namespace SWP391Web.Application.Services
                     }
                 }
 
+                if(newStatus == BookingStatus.Rejected || newStatus == BookingStatus.Cancelled)
+                {
+                    foreach( var dt in bookingEV.BookingEVDetails)
+                    {
+                        var pendingVehicles = await _unitOfWork.ElectricVehicleRepository
+                            .GetPendingVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+                        if(!pendingVehicles.Any() || pendingVehicles == null)
+                        {
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                Message = "No vehicle in pending status",
+                                StatusCode = 404
+                            };
+                        }
+
+                        var selectedVehicles = pendingVehicles
+                            .OrderBy(ev => ev.ImportDate)
+                            .Take(dt.Quantity)
+                            .ToList();
+
+                        //change status to available
+                        foreach ( var ev in selectedVehicles)
+                        {
+                            ev.Status = StatusVehicle.Available;
+                            _unitOfWork.ElectricVehicleRepository.Update(ev);
+                        }
+                    }
+                }
                 bookingEV.Status = newStatus;
                 _unitOfWork.BookingEVRepository.Update(bookingEV);
                 await _unitOfWork.SaveAsync();

@@ -80,11 +80,13 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<List<ElectricVehicle>> GetAvailableVehicleByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId)
         {
             return await _context.ElectricVehicles
+                .Include(ev => ev.Warehouse)
                 .Where(ev => ev.Version.ModelId == modelId
                              && ev.VersionId == versionId
                              && ev.ColorId == colorId
                              && ev.Status == StatusVehicle.Available
-                             && ev.Warehouse.EVCInventoryId != null)
+                             && ev.WarehouseId != null
+                             && ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
                 .OrderBy(ev => ev.ImportDate)
                 .ToListAsync();
         }
@@ -119,6 +121,20 @@ namespace SWP391Web.Infrastructure.Repository
                 .Include(ev => ev.Warehouse)
                 .Where(ev => ev.Warehouse.DealerId == dealerId
                             && ev.Status == StatusVehicle.AtDealer)
+                .ToListAsync();
+        }
+
+        public async Task<List<ElectricVehicle>> GetPendingVehicleByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId)
+        {
+            return await _context.ElectricVehicles
+                .Include(ev => ev.Warehouse)
+                .Where(ev => ev.Version.ModelId == modelId
+                             && ev.VersionId == versionId
+                             && ev.ColorId == colorId
+                             && ev.Status == StatusVehicle.Pending
+                             && ev.WarehouseId != null
+                             && ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
+                .OrderBy(ev => ev.ImportDate)
                 .ToListAsync();
         }
 

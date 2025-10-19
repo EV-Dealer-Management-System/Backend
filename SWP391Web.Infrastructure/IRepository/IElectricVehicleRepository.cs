@@ -21,5 +21,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<List<ElectricVehicle?>> GetAvailableVehicleByDealerAsync(Guid dealerId, Guid versionId, Guid colorId);
         Task<int> GetAvailableVehicleAsync(Guid dealerId, Guid versionId, Guid colorId);
         Task<ElectricVehicle?> GetByVersionColorAndWarehouseAsync(Guid versionId, Guid colorId, Guid warehouseId);
+        Task<List<ElectricVehicle>> GetPendingVehicleByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId);
     }
 }
