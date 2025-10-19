@@ -17,5 +17,6 @@ namespace SWP391Web.Domain.Entities
         public ElectricVehicleVersion Version { get; set; } = null!;
         public ElectricVehicleColor Color { get; set; } = null!;
         public ICollection<ElectricVehicle> ElectricVehicles { get; set; } = new List<ElectricVehicle>();
+        public ICollection<EVAttachment> EVAttachments { get; set; } = new List<EVAttachment>();
     }
 }
