@@ -9,6 +9,6 @@ namespace SWP391Web.Infrastructure.IRepository
 {
     public interface IEVAttachmentRepository : IRepository<EVAttachment>
     {
-        List<EVAttachment>? GetAttachmentsByElectricVehicleId(Guid electricVehicleId);
+        List<EVAttachment>? GetAttachmentsByElectricVehicleTemplateId(Guid electricVehicleTemplateId);
     }
 }
