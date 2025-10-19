@@ -10,6 +10,7 @@ namespace SWP391Web.Domain.Entities
     public class ElectricVehicle
     {
         public Guid Id { get; set; }
+        public Guid ElectricVehicleTemplateId {  get; set; }
         public Guid VersionId { get; set; }
         public Guid ColorId { get; set; }
         public Guid WarehouseId { get; set; }

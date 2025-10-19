@@ -31,7 +31,7 @@ namespace SWP391Web.API.Controllers
         [HttpGet("get-all-vehicles")]
         public async Task<ActionResult> GetAllVehiclesAsync()
         {
-            var response = await _electricVehicleService.GetAllVehiclesAsync();
+            var response = await _electricVehicleService.GetAllVehiclesAsync(User);
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-vehicle-by-id/{vehicleId}")]
@@ -78,6 +78,13 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult<ResponseDTO>> GetDealerInventoryAsync()
         {
             var response = await _electricVehicleService.GetDealerInventoryAsync(User);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpGet("get-sample-vehicles")]
+        public async Task<ActionResult<ResponseDTO>> GetSampleVehiclesAsync()
+        {
+            var response = await _electricVehicleService.GetSampleVehiclesAsync(User);
             return StatusCode(response.StatusCode, response);
         }
 

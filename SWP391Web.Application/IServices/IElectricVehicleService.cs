@@ -12,7 +12,7 @@ namespace SWP391Web.Application.IServices
 {
     public interface IElectricVehicleService
     {
-        Task<ResponseDTO> GetAllVehiclesAsync();
+        Task<ResponseDTO> GetAllVehiclesAsync(ClaimsPrincipal user);
         Task<ResponseDTO> GetVehicleByIdAsync(Guid vehicleId);
         Task<ResponseDTO> GetVehicleByVinAsync(string vin);
         Task<ResponseDTO> CreateVehicleAsync(CreateElecticVehicleDTO createElectricVehicleDTO);
@@ -20,6 +20,7 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> UpdateVehicleStatusAsync(Guid vehicleId, StatusVehicle newStatus);
         Task<ResponseDTO> GetAvailableQuantityByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId);
         Task<ResponseDTO> GetDealerInventoryAsync(ClaimsPrincipal user);
+        Task<ResponseDTO> GetSampleVehiclesAsync(ClaimsPrincipal user);
 
     }
 }
