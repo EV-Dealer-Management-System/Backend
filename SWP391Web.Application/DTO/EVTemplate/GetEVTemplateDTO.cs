@@ -15,6 +15,6 @@ namespace SWP391Web.Application.DTO.EVTemplate
         public ViewVersionName? Version { get; set; }
         public ViewColorName? Color { get; set; }
         public string Description { get; set; }
-        public List<string> ImgUrl { get; set; } = new();
+        public List<string> AttachmentKeys { get; set; } = new();
     }
 }

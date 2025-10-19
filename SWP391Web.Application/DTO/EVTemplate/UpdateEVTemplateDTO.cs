@@ -10,6 +10,6 @@ namespace SWP391Web.Application.DTO.EVTemplate
     {
         public decimal? Price { get; set; }
         public string? Description { get; set; }
-        public List<string> ImgUrl { get; set; } = new();
+        public List<string> AttachmentKeys { get; set; } = new();
     }
 }

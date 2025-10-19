@@ -67,7 +67,7 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.ApplicationUser.Email))
                 .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.ApplicationUser.FullName))
                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.ApplicationUser.PhoneNumber)).ReverseMap();
-            CreateMap<EVTemplate, GetEVTemplateDTO>()
+            CreateMap<ElectricVehicleTemplate, GetEVTemplateDTO>()
                 .ForMember(dest => dest.Color, opt => opt.MapFrom(src => new ViewColorName
                 {
                     ColorId = src.Color.Id,

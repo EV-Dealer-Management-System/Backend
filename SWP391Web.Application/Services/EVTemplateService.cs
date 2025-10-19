@@ -30,7 +30,7 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                EVTemplate template = new EVTemplate
+                ElectricVehicleTemplate template = new ElectricVehicleTemplate
                 {
                     VersionId = createEVTemplateDTO.VersionId,
                     ColorId = createEVTemplateDTO.ColorId,
@@ -82,15 +82,26 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var template = await _unitOfWork.EVTemplateRepository.GetAllAsync();
-                var getTemple = _mapper.Map<List<GetEVTemplateDTO>>(template);
+                var templates = await _unitOfWork.EVTemplateRepository.GetAllAsync();
+                var getTemples = _mapper.Map<List<GetEVTemplateDTO>>(templates);
+
+                foreach (var evt in getTemples)
+                {
+                    var entity = templates.FirstOrDefault(t => t.Id == evt.Id);
+                    if (entity?.EVAttachments != null && entity.EVAttachments.Any())
+                    {
+                        evt.AttachmentKeys = entity.EVAttachments
+                            .Select(a => _s3Service.GenerateDownloadUrl(a.Key))
+                            .ToList();
+                    }
+                }
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     Message = "Get all Template successfully",
                     StatusCode = 200,
-                    Result = getTemple
+                    Result = getTemples
                 };
             }
             catch (Exception ex)
@@ -120,6 +131,12 @@ namespace SWP391Web.Application.Services
                 }
 
                 var getTemplate = _mapper.Map<GetEVTemplateDTO>(template);
+                if (template.EVAttachments != null && template.EVAttachments.Any())
+                {
+                    getTemplate.AttachmentKeys = template.EVAttachments
+                        .Select(a => _s3Service.GenerateDownloadUrl(a.Key))
+                        .ToList();
+                }
 
                 return new ResponseDTO
                 {
@@ -162,24 +179,39 @@ namespace SWP391Web.Application.Services
                 if (updateEVTemplateDTO.Price.HasValue && updateEVTemplateDTO.Price.Value >= 0)
                     template.Price = updateEVTemplateDTO.Price.Value;
 
-                var existingKeys = template.EVAttachments.Select(a => a.Key).ToList();
-
-                foreach (var key in updateEVTemplateDTO.AttachmentKeys)
+                //Take photo
+                if (updateEVTemplateDTO.AttachmentKeys != null && updateEVTemplateDTO.AttachmentKeys.Any())
                 {
-                    if (!existingKeys.Contains(key))
+                    //Remove all photo
+                    foreach (var att in template.EVAttachments.ToList())
+                    {
+                        _unitOfWork.EVAttachmentRepository.Remove(att);
+                    }
+
+                    template.EVAttachments.Clear();
+
+                    //Add new photo
+                    foreach (var key in updateEVTemplateDTO.AttachmentKeys)
                     {
                         var fileName = Path.GetFileName(key);
-                        var newAtt = new EVAttachment
+                        template.EVAttachments.Add(new EVAttachment
                         {
-                            EVTemplateId = template.Id,
+                            ElectricVehicleTemplateId = template.Id,
                             FileName = fileName,
                             Key = key
-                        };
-                        template.EVAttachments.Add(newAtt);
-                        await _unitOfWork.EVAttachmentRepository.AddAsync(newAtt, CancellationToken.None);
+                        });
                     }
                 }
 
+                _unitOfWork.EVTemplateRepository.Update(template);
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Template updated successfully",
+                    StatusCode = 200
+                };
             }
             catch (Exception ex)
             {

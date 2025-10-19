@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Domain.Entities
 {
-    public class EVTemplate
+    public class ElectricVehicleTemplate
     {
         public Guid Id { get; set; }                  
         public Guid VersionId { get; set; }          

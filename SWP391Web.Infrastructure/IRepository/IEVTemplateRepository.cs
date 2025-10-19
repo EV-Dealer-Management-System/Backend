@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Infrastructure.IRepository
 {
-    public interface IEVTemplateRepository :IRepository<EVTemplate>
+    public interface IEVTemplateRepository :IRepository<ElectricVehicleTemplate>
     {
-        Task<EVTemplate?> GetByIdAsync(Guid EVTemplateId);
+        Task<ElectricVehicleTemplate?> GetByIdAsync(Guid EVTemplateId);
         Task<bool> IsEVTemplateExistsById(Guid EVTemplateId);
     }
 }

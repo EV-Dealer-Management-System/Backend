@@ -10,21 +10,21 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Infrastructure.Repository
 {
-    public class EVTemplateRepository : Repository<EVTemplate>, IEVTemplateRepository
+    public class EVTemplateRepository : Repository<ElectricVehicleTemplate>, IEVTemplateRepository
     {
         private readonly ApplicationDbContext _context;
         public EVTemplateRepository(ApplicationDbContext context) : base(context) 
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
-        public async Task<EVTemplate?> GetByIdAsync(Guid EVTemplateId)
+        public async Task<ElectricVehicleTemplate?> GetByIdAsync(Guid EVTemplateId)
         {
-            return await _context.EVTemplates.FirstOrDefaultAsync(evt => evt.Id == EVTemplateId);
+            return await _context.ElectricVehicleTemplates.FirstOrDefaultAsync(evt => evt.Id == EVTemplateId);
         }
 
         public async Task<bool>? IsEVTemplateExistsById(Guid EVTemplateId)
         {
-            return await _context.EVTemplates.AnyAsync(evt => evt.Id == EVTemplateId);
+            return await _context.ElectricVehicleTemplates.AnyAsync(evt => evt.Id == EVTemplateId);
         }
     }
 }
