@@ -67,7 +67,7 @@ namespace SWP391Web.Application.Services
                 await _unitOfWork.UserManagerRepository.AddToRoleAsync(user, StaticUserRole.EVMStaff);
                 await _unitOfWork.SaveAsync();
 
-                await _emailService.SendEmployeeAaccountEmail(createEVMStaffDTO.Email, createEVMStaffDTO.FullName, password);
+                await _emailService.SendEVMStaffAccountEmail(createEVMStaffDTO.Email, createEVMStaffDTO.FullName, password);
 
                 return new ResponseDTO
                 {
