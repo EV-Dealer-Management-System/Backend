@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Services;
+using SWP391Web.Infrastructure.SignlR;
 using System.Security.Claims;
 using System.Text;
 
@@ -92,6 +94,18 @@ public static class WebApplicationBuilderExtensions
         AutomaticDecompression = System.Net.DecompressionMethods.All,
         SslProtocols = System.Security.Authentication.SslProtocols.Tls12,
     });
+
+        return builder;
+    }
+
+    public static WebApplicationBuilder AddSignalR(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddSignalR(options =>
+        {
+            options.EnableDetailedErrors = true;
+        });
+
+        builder.Services.AddSingleton<IUserIdProvider, NameIdentifierUserIdProvider>();
 
         return builder;
     }

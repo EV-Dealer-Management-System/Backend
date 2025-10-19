@@ -39,6 +39,16 @@ namespace SWP391Web.Infrastructure.Repository
                 .CountAsync();
         }
 
+        public Task<int> GetAvailableQuantityByVersionColorAsync(Guid versionId, Guid colorId)
+        {
+            return _context.ElectricVehicles
+                .Where(ev => ev.VersionId == versionId
+                             && ev.ColorId == colorId
+                             && ev.Status == StatusVehicle.Available
+                             && ev.Warehouse.EVCInventoryId != null)
+                .CountAsync();
+        }
+
         public async Task<List<ElectricVehicle>> GetAvailableVehicleByModelIdAsync(Guid modelId)
         {
             return await _context.ElectricVehicles
@@ -65,7 +75,8 @@ namespace SWP391Web.Infrastructure.Repository
 
         public Task<ElectricVehicle?> GetByIdsAsync(Guid vehicleId)
         {
-            throw new NotImplementedException();
+            return _context.ElectricVehicles
+                .FirstOrDefaultAsync(v => v.Id == vehicleId);
         }
 
         public async Task<ElectricVehicle?> GetByVINAsync(string vin)
