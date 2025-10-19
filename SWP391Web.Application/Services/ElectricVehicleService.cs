@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Amazon.Runtime.Internal.Endpoints.StandardLibrary;
+using AutoMapper;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.ElectricVehicle;
 using SWP391Web.Application.IServices;
@@ -17,12 +18,14 @@ namespace SWP391Web.Application.Services
 {
     public class ElectricVehicleService : IElectricVehicleService
     {
-        public readonly IUnitOfWork _unitOfWork;
-        public readonly IMapper _mapper;
-        public ElectricVehicleService(IUnitOfWork unitOfWork, IMapper mapper)
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
+        private readonly IS3Service _s3Service;
+        public ElectricVehicleService(IUnitOfWork unitOfWork, IMapper mapper, IS3Service s3Service)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _s3Service = s3Service ?? throw new ArgumentNullException(nameof(s3Service));
         }
 
         public async Task<ResponseDTO> CreateVehicleAsync(CreateElecticVehicleDTO createElectricVehicleDTO)
@@ -57,8 +60,6 @@ namespace SWP391Web.Application.Services
                 ElectricVehicle electricVehicle = new ElectricVehicle
                 {
                     WarehouseId = createElectricVehicleDTO.WarehouseId,
-                    VersionId = createElectricVehicleDTO.VersionId,
-                    ColorId = createElectricVehicleDTO.ColorId,
                     VIN = createElectricVehicleDTO.VIN,
                     Status = StatusVehicle.Available,
                     ManufactureDate = createElectricVehicleDTO.ManufactureDate,
@@ -107,12 +108,66 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetAllVehiclesAsync()
+        public async Task<ResponseDTO> GetAllVehiclesAsync(ClaimsPrincipal user)
         {
             try
             {
-                var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllVehicleWithDetailAsync();
-                var getVehicles = _mapper.Map<List<GetElecticVehicleDTO>>(vehicles); 
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if(userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 400
+                    };
+                }
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
+
+                List<ElectricVehicle> vehicles;
+                if (role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
+                {
+                    vehicles = (await _unitOfWork.ElectricVehicleRepository.GetAllAsync()).ToList();
+                }
+                else if (role == StaticUserRole.DealerManager || role == StaticUserRole.DealerStaff)
+                {
+                    var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+                    if (dealer == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer not found.",
+                            StatusCode = 404
+                        };
+                    }
+                    vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllVehicleWithDetailAsync();
+                }
+                else
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No permission",
+                        StatusCode = 404
+                    };
+                }
+
+                var getVehicles = _mapper.Map<List<GetElecticVehicleDTO>>(vehicles);
+
+                foreach (var vehicle in getVehicles)
+                {
+                    var keyList = _unitOfWork.EVAttachmentRepository.GetAttachmentsByElectricVehicleId(vehicle.Id);
+                    var urlList = new List<string>();
+                    foreach (var key in keyList)
+                    {
+                        var url = _s3Service.GenerateDownloadUrl(key.Key);
+                        urlList.Add(url);
+                    }
+
+                    vehicle.ImgUrl = urlList;
+                }
+
                 return new ResponseDTO()
                 {
                     IsSuccess = true,
@@ -197,7 +252,7 @@ namespace SWP391Web.Application.Services
                 }
                 else
                 {
-                    var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
                     if (dealer == null)
                     {
                         return new ResponseDTO
@@ -223,9 +278,9 @@ namespace SWP391Web.Application.Services
 
                 var getDealerInventory = vehicles.GroupBy(ev => new
                 {
-                    ev.Version.Model.ModelName,
-                    ev.Version.VersionName,
-                    ev.Color.ColorName
+                    ev.ElectricVehicleTemplate.Version.Model.ModelName,
+                    ev.ElectricVehicleTemplate.Version.VersionName,
+                    ev.ElectricVehicleTemplate.Color.ColorName
                 })
                     .Select(g => new
                     {
@@ -251,6 +306,88 @@ namespace SWP391Web.Application.Services
                     
             }
             catch(Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetSampleVehiclesAsync(ClaimsPrincipal user)
+        {
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if(userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 400
+                    };
+                }
+
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
+
+                List<ElectricVehicle> vehicles;
+                if(role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
+                {
+                    vehicles = (await _unitOfWork.ElectricVehicleRepository.GetAllAsync()).ToList();
+                }
+                else
+                {
+                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
+                    if(dealer == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = " Dealer not found",
+                            StatusCode = 404
+                        };
+                    }
+
+                    vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllVehicleWithDetailAsync();
+                }
+
+                //Group into 1
+                var groupVehicles = vehicles
+                    .GroupBy(v => new {v.ElectricVehicleTemplate.VersionId, v.ElectricVehicleTemplate.ColorId })
+                    .Select(g => g.FirstOrDefault(v => _unitOfWork.EVAttachmentRepository.GetAttachmentsByElectricVehicleId(v.Id).Any())
+                    ??g.First())
+                    .ToList();
+
+                var getVehicles = _mapper.Map<List<GetElecticVehicleDTO>>(groupVehicles);
+
+                foreach (var vehicle in getVehicles)
+                {
+                    var attachments = _unitOfWork.EVAttachmentRepository
+                        .GetAttachmentsByElectricVehicleId(vehicle.Id);
+
+                    var urlList = new List<string>();
+                    foreach (var att in attachments)
+                    {
+                        var url = _s3Service.GenerateDownloadUrl(att.Key);
+                        urlList.Add(url);
+                    }
+
+                    vehicle.ImgUrl = urlList;
+                }
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Get sample vehicles successfully.",
+                    StatusCode = 200,
+                    Result = getVehicles
+                };
+
+            }
+            catch (Exception ex)
             {
                 return new ResponseDTO
                 {
@@ -346,7 +483,6 @@ namespace SWP391Web.Application.Services
                         StatusCode = 404
                     };
 
-                // Chỉ update các trường thông tin, không động đến khóa ngoại
                 if (!string.IsNullOrWhiteSpace(dto.VIN))
                     vehicle.VIN = dto.VIN;
 
@@ -371,7 +507,6 @@ namespace SWP391Web.Application.Services
                 if (dto.DealerReceivedDate.HasValue && dto.DealerReceivedDate.Value != default)
                     vehicle.DealerReceivedDate = dto.DealerReceivedDate.Value;
 
-                // Không set: DealerId, ColorId, VersionId
                 _unitOfWork.ElectricVehicleRepository.Update(vehicle);
                 await _unitOfWork.SaveAsync();
 

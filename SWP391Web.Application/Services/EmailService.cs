@@ -162,13 +162,36 @@ namespace SWP391Web.Application.Service
             });
         }
 
-        public async Task<bool> SendEmployeeAaccountEmail(string to, string fullName, string password)
+        public async Task<bool> SendEVMStaffAccountEmail(string to, string fullName, string password)
         {
             return await SendEmailFromTemplate(to, "SendEmployeeAccount", new Dictionary<string, string>
             {
                 { "{EmployeeName}", fullName },
                 { "{Email}" , to },
                 { "{TempPassword}", password },
+                { "{LoginLink}", StaticLinkUrl.WebUrl }
+            });
+        }
+
+        public async Task<bool> SendDealerStaffAaccountEmail(string to, string fullName, string password, string dealerName)
+        {
+            return await SendEmailFromTemplate(to, "SendDealerStaff", new Dictionary<string, string>
+            {
+                { "{EmployeeName}", fullName },
+                { "{DealerName}", dealerName },
+                { "{Email}" , to },
+                { "{TempPassword}", password },
+                { "{LoginLink}", StaticLinkUrl.WebUrl }
+            });
+        }
+
+        public Task<bool> NotifyAddedToDealerExistingUser(string to, string fullName, string roleInDealer, string dealerName)
+        {
+            return SendEmailFromTemplate(to, "NotifyAddedToDealerExistingUser", new Dictionary<string, string>
+            {
+                { "{EmployeeName}", fullName },
+                { "{DealerName}", dealerName },
+                { "{RoleInDealer}" , roleInDealer },
                 { "{LoginLink}", StaticLinkUrl.WebUrl }
             });
         }

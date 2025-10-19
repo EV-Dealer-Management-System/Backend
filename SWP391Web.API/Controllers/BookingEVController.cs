@@ -39,7 +39,7 @@ namespace SWP391Web.API.Controllers
         [HttpPut("update-booking-status/{bookingId}")]
         public async Task<ActionResult<ResponseDTO>> UpdateBookingStatus(Guid bookingId, [FromQuery] BookingStatus newStatus)
         {
-            var response = await _bookingEVService.UpdateBookingStatusAsync(bookingId, newStatus);
+            var response = await _bookingEVService.UpdateBookingStatusAsync(User, bookingId, newStatus);
             return StatusCode(response.StatusCode, response);
         }
     }

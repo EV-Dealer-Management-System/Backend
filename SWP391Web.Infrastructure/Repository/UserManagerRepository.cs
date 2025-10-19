@@ -97,5 +97,11 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _userManager.GetUsersInRoleAsync(roleName);
         }
+
+        public async Task<IdentityResult> RemoveAllRole(ApplicationUser user)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            return await _userManager.RemoveFromRolesAsync(user, roles);
+        }
     }
 }

@@ -22,5 +22,7 @@ namespace SWP391Web.Domain.Entities
         public Quote Quote { get; set; } = null!;
         public ElectricVehicleVersion ElectricVehicleVersion { get; set; } = null!;
         public ElectricVehicleColor ElectricVehicleColor { get; set; } = null!;
+        
+
     }
 }

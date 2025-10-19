@@ -15,8 +15,12 @@ namespace SWP391Web.Application.DTO.Promotion
         [Range(0, 100)]
         public decimal? Percentage { get; set; }
         public int? FixedAmount { get; set; }
+        public Guid? ModelId { get; set; }
+        public Guid? VersionId { get; set; }
         public DiscountType DiscountType { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsActive { get; set; } = true;
     }
 }

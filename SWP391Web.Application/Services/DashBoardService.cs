@@ -1,4 +1,5 @@
-﻿using SWP391Web.Application.DTO.Auth;
+﻿using Microsoft.EntityFrameworkCore;
+using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.IServices;
 using SWP391Web.Infrastructure.IRepository;
 using System;
@@ -21,7 +22,7 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var totalCustomer = (await _unitOfWork.CustomerRepository.GetAllAsync(includeProperties: "User"))
+                var totalCustomer = (await _unitOfWork.CustomerRepository.GetAllAsync(includes: q => q.Include(c => c.User)))
                     .Where(c => c.User.LockoutEnabled).Count();
                 return new ResponseDTO
                     {

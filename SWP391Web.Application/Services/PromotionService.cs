@@ -47,7 +47,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                // Ngày bắt đầu và kết thúc không thể là quá khứ  
+                // Start Date and End Date can't in the past  
                 if (createPromotionDTO.StartDate < DateTime.UtcNow || createPromotionDTO.EndDate < DateTime.UtcNow)
                 {
                     return new ResponseDTO
@@ -89,9 +89,13 @@ namespace SWP391Web.Application.Services
                     Description = createPromotionDTO.Description,
                     Percentage = createPromotionDTO?.Percentage,
                     FixedAmount = createPromotionDTO?.FixedAmount,
+                    ModelId = createPromotionDTO?.ModelId,
+                    VersionId = createPromotionDTO?.VersionId,
                     DiscountType = createPromotionDTO.DiscountType,
                     StartDate = createPromotionDTO.StartDate,
                     EndDate = createPromotionDTO.EndDate,
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true
                 };
 
                 if(promotion == null)
@@ -111,7 +115,8 @@ namespace SWP391Web.Application.Services
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    Message = "Create promotion successfully"
+                    Message = "Create promotion successfully",
+                    Result = promotion
                 };
             }
             catch (Exception ex)
@@ -121,6 +126,7 @@ namespace SWP391Web.Application.Services
                     IsSuccess = false,
                     StatusCode = 500,
                     Message = ex.Message
+
                 };
             }
         }
@@ -166,16 +172,17 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var promotion = (await _unitOfWork.PromotionRepository.GetAllAsync())
+                var promotions = (await _unitOfWork.PromotionRepository.GetAllAsync())
                     .Where(p => p.IsActive == true);
 
-                var getPromotion = _mapper.Map<List<GetPromotionDTO>>(promotion);
+                var getPromotion = _mapper.Map<List<GetPromotionDTO>>(promotions);
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    Message = "Get all promotion successfully"
+                    Message = "Get all promotion successfully",
+                    Result = getPromotion
                 };
 
             }
@@ -205,7 +212,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var getPromotion = _mapper.Map<List<GetPromotionDTO>>(promotion);
+                var getPromotion = _mapper.Map<GetPromotionDTO>(promotion);
 
                 return new ResponseDTO
                 {
@@ -226,9 +233,39 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public Task<ResponseDTO> GetPromotionByNameAsync(string name)
+        public async Task<ResponseDTO> GetPromotionByNameAsync(string name)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var promotions = await _unitOfWork.PromotionRepository.GetPromotionByNameAsync(name);
+                if(promotions == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = " Promotion not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var getPromotion = _mapper.Map<GetPromotionDTO>(promotions);
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Get promotion name successfully",
+                    StatusCode = 201,
+                    Result = getPromotion
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
         }
 
         public async Task<ResponseDTO> UpdatePromotionAsync(Guid promotionId, UpdatePromotionDTO updatePromotionDTO)
@@ -299,7 +336,7 @@ namespace SWP391Web.Application.Services
                 }
                 else if (updatePromotionDTO.DiscountType == DiscountType.FixAmount)
                 {
-                    if (updatePromotionDTO.FixedAmount is not null || updatePromotionDTO.FixedAmount <= 0)
+                    if (updatePromotionDTO.FixedAmount == null || updatePromotionDTO.FixedAmount <= 0)
                     {
                         return new ResponseDTO
                         {
