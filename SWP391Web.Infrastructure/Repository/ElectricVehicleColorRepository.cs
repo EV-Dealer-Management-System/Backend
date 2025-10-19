@@ -22,11 +22,12 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<List<ElectricVehicleColor?>> GetAvailableColorsByModelIdAndVersionIdAsync(Guid modelId, Guid versionId)
         {
             var colors = await _context.ElectricVehicles
-                .Where(ev => ev.Version.ModelId == modelId
-                     && ev.VersionId == versionId
+                .Include(ev => ev.ElectricVehicleTemplate)
+                .Where(ev => ev.ElectricVehicleTemplate.Version.ModelId == modelId
+                     && ev.ElectricVehicleTemplate.VersionId == versionId
                      && ev.Status == StatusVehicle.Available
                      && ev.Warehouse.EVCInventoryId != null)
-                .Select(ev => ev.Color)
+                .Select(ev => ev.ElectricVehicleTemplate.Color)
                 .Distinct()
                 .ToListAsync();
             return colors;

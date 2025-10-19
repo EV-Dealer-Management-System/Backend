@@ -11,10 +11,8 @@ namespace SWP391Web.Domain.Entities
     {
         public Guid Id { get; set; }
         public Guid ElectricVehicleTemplateId {  get; set; }
-        public Guid VersionId { get; set; }
-        public Guid ColorId { get; set; }
         public Guid WarehouseId { get; set; }
-        public string VIN { get; set; }
+        public string VIN { get; set; } = null!;
         public StatusVehicle Status { get; set; }
         public DateTime? ManufactureDate { get; set; }
         public DateTime? ImportDate { get; set; }
@@ -23,11 +21,8 @@ namespace SWP391Web.Domain.Entities
         public decimal CostPrice { get; set; }
         public DateTime? DealerReceivedDate { get; set; }
 
-        public ElectricVehicleVersion Version { get; set; } = null!;
-        public ElectricVehicleColor Color { get; set; } = null!;
         public Warehouse Warehouse { get; set; } = null!;
         public ICollection<EVAttachment> EVAttachments { get; set; } = new List<EVAttachment>();
-        
-
+        public ElectricVehicleTemplate ElectricVehicleTemplate { get; set; } = null!;
     }
 }

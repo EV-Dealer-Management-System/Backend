@@ -60,8 +60,6 @@ namespace SWP391Web.Application.Services
                 ElectricVehicle electricVehicle = new ElectricVehicle
                 {
                     WarehouseId = createElectricVehicleDTO.WarehouseId,
-                    VersionId = createElectricVehicleDTO.VersionId,
-                    ColorId = createElectricVehicleDTO.ColorId,
                     VIN = createElectricVehicleDTO.VIN,
                     Status = StatusVehicle.Available,
                     ManufactureDate = createElectricVehicleDTO.ManufactureDate,
@@ -280,9 +278,9 @@ namespace SWP391Web.Application.Services
 
                 var getDealerInventory = vehicles.GroupBy(ev => new
                 {
-                    ev.Version.Model.ModelName,
-                    ev.Version.VersionName,
-                    ev.Color.ColorName
+                    ev.ElectricVehicleTemplate.Version.Model.ModelName,
+                    ev.ElectricVehicleTemplate.Version.VersionName,
+                    ev.ElectricVehicleTemplate.Color.ColorName
                 })
                     .Select(g => new
                     {
@@ -358,7 +356,7 @@ namespace SWP391Web.Application.Services
 
                 //Group into 1
                 var groupVehicles = vehicles
-                    .GroupBy(v => new {v.VersionId, v.ColorId })
+                    .GroupBy(v => new {v.ElectricVehicleTemplate.VersionId, v.ElectricVehicleTemplate.ColorId })
                     .Select(g => g.FirstOrDefault(v => _unitOfWork.EVAttachmentRepository.GetAttachmentsByElectricVehicleId(v.Id).Any())
                     ??g.First())
                     .ToList();

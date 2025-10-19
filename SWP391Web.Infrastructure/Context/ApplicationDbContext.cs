@@ -26,12 +26,13 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<EContractTerm> EContractTerms { get; set; }
         public DbSet<BookingEV> BookingEVs { get; set; }
         public DbSet<BookingEVDetail> BookingEVDetails { get; set; }
-        public DbSet<EVCInventory> EVCInventories { get; set; } 
+        public DbSet<EVCInventory> EVCInventories { get; set; }
         public DbSet<Warehouse> Warehouses { get; set; }
         public DbSet<Quote> Quotes { get; set; }
         public DbSet<Promotion> Promotions { get; set; }
         public DbSet<EVAttachment> EVAttachments { get; set; }
         public DbSet<QuoteDetail> QuoteDetails { get; set; }
+        public DbSet<ElectricVehicleTemplate> ElectricVehicleTemplates { get; set; }
         public DbSet<DealerMember> DealerMembers { get; set; }
         public DbSet<EVTemplate> EVTemplates { get; set; }
 
@@ -137,15 +138,9 @@ namespace SWP391Web.Infrastructure.Context
             // Configure ElectricVehicle entity
 
             modelBuilder.Entity<ElectricVehicle>()
-                .HasOne(ev => ev.Version)
+                .HasOne(ev => ev.ElectricVehicleTemplate)
                 .WithMany(vs => vs.ElectricVehicles)
-                .HasForeignKey(ev => ev.VersionId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<ElectricVehicle>()
-                .HasOne(ev => ev.Color)
-                .WithMany(c => c.ElectricVehicles)
-                .HasForeignKey(ev => ev.ColorId)
+                .HasForeignKey(ev => ev.ElectricVehicleTemplateId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<ElectricVehicle>()
@@ -262,7 +257,7 @@ namespace SWP391Web.Infrastructure.Context
 
             modelBuilder.Entity<QuoteDetail>()
                 .HasOne(qd => qd.ElectricVehicleVersion)
-                .WithMany(v => v.quoteDetails)
+                .WithMany(v => v.QuoteDetails)
                 .HasForeignKey(qd => qd.VersionId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -310,6 +305,21 @@ namespace SWP391Web.Infrastructure.Context
                 .HasOne(dm => dm.ApplicationUser)
                 .WithMany(au => au.DealerMembers)
                 .HasForeignKey(dm => dm.ApplicationUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure ElectricVehicleTemplate entity
+
+            modelBuilder.Entity<ElectricVehicleTemplate>()
+                .HasOne(evt => evt.Version)
+                .WithMany(vs => vs.ElectricVehicleTemplates)
+                .HasForeignKey(evt => evt.VersionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ElectricVehicleTemplate>()
+                .HasOne(evt => evt.Color)
+                .WithMany(c => c.ElectricVehicleTemplates)
+                .HasForeignKey(evt => evt.ColorId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

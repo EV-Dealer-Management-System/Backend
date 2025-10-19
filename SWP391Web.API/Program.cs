@@ -6,6 +6,7 @@ using QuestPDF.Infrastructure;
 using SWP391Web.API.Extentions;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.Seeders;
+using SWP391Web.Infrastructure.SignlR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +42,10 @@ builder.Services.RegisterService();
 // Register Authentication service
 // Base on Extensions.WebApplicationBuilderExtensions
 builder.AddAuthenticationService();
+
+// Register SignalR service
+// Base on Extensions.ServiceCollectionExtensions
+builder.AddSignalR();
 
 // Register Swagger that has bearer services
 // Base on Extensions.ServiceCollectionExtensions
@@ -127,5 +132,7 @@ using (var scope = app.Services.CreateScope())
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     await RoleSeeder.SeedRolesAsync(roleManager);
 }
+
+app.MapHub<NotificationHub>("/api/notificationHub");
 
 app.Run();
