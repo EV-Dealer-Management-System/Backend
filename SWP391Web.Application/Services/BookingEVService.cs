@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.SignalR;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.BookingEV;
 using SWP391Web.Application.DTO.BookingEVDetail;
@@ -8,6 +9,7 @@ using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
 using SWP391Web.Infrastructure.Repository;
+using SWP391Web.Infrastructure.SignlR;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,11 +24,13 @@ namespace SWP391Web.Application.Services
     {
         public readonly IUnitOfWork _unitOfWork;
         public readonly IMapper _mapper;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public BookingEVService(IUnitOfWork unitOfWork, IMapper mapper)
+        public BookingEVService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
         }
 
         public async Task<ResponseDTO> CreateBookingEVAsync(ClaimsPrincipal user, CreateBookingEVDTO createBookingEVDTO)
@@ -127,6 +131,11 @@ namespace SWP391Web.Application.Services
                 var bookingWithDetails = await _unitOfWork.BookingEVRepository.GetBookingWithIdAsync(bookingEV.Id);
 
                 var getBookingEV = _mapper.Map<GetBookingEVDTO>(bookingWithDetails);
+
+                var versionId = createBookingEVDTO.BookingDetails.First().VersionId;
+                var colorId = createBookingEVDTO.BookingDetails.First().ColorId;
+                var quantity = await _unitOfWork.ElectricVehicleRepository.GetAvailableQuantityByVersionColorAsync(versionId, colorId);
+                await UpdateQuantityRealTime(versionId, colorId, quantity);
 
                 return new ResponseDTO
                 {
@@ -469,6 +478,19 @@ namespace SWP391Web.Application.Services
                     StatusCode = 500,
                 };
             }
+        }
+
+        private async Task<ResponseDTO> UpdateQuantityRealTime(Guid versionId, Guid colorId, int quantity)
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveElectricVehicleQuantityUpdate", versionId, colorId, quantity);
+
+
+            return new ResponseDTO
+            {
+                IsSuccess = true,
+                Message = "Real-time quantity update sent successfully",
+                StatusCode = 200
+            };
         }
     }
 }

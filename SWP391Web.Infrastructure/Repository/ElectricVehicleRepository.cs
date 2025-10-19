@@ -41,6 +41,16 @@ namespace SWP391Web.Infrastructure.Repository
                             && ev.Warehouse.EVCInventoryId != null)
                 .CountAsync();
         }
+
+        public Task<int> GetAvailableQuantityByVersionColorAsync(Guid versionId, Guid colorId)
+        {
+            return _context.ElectricVehicles
+                .Where(ev => ev.VersionId == versionId
+                             && ev.ColorId == colorId
+                             && ev.Status == StatusVehicle.Available
+                             && ev.Warehouse.EVCInventoryId != null)
+                .CountAsync();
+        }
         // Count vehicle in dealer 's inventory
         public async Task<int> GetAvailableVehicleAsync(Guid dealerId , Guid versionId , Guid colorId)
         {
@@ -99,7 +109,7 @@ namespace SWP391Web.Infrastructure.Repository
 
         public async Task<ElectricVehicle?> GetByIdsAsync(Guid vehicleId)
         {
-            return await _context?.ElectricVehicles
+            return await _context.ElectricVehicles
                 .FirstOrDefaultAsync(v => v.Id == vehicleId);
         }
 
