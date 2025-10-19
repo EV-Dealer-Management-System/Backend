@@ -12,6 +12,7 @@ using SWP391Web.Application.DTO.ElectricVehicleColor;
 using SWP391Web.Application.DTO.ElectricVehicleModel;
 using SWP391Web.Application.DTO.ElectricVehicleVersion;
 using SWP391Web.Application.DTO.EVCInventory;
+using SWP391Web.Application.DTO.EVTemplate;
 using SWP391Web.Application.DTO.Promotion;
 using SWP391Web.Application.DTO.Quote;
 using SWP391Web.Application.DTO.QuoteDetail;
@@ -66,6 +67,19 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.ApplicationUser.Email))
                 .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.ApplicationUser.FullName))
                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.ApplicationUser.PhoneNumber)).ReverseMap();
+            CreateMap<EVTemplate, GetEVTemplateDTO>()
+                .ForMember(dest => dest.Color, opt => opt.MapFrom(src => new ViewColorName
+                {
+                    ColorId = src.Color.Id,
+                    ColorName = src.Color.ColorName,
+                }))
+                .ForMember(dest => dest.Version, opt => opt.MapFrom(src => new ViewVersionName
+                {
+                    VersionId = src.Version.Id,
+                    VersionName = src.Version.VersionName,
+                    ModelId = src.Version.Model.Id,
+                    ModelName = src.Version.Model.ModelName,
+                }));
         }
     }
 }

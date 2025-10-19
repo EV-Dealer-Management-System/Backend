@@ -33,6 +33,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<EVAttachment> EVAttachments { get; set; }
         public DbSet<QuoteDetail> QuoteDetails { get; set; }
         public DbSet<DealerMember> DealerMembers { get; set; }
+        public DbSet<EVTemplate> EVTemplates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
