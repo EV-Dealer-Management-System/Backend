@@ -276,6 +276,7 @@ namespace SWP391Web.Infrastructure.Context
                 .WithMany(p => p.QuoteDetails)
                 .HasForeignKey(qd => qd.PromotionId)
                 .OnDelete(DeleteBehavior.Restrict);
+            
 
             /******************************************************************************/
             // Configure Promotion entity

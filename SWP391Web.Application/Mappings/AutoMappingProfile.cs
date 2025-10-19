@@ -58,7 +58,8 @@ namespace SWP391Web.Application.Mappings
             CreateMap<Warehouse, GetWarehouseDTO>().ReverseMap();
             CreateMap<EContract, GetEContractDTO>().ReverseMap();
             CreateMap<EContractTemplate, GetEContractTemplateDTO>().ReverseMap();
-            CreateMap<Quote,GetQuoteDTO>().ReverseMap();
+            CreateMap<Quote,GetQuoteDTO>()
+                .ForMember(dest => dest.QuoteDetails, opt => opt.MapFrom(src => src.QuoteDetails)).ReverseMap();
             CreateMap<QuoteDetail,GetQuoteDetailDTO>().ReverseMap();
             CreateMap<Promotion,GetPromotionDTO>().ReverseMap();
             CreateMap<DealerMember, GetDealerStaffDTO>()

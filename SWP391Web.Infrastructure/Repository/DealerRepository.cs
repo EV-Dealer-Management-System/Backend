@@ -67,5 +67,14 @@ namespace SWP391Web.Infrastructure.Repository
             return await _context.Dealers
                 .AnyAsync(dl => dl.Name == name, ct);
         }
+
+        public async Task<Dealer?> GetDealerByManagerOrStaffAsync(string userdId, CancellationToken ct)
+        {
+            return await _context.Dealers
+                .AsNoTracking()
+                .Where(dl => dl.ManagerId == userdId
+                        || dl.DealerMembers.Any(dm => dm.ApplicationUserId == userdId && dm.IsActive))
+                .FirstOrDefaultAsync();
+        }
     }
 }
