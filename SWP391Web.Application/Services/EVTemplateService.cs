@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.ElectricVehicle;
 using SWP391Web.Application.DTO.EVTemplate;
@@ -82,7 +83,12 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var templates = await _unitOfWork.EVTemplateRepository.GetAllAsync();
+                var templates = await _unitOfWork.EVTemplateRepository.GetAllAsync(
+                    includes: q => q
+                        .Include(t => t.Version)
+                            .ThenInclude(v => v.Model)
+                        .Include(t => t.Color));
+                        //.Include(t => t.EVAttachments));
                 var getTemples = _mapper.Map<List<GetEVTemplateDTO>>(templates);
 
                 foreach (var evt in getTemples)
@@ -119,7 +125,12 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var template = await _unitOfWork.EVTemplateRepository.GetByIdAsync(EVTemplateId);
+                var template = await _unitOfWork.EVTemplateRepository.Query(t => t.Id == EVTemplateId)
+                    .Include(t => t.Version)
+                        .ThenInclude(v => v.Model)
+                    .Include(t => t.Color)
+                    //.Include(t => t.EVAttachments)
+                    .FirstOrDefaultAsync();
                 if (template == null)
                 {
                     return new ResponseDTO
