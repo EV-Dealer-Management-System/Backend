@@ -59,6 +59,7 @@ namespace SWP391Web.Application.Services
 
                 ElectricVehicle electricVehicle = new ElectricVehicle
                 {
+                    ElectricVehicleTemplateId = createElectricVehicleDTO.ElectricVehicleTemplateId,
                     WarehouseId = createElectricVehicleDTO.WarehouseId,
                     VIN = createElectricVehicleDTO.VIN,
                     Status = StatusVehicle.Available,

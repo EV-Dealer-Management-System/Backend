@@ -34,19 +34,7 @@ namespace SWP391Web.Application.Mappings
             CreateMap<ElectricVehicleColor, GetElectricVehicleColorDTO>().ReverseMap();
             CreateMap<ElectricVehicleModel, GetElectricVehicleModelDTO>().ReverseMap();
             CreateMap<ElectricVehicleVersion, GetElectricVehicleVersionDTO>().ReverseMap();
-            CreateMap<ElectricVehicle, GetElecticVehicleDTO>()
-                .ForMember(dest => dest.Color, opt => opt.MapFrom(src => new ViewColorName
-                {
-                    ColorId = src.ElectricVehicleTemplate.Color.Id,
-                    ColorName = src.ElectricVehicleTemplate.Color.ColorName,
-                }))
-                .ForMember(dest => dest.Version, opt => opt.MapFrom(src => new ViewVersionName
-                {
-                    VersionId = src.ElectricVehicleTemplate.Version.Id,
-                    VersionName = src.ElectricVehicleTemplate.Version.VersionName,
-                    ModelId = src.ElectricVehicleTemplate.Version.Model.Id,
-                    ModelName = src.ElectricVehicleTemplate.Version.Model.ModelName,
-                }));
+            CreateMap<ElectricVehicle, GetElecticVehicleDTO>().ReverseMap();
             CreateMap<BookingEV, GetBookingEVDTO>()
                 .ForMember(dest => dest.BookingEVDetails, opt => opt.MapFrom(src => src.BookingEVDetails)).ReverseMap();
             CreateMap<BookingEVDetail, GetBookingEVDetailDTO>()
