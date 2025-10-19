@@ -15,7 +15,7 @@ namespace SWP391Web.Application.IServices
         Task <ResponseDTO> CreateBookingEVAsync(ClaimsPrincipal user, CreateBookingEVDTO createBookingEVDTO);
         Task <ResponseDTO> GetAllBookingEVsAsync(ClaimsPrincipal user);
         Task <ResponseDTO> GetBookingEVByIdAsync(ClaimsPrincipal user, Guid bookingId);
-        Task <ResponseDTO> UpdateBookingStatusAsync(Guid bookingId, BookingStatus newStatus);
+        Task <ResponseDTO> UpdateBookingStatusAsync(ClaimsPrincipal user, Guid bookingId, BookingStatus newStatus);
 
     }
 }

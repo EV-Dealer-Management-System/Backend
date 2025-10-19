@@ -214,7 +214,7 @@ namespace SWP391Web.Application.Services
                 }
                 else
                 {
-                    var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
                     if (dealer == null)
                     {
                         return new ResponseDTO
