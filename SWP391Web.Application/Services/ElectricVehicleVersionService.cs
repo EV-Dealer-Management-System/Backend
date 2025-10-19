@@ -140,7 +140,7 @@ namespace SWP391Web.Application.Services
                 }
 
                 var availableVersions = vehicles
-                    .Select(ev => ev.Version)
+                    .Select(ev => ev.ElectricVehicleTemplate.Version)
                     .DistinctBy(v => v.Id)
                     .Select(v => _mapper.Map<GetElectricVehicleVersionDTO>(v))
                     .ToList();

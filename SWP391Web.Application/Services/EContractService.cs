@@ -117,8 +117,6 @@ namespace SWP391Web.Application.Services
                     Manager = user
                 };
 
-                dealer.ApplicationUsers.Add(user);
-
                 var token = await GetAccessTokenAsync();
 
                 var created = await CreateDocumentPlusAsync(userClaim, token, dealer, user, createDealerDTO.AdditionalTerm, createDealerDTO.RegionDealer, ct);
