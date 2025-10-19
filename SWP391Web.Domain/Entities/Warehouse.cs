@@ -12,7 +12,7 @@ namespace SWP391Web.Domain.Entities
         public Guid Id { get; set; }
         public Guid? DealerId { get; set; }
         public Guid? EVCInventoryId { get; set; }
-        public string WarehouseName { get; set; }
+        public string? WarehouseName { get; set; }
         public WarehouseType WarehouseType { get; set; }
 
         public ICollection<ElectricVehicle> ElectricVehicles { get; set; } = new List<ElectricVehicle>();
