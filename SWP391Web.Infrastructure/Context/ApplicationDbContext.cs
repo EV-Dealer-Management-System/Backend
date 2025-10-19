@@ -136,11 +136,11 @@ namespace SWP391Web.Infrastructure.Context
             /******************************************************************************/
             // Configure ElectricVehicle entity
 
-            //modelBuilder.Entity<ElectricVehicle>()
-            //    .HasOne(ev => ev.ElectricVehicleTemplate)
-            //    .WithMany(vs => vs.ElectricVehicles)
-            //    .HasForeignKey(ev => ev.ElectricVehicleTemplateId)
-            //    .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<ElectricVehicle>()
+                .HasOne(ev => ev.ElectricVehicleTemplate)
+                .WithMany(vs => vs.ElectricVehicles)
+                .HasForeignKey(ev => ev.ElectricVehicleTemplateId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<ElectricVehicle>()
                 .HasOne(ev => ev.Warehouse)
@@ -291,20 +291,20 @@ namespace SWP391Web.Infrastructure.Context
             /******************************************************************************/
             // Configure DealerMember entity
 
-            //modelBuilder.Entity<DealerMember>()
-            //    .HasKey(dm => new { dm.DealerId, dm.ApplicationUserId });
+            modelBuilder.Entity<DealerMember>()
+                .HasKey(dm => new { dm.DealerId, dm.ApplicationUserId });
 
-            //modelBuilder.Entity<DealerMember>()
-            //    .HasOne(dm => dm.Dealer)
-            //    .WithMany(d => d.DealerMembers)
-            //    .HasForeignKey(dm => dm.DealerId)
-            //    .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<DealerMember>()
+                .HasOne(dm => dm.Dealer)
+                .WithMany(d => d.DealerMembers)
+                .HasForeignKey(dm => dm.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            //modelBuilder.Entity<DealerMember>()
-            //    .HasOne(dm => dm.ApplicationUser)
-            //    .WithMany(au => au.DealerMembers)
-            //    .HasForeignKey(dm => dm.ApplicationUserId)
-            //    .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<DealerMember>()
+                .HasOne(dm => dm.ApplicationUser)
+                .WithMany(au => au.DealerMembers)
+                .HasForeignKey(dm => dm.ApplicationUserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             /******************************************************************************/
             // Configure ElectricVehicleTemplate entity
@@ -319,22 +319,6 @@ namespace SWP391Web.Infrastructure.Context
                 .HasOne(evt => evt.Color)
                 .WithMany(c => c.ElectricVehicleTemplates)
                 .HasForeignKey(evt => evt.ColorId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-
-            modelBuilder.Entity<DealerMember>()
-                .HasKey(dm => new { dm.DealerId, dm.ApplicationUserId });
-
-            modelBuilder.Entity<DealerMember>()
-                .HasOne(dm => dm.Dealer)
-                .WithMany(d => d.DealerMembers)
-                .HasForeignKey(dm => dm.DealerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<DealerMember>()
-                .HasOne(dm => dm.ApplicationUser)
-                .WithMany(au => au.DealerMembers)
-                .HasForeignKey(dm => dm.ApplicationUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }
