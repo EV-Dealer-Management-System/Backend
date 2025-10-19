@@ -91,15 +91,19 @@ namespace SWP391Web.Application.Services
                         //.Include(t => t.EVAttachments));
                 var getTemples = _mapper.Map<List<GetEVTemplateDTO>>(templates);
 
-                foreach (var evt in getTemples)
+                foreach (var tem in getTemples)
                 {
-                    var entity = templates.FirstOrDefault(t => t.Id == evt.Id);
-                    if (entity?.EVAttachments != null && entity.EVAttachments.Any())
+                    var attachments = _unitOfWork.EVAttachmentRepository
+                        .GetAttachmentsByElectricVehicleTemplateId(tem.Id);
+
+                    var urlList = new List<string>();
+                    foreach (var att in attachments)
                     {
-                        evt.AttachmentKeys = entity.EVAttachments
-                            .Select(a => _s3Service.GenerateDownloadUrl(a.Key))
-                            .ToList();
+                        var url = _s3Service.GenerateDownloadUrl(att.Key);
+                        urlList.Add(url);
                     }
+
+                    tem.ImgUrl = urlList;
                 }
 
                 return new ResponseDTO
@@ -144,7 +148,7 @@ namespace SWP391Web.Application.Services
                 var getTemplate = _mapper.Map<GetEVTemplateDTO>(template);
                 if (template.EVAttachments != null && template.EVAttachments.Any())
                 {
-                    getTemplate.AttachmentKeys = template.EVAttachments
+                    getTemplate.ImgUrl = template.EVAttachments
                         .Select(a => _s3Service.GenerateDownloadUrl(a.Key))
                         .ToList();
                 }

@@ -80,7 +80,7 @@ namespace SWP391Web.Application.Mappings
                     ModelId = src.Version.Model.Id,
                     ModelName = src.Version.Model.ModelName,
                 }));
-                //.ForMember(dest => dest.AttachmentKeys, opt => opt.MapFrom(src => src.EVAttachments.Select(a => a.Key).ToList()));
+                //.ForMember(dest => dest.ImgUrl, opt => opt.MapFrom(src => src.EVAttachments.Select(a => a.Key).ToList()));
         }
     }
 }
