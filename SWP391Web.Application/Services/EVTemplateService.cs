@@ -35,7 +35,6 @@ namespace SWP391Web.Application.Services
                 {
                     VersionId = createEVTemplateDTO.VersionId,
                     ColorId = createEVTemplateDTO.ColorId,
-                    Price = createEVTemplateDTO.Price,
                     Description = createEVTemplateDTO.Description
                 };
                 if(template == null)
@@ -275,8 +274,7 @@ namespace SWP391Web.Application.Services
                 {
                     template.Description = updateEVTemplateDTO.Description.Trim();
                 }
-                if (updateEVTemplateDTO.Price.HasValue && updateEVTemplateDTO.Price.Value >= 0)
-                    template.Price = updateEVTemplateDTO.Price.Value;
+                
 
                 //Take photo
                 if (updateEVTemplateDTO.AttachmentKeys != null && updateEVTemplateDTO.AttachmentKeys.Any())
