@@ -10,10 +10,10 @@ namespace SWP391Web.Application.DTO.EVTemplate
     public class GetEVTemplateDTO
     {
         public Guid Id { get; set; }
-        public decimal Price { get; set; }
         public ViewVersionName? Version { get; set; }
         public ViewColorName? Color { get; set; }
         public string Description { get; set; }
+        public decimal Price { get; set; }
         public List<string> ImgUrl { get; set; } = new();
         public bool IsActive { get; set; } = true;
     }

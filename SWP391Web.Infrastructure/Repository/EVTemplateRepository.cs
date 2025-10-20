@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.IRepository;
 using System;
@@ -20,6 +21,17 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<ElectricVehicleTemplate?> GetByIdAsync(Guid EVTemplateId)
         {
             return await _context.ElectricVehicleTemplates.FirstOrDefaultAsync(evt => evt.Id == EVTemplateId);
+        }
+
+        public async Task<ElectricVehicleTemplate?> GetByVersionColorAndWarehouseAsync(Guid versionId, Guid colorId, Guid warehouseId)
+        {
+            return await _context.ElectricVehicleTemplates
+                .Include(evt => evt.ElectricVehicles)
+                    .ThenInclude(ev => ev.Warehouse)
+                .FirstOrDefaultAsync(t =>t.VersionId == versionId 
+                                    && t.ColorId == colorId 
+                                    && t.ElectricVehicles.Any(ev => ev.WarehouseId == warehouseId 
+                                    && ev.Warehouse.WarehouseType == WarehouseType.Dealer));
         }
 
         public async Task<List<ElectricVehicleTemplate>> GetTemplatesByVersionAndColorAsync(Guid versionId, Guid colorId)

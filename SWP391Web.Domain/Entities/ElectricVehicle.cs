@@ -18,7 +18,6 @@ namespace SWP391Web.Domain.Entities
         public DateTime? ImportDate { get; set; }
         public DateTime? WarrantyExpiryDate { get; set; }
         public DateTime? DeliveryDate { get; set; }
-        public decimal CostPrice { get; set; }
         public DateTime? DealerReceivedDate { get; set; }
 
         public Warehouse Warehouse { get; set; } = null!;

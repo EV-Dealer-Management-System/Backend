@@ -32,18 +32,6 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var isVinExist = await _unitOfWork.ElectricVehicleRepository
-                    .IsVehicleExistsByVIN(createElectricVehicleDTO.VIN);
-                if (isVinExist)
-                {
-                    return new ResponseDTO()
-                    {
-                        IsSuccess = false,
-                        Message = "Vehicle VIN already exists.",
-                        StatusCode = 404
-                    };
-                }
-
                 var warehouse = await _unitOfWork.WarehouseRepository
                     .GetWarehouseByIdAsync(createElectricVehicleDTO.WarehouseId);
                 if (warehouse is null || warehouse.WarehouseType != WarehouseType.EVInventory
@@ -57,35 +45,67 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                ElectricVehicle electricVehicle = new ElectricVehicle
+                var vinError = new List<string>();
+                var vinCreated = new List<string>();
+
+                foreach (var vin in createElectricVehicleDTO.VINList)
                 {
-                    ElectricVehicleTemplateId = createElectricVehicleDTO.ElectricVehicleTemplateId,
-                    WarehouseId = createElectricVehicleDTO.WarehouseId,
-                    VIN = createElectricVehicleDTO.VIN,
-                    Status = ElectricVehicleStatus.Available,
-                    ManufactureDate = createElectricVehicleDTO.ManufactureDate,
-                    ImportDate = createElectricVehicleDTO.ImportDate,
-                    WarrantyExpiryDate = createElectricVehicleDTO.WarrantyExpiryDate,
-                    CostPrice = createElectricVehicleDTO.CostPrice,
-                };
-                if (electricVehicle is null)
+                    var isVinExist = await _unitOfWork.ElectricVehicleRepository.IsVehicleExistsByVIN(vin);
+                    if (isVinExist)
+                    {
+                        vinError.Add(vin);
+                        continue;
+                    }
+
+                    ElectricVehicle electricVehicle = new ElectricVehicle
+                    {
+                        ElectricVehicleTemplateId = createElectricVehicleDTO.ElectricVehicleTemplateId,
+                        WarehouseId = createElectricVehicleDTO.WarehouseId,
+                        VIN = vin,
+                        Status = StatusVehicle.Available,
+                        ManufactureDate = createElectricVehicleDTO.ManufactureDate,
+                        ImportDate = createElectricVehicleDTO.ImportDate,
+                        WarrantyExpiryDate = createElectricVehicleDTO.WarrantyExpiryDate,
+                    };
+
+                    if (electricVehicle is null)
+                    {
+                        return new ResponseDTO()
+                        {
+                            IsSuccess = false,
+                            Message = "Vehicle is null.",
+                            StatusCode = 404
+                        };
+                    }
+
+                    await _unitOfWork.ElectricVehicleRepository.AddAsync(electricVehicle, CancellationToken.None);
+                    vinCreated.Add(vin);
+                }
+
+                if (!vinCreated.Any())
                 {
-                    return new ResponseDTO()
+                    return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Vehicle is null.",
-                        StatusCode = 404
+                        Message = "All vin are duplicated ",
+                        StatusCode = 400,
+                        Result = new { VINError = vinError }
+                        
                     };
                 }
 
-                await _unitOfWork.ElectricVehicleRepository.AddAsync(electricVehicle, CancellationToken.None);
                 await _unitOfWork.SaveAsync();
 
                 return new ResponseDTO()
                 {
                     IsSuccess = true,
-                    Message = "Create vehicle successfully.",
-                    StatusCode = 201
+                    Message = $"Created {vinCreated.Count} vehicles successfully. {vinError.Count} VIN(s) duplicated.",
+                    StatusCode = 201,
+                    Result = new
+                    {
+                        CreatedVIN = vinCreated,
+                        VINError = vinError
+                    }
                 };
             }
             catch (Exception ex)
@@ -479,9 +499,6 @@ namespace SWP391Web.Application.Services
 
                 if (dto.DeliveryDate.HasValue && dto.DeliveryDate.Value != default)
                     vehicle.DeliveryDate = dto.DeliveryDate.Value;
-
-                if (dto.CostPrice.HasValue && dto.CostPrice.Value >= 0)
-                    vehicle.CostPrice = dto.CostPrice.Value;
 
                 if (dto.DealerReceivedDate.HasValue && dto.DealerReceivedDate.Value != default)
                     vehicle.DealerReceivedDate = dto.DealerReceivedDate.Value;
