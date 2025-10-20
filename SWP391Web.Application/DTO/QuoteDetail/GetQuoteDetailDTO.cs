@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SWP391Web.Application.DTO.EVTemplate;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,12 +11,17 @@ namespace SWP391Web.Application.DTO.QuoteDetail
     {
         public Guid Id { get; set; }
         public Guid QuoteId { get; set; }
-        public Guid VersionId { get; set; }
-        public Guid ColorId { get; set; }
-        public Guid PromotionId { get; set; }
+        public ViewVersionName? Version { get; set; }
+        public ViewColorName? Color { get; set; }
+        public ViewPromotionName? Promotion { get; set; }
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
-        //public decimal Discount { get; set; }
         public decimal TotalPrice { get; set; }
+    }
+
+    public class ViewPromotionName
+    {
+        public Guid PromotionId { get; set; }
+        public string? PromotionName { get; set; }
     }
 }

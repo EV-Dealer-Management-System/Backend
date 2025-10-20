@@ -64,7 +64,24 @@ namespace SWP391Web.Application.Mappings
             CreateMap<EContractTemplate, GetEContractTemplateDTO>().ReverseMap();
             CreateMap<Quote,GetQuoteDTO>()
                 .ForMember(dest => dest.QuoteDetails, opt => opt.MapFrom(src => src.QuoteDetails)).ReverseMap();
-            CreateMap<QuoteDetail,GetQuoteDetailDTO>().ReverseMap();
+            CreateMap<QuoteDetail, GetQuoteDetailDTO>()
+                .ForMember(dest => dest.Color, opt => opt.MapFrom(src => new ViewColorName
+                {
+                    ColorId = src.ColorId,
+                    ColorName = src.ElectricVehicleColor.ColorName
+                }))
+                .ForMember(dest => dest.Version, opt => opt.MapFrom(src => new ViewVersionName
+                {
+                    VersionId = src.VersionId,
+                    VersionName = src.ElectricVehicleVersion.VersionName,
+                    ModelId = src.ElectricVehicleVersion.Model.Id,
+                    ModelName = src.ElectricVehicleVersion.Model.ModelName,
+                }))
+                .ForMember(dest => dest.Promotion, opt => opt.MapFrom(src => new ViewPromotionName
+                {
+                    PromotionId = src.PromotionId,
+                    PromotionName = src.Promotion.Name,
+                }));
             CreateMap<Promotion,GetPromotionDTO>().ReverseMap();
             CreateMap<DealerMember, GetDealerStaffDTO>()
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.ApplicationUser.Email))
