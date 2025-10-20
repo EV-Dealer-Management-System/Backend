@@ -15,5 +15,6 @@ namespace SWP391Web.Application.DTO.EVTemplate
         public ViewColorName? Color { get; set; }
         public string Description { get; set; }
         public List<string> ImgUrl { get; set; } = new();
+        public bool IsActive { get; set; } = true;
     }
 }

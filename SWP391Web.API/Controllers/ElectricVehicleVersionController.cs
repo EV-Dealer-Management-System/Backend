@@ -46,13 +46,7 @@ namespace SWP391Web.API.Controllers
             var response = await _electricVehicleVersionService.UpdateVersionAsync(versionId, updateElectricVehicleVersionDTO);
             return StatusCode(response.StatusCode, response);
         }
-
-        [HttpPut("update-version-by-status/{versionId}")]
-        public async Task<ActionResult<ResponseDTO>> UpdateVersionStatus([FromRoute] Guid versionId, [FromRoute] SupplyStatus newStatus)
-        {
-            var response = await _electricVehicleVersionService.UpdateVersionStatusAsync(versionId, newStatus);
-            return StatusCode(response.StatusCode, response);
-        }
+        
         [HttpGet("get-all-available-versions-by-model-id/{modelId}")]
         public async Task<ActionResult<ResponseDTO>> GetAllAvailableVersionsByModelIdAsync([FromRoute] Guid modelId)
         {

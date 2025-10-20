@@ -13,5 +13,6 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> CreateEContractTemplateAsync(CreateEContractTemplateDTO templateDTO, CancellationToken ct);
         Task<ResponseDTO> GetEContractTemplateByEcontractIdAsync(Guid eContractId, CancellationToken ct);
         Task<ResponseDTO> GetAll(int? pageNumber, int? pageSize, CancellationToken ct);
+        Task<ResponseDTO> UpdateEcontractTemplateAsync(string code, UpdateEContractTemplateDTO templateDTO, CancellationToken ct);
     }
 }

@@ -22,6 +22,16 @@ namespace SWP391Web.Infrastructure.Repository
             return await _context.ElectricVehicleTemplates.FirstOrDefaultAsync(evt => evt.Id == EVTemplateId);
         }
 
+        public async Task<List<ElectricVehicleTemplate>> GetTemplatesByVersionAndColorAsync(Guid versionId, Guid colorId)
+        {
+            return await _context.ElectricVehicleTemplates
+                .Include(evt => evt.Version)
+                    .ThenInclude(v => v.Model)
+                .Include(evt => evt.Color)
+                .Where(evt => evt.VersionId == versionId && evt.ColorId == colorId)
+                .ToListAsync();
+        }
+
         public async Task<bool>? IsEVTemplateExistsById(Guid EVTemplateId)
         {
             return await _context.ElectricVehicleTemplates.AnyAsync(evt => evt.Id == EVTemplateId);

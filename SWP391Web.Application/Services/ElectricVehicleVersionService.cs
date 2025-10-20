@@ -46,7 +46,6 @@ namespace SWP391Web.Application.Services
                     MotorPower = createElectricVehicleVersionDTO.MotorPower,
                     BatteryCapacity = createElectricVehicleVersionDTO.BatteryCapacity,
                     RangePerCharge = createElectricVehicleVersionDTO.RangePerCharge,
-                    SupplyStatus = createElectricVehicleVersionDTO.SupplyStatus,
                     TopSpeed = createElectricVehicleVersionDTO.TopSpeed,
                     Weight = createElectricVehicleVersionDTO.Weight,
                     Height = createElectricVehicleVersionDTO.Height,
@@ -181,7 +180,7 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var versions = await _unitOfWork.ElectricVehicleVersionRepository.GetAllAsync();
+                var versions = (await _unitOfWork.ElectricVehicleVersionRepository.GetAllAsync()).Where(v => v.IsActive == true);
                 var getVersions = _mapper.Map<List<GetElectricVehicleVersionDTO>>(versions);
                 return new ResponseDTO()
                 {
@@ -298,9 +297,6 @@ namespace SWP391Web.Application.Services
                 if (updateElectricVehicleVersionDTO.RangePerCharge.HasValue && updateElectricVehicleVersionDTO.RangePerCharge.Value > 0)
                     version.RangePerCharge = updateElectricVehicleVersionDTO.RangePerCharge.Value;
 
-                if (updateElectricVehicleVersionDTO.SupplyStatus.HasValue)
-                    version.SupplyStatus = updateElectricVehicleVersionDTO.SupplyStatus.Value;
-
                 if (updateElectricVehicleVersionDTO.TopSpeed.HasValue && updateElectricVehicleVersionDTO.TopSpeed.Value >= 0)
                     version.TopSpeed = updateElectricVehicleVersionDTO.TopSpeed.Value;
 
@@ -344,41 +340,5 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> UpdateVersionStatusAsync(Guid versionId, SupplyStatus newStatus)
-        {
-            try
-            {
-                var version = await _unitOfWork.ElectricVehicleVersionRepository.GetByIdsAsync(versionId);
-                if(version == null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Version not found",
-                        StatusCode = 400
-                    };
-                }
-
-                version.SupplyStatus = newStatus;
-                _unitOfWork.ElectricVehicleVersionRepository.Update(version);
-                await _unitOfWork.SaveAsync();
-
-                return new ResponseDTO
-                {
-                    IsSuccess = true,
-                    Message = "Version status update successfully",
-                    StatusCode = 200,
-                };
-            }
-            catch(Exception ex)
-            {
-                return new ResponseDTO
-                {
-                    IsSuccess = false,
-                    Message = ex.Message,
-                    StatusCode = 500
-                };
-            }
-        }
     }
 }
