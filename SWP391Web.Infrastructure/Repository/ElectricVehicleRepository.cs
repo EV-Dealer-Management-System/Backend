@@ -134,8 +134,8 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _context.ElectricVehicles
                 .Include(ev => ev.ElectricVehicleTemplate)
-                .Include(ev => ev.ElectricVehicleTemplate.Version)
-                .ThenInclude(v => v.Model)
+                    .ThenInclude(evt => evt.Version)
+                        .ThenInclude(v => v.Model)
                 .Include(ev => ev.ElectricVehicleTemplate.Color)
                 .Include(ev => ev.Warehouse)
                 .Where(ev => ev.Warehouse.DealerId == dealerId

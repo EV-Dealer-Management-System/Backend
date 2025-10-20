@@ -63,7 +63,7 @@ namespace SWP391Web.Application.Services
                         ElectricVehicleTemplateId = createElectricVehicleDTO.ElectricVehicleTemplateId,
                         WarehouseId = createElectricVehicleDTO.WarehouseId,
                         VIN = vin,
-                        Status = StatusVehicle.Available,
+                        Status = ElectricVehicleStatus.Available,
                         ManufactureDate = createElectricVehicleDTO.ManufactureDate,
                         ImportDate = createElectricVehicleDTO.ImportDate,
                         WarrantyExpiryDate = createElectricVehicleDTO.WarrantyExpiryDate,
@@ -282,14 +282,20 @@ namespace SWP391Web.Application.Services
 
                 var getDealerInventory = vehicles.GroupBy(ev => new
                 {
-                    ev.ElectricVehicleTemplate.Version.Model.ModelName,
-                    ev.ElectricVehicleTemplate.Version.VersionName,
-                    ev.ElectricVehicleTemplate.Color.ColorName
+                    ModelId = ev.ElectricVehicleTemplate.Version.Model.Id,
+                    ModelName = ev.ElectricVehicleTemplate.Version.Model.ModelName,
+                    VersionId = ev.ElectricVehicleTemplate.Version.Id,
+                    VersionName = ev.ElectricVehicleTemplate.Version.VersionName,
+                    ColorId = ev.ElectricVehicleTemplate.Color.Id,
+                    ColorName =ev.ElectricVehicleTemplate.Color.ColorName
                 })
                     .Select(g => new
                     {
+                        ModelId = g.Key.ModelId,
                         ModelName = g.Key.ModelName,
+                        VersionId = g.Key.VersionId,
                         VersionName = g.Key.VersionName,
+                        ColorId = g.Key.ColorId,
                         ColorName = g.Key.ColorName,
                         Quantity = g.Count()
                     })

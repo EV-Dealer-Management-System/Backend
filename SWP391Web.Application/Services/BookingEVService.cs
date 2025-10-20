@@ -463,7 +463,7 @@ namespace SWP391Web.Application.Services
                         }
                     }
                 }
-
+                
                 if (newStatus == BookingStatus.Cancelled)
                 {
                     foreach (var dt in bookingEV.BookingEVDetails)
@@ -493,7 +493,6 @@ namespace SWP391Web.Application.Services
                         }
                     }
                 }
-
                 bookingEV.Status = newStatus;
                 _unitOfWork.BookingEVRepository.Update(bookingEV);
                 await _unitOfWork.SaveAsync();
