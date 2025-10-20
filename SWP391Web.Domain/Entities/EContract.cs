@@ -19,8 +19,7 @@ namespace SWP391Web.Domain.Entities
         public string CreatedBy { get; private set; } = null!;
         public string OwnerBy { get; private set; } = null!;
 
-
-        public readonly ApplicationUser Ower = null!;
+        public ApplicationUser Owner { get; private set; } = null!;
 
         private EContract() { }
         public EContract(Guid id, Guid templateId, string? name, string createdBy, string ownerBy, EContractStatus status)
