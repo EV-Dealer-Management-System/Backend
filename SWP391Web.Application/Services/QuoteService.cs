@@ -52,6 +52,17 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
+                var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(dealer.Id);
+                if (warehouse == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Warehouse 's dealer is not found ",
+                        StatusCode = 404
+                    };
+                }
+
                 Quote quote = new Quote
                 {
                     DealerId = dealer.Id,
@@ -90,24 +101,25 @@ namespace SWP391Web.Application.Services
                         };
                     }
 
-                    var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(dealer.Id);
-                    if(warehouse == null)
+                    var availableVehicles = await _unitOfWork.ElectricVehicleRepository
+                        .GetAvailableVehicleByDealerAsync(dealer.Id,version.Id,color.Id);
+                    if (availableVehicles == null)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
-                            Message = "Warehouse 's dealer is not found ",
+                            Message = "No available vehicle in dealer 's warehouse",
                             StatusCode = 404
                         };
                     }
 
-                    var vehicle = await _unitOfWork.ElectricVehicleRepository.GetByVersionColorAndWarehouseAsync(version.Id , color.Id , warehouse.Id);
-                    if(vehicle == null)
+                    var templates = (await _unitOfWork.EVTemplateRepository.GetTemplatesByVersionAndColorAsync(version.Id,color.Id)).FirstOrDefault();
+                    if (templates == null)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
-                            Message = "No vehicle found",
+                            Message = "No templates found",
                             StatusCode = 404
                         };
                     }
@@ -134,7 +146,7 @@ namespace SWP391Web.Application.Services
                         };
                     }
 
-                    decimal basePrice = vehicle.CostPrice;
+                    decimal basePrice = templates.Price;
                     decimal extraPrice = color.ExtraCost;
                     decimal unitPrice = basePrice + extraPrice;
                     decimal discount = 0;

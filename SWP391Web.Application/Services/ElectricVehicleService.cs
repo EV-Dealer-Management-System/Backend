@@ -66,7 +66,6 @@ namespace SWP391Web.Application.Services
                         ManufactureDate = createElectricVehicleDTO.ManufactureDate,
                         ImportDate = createElectricVehicleDTO.ImportDate,
                         WarrantyExpiryDate = createElectricVehicleDTO.WarrantyExpiryDate,
-                        CostPrice = createElectricVehicleDTO.CostPrice,
                     };
 
                     if (electricVehicle is null)
@@ -500,9 +499,6 @@ namespace SWP391Web.Application.Services
 
                 if (dto.DeliveryDate.HasValue && dto.DeliveryDate.Value != default)
                     vehicle.DeliveryDate = dto.DeliveryDate.Value;
-
-                if (dto.CostPrice.HasValue && dto.CostPrice.Value >= 0)
-                    vehicle.CostPrice = dto.CostPrice.Value;
 
                 if (dto.DealerReceivedDate.HasValue && dto.DealerReceivedDate.Value != default)
                     vehicle.DealerReceivedDate = dto.DealerReceivedDate.Value;

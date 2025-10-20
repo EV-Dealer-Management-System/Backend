@@ -12,6 +12,7 @@ namespace SWP391Web.Domain.Entities
         public Guid VersionId { get; set; }          
         public Guid ColorId { get; set; }             
         public string? Description { get; set; }
+        public decimal Price { get; set; }
         public bool IsActive { get; set; } = true;
 
         public ElectricVehicleVersion Version { get; set; } = null!;
