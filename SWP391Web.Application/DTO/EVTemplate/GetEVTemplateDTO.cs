@@ -17,4 +17,17 @@ namespace SWP391Web.Application.DTO.EVTemplate
         public List<string> ImgUrl { get; set; } = new();
         public bool IsActive { get; set; } = true;
     }
+    public class ViewVersionName
+    {
+        public Guid VersionId { get; set; }
+        public string? VersionName { get; set; }
+        public Guid ModelId { get; set; }
+        public string? ModelName { get; set; }
+    }
+
+    public class ViewColorName
+    {
+        public Guid ColorId { get; set; }
+        public string? ColorName { get; set; }
+    }
 }
