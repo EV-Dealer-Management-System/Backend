@@ -51,5 +51,13 @@ namespace SWP391Web.API.Controllers
             }
             return StatusCode(result.StatusCode, result);
         }
+
+        [HttpPut]
+        [Route("update-econtract-template")]
+        public async Task<ActionResult<ResponseDTO>> UpdateEContractTemplateAsync([FromQuery] string code, [FromBody] UpdateEContractTemplateDTO templateDTO, CancellationToken ct)
+        {
+            var result = await _eContractTemplateService.UpdateEcontractTemplateAsync(code, templateDTO, ct);
+            return StatusCode(result.StatusCode, result);
+        }
     }
 }
