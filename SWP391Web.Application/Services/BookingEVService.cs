@@ -488,7 +488,7 @@ namespace SWP391Web.Application.Services
 
                         foreach (var ev in selectedVehicles)
                         {
-                            ev.Status = StatusVehicle.Available;
+                            ev.Status = ElectricVehicleStatus.Available;
                             _unitOfWork.ElectricVehicleRepository.Update(ev);
                         }
                     }
