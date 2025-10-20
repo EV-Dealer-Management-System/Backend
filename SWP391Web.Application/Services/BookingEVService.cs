@@ -120,7 +120,7 @@ namespace SWP391Web.Application.Services
 
                     foreach( var ev in selectedVehicles)
                     {
-                        ev.Status = StatusVehicle.Pending;
+                        ev.Status = ElectricVehicleStatus.Pending;
                         _unitOfWork.ElectricVehicleRepository.Update(ev);
                     }
                 }
@@ -414,7 +414,7 @@ namespace SWP391Web.Application.Services
                         
                         foreach (var ev in selectedVehicles)
                         {
-                            ev.Status = StatusVehicle.Booked;
+                            ev.Status = ElectricVehicleStatus.Booked;
                             ev.WarehouseId = warehouse.Id;
                             _unitOfWork.ElectricVehicleRepository.Update(ev);
                         }
@@ -445,7 +445,7 @@ namespace SWP391Web.Application.Services
                         //change status to available
                         foreach ( var ev in selectedVehicles)
                         {
-                            ev.Status = StatusVehicle.Available;
+                            ev.Status = ElectricVehicleStatus.Available;
                             _unitOfWork.ElectricVehicleRepository.Update(ev);
                         }
                     }

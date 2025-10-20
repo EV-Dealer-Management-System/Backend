@@ -37,6 +37,7 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _context.Dealers
                 .AsNoTracking()
+                .Include(dl => dl.Manager)
                 .Where(dl => dl.ManagerId == managerId)
                 .FirstOrDefaultAsync(ct);
         }
@@ -72,6 +73,7 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _context.Dealers
                 .AsNoTracking()
+                .Include(dl => dl.Manager)
                 .Where(dl => dl.ManagerId == userdId
                         || dl.DealerMembers.Any(dm => dm.ApplicationUserId == userdId && dm.IsActive))
                 .FirstOrDefaultAsync();

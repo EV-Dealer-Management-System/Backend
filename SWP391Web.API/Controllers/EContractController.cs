@@ -163,9 +163,9 @@ namespace SWP391Web.API.Controllers
         [HttpGet]
         [Route("get-all-econtract-list")]
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
-        public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default)
+        public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default, [FromQuery] EcontractType econtractType = default)
         {
-            var r = await _econtractService.GetAllEContractList(pageNumber, pageSize, eContractStatus);
+            var r = await _econtractService.GetAllEContractList(pageNumber, pageSize, eContractStatus, econtractType);
             return Ok(r);
         }
 
@@ -196,10 +196,10 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPost]
-        [Route("snapshot-econtract-by-key")]
-        public async Task<ActionResult<ResponseDTO>> SnapshotEcontractByKey([FromQuery] Guid econtractId, [FromForm] string key, CancellationToken ct)
+        [Route("create-booking-confirm-econtract")]
+        public async Task<ActionResult<ResponseDTO>> CreateBookingConfirmEcontract([FromQuery] Guid bookingId, CancellationToken ct)
         {
-            var response = await _econtractService.SnapshotEcontract(econtractId, key, ct);
+            var response = await _econtractService.CreateBookingEContractAsync(User, bookingId, ct);
             return StatusCode(response.StatusCode, response);
         }
     }

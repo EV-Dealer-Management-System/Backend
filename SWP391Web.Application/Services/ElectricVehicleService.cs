@@ -526,7 +526,7 @@ namespace SWP391Web.Application.Services
 
         }
 
-        public async Task<ResponseDTO> UpdateVehicleStatusAsync(Guid vehicleId, StatusVehicle newStatus)
+        public async Task<ResponseDTO> UpdateVehicleStatusAsync(Guid vehicleId, ElectricVehicleStatus newStatus)
         {
             try
             {

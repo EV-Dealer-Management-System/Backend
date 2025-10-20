@@ -25,7 +25,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .Include(ev => ev.ElectricVehicleTemplate)
                 .Where(ev => ev.ElectricVehicleTemplate.Version.ModelId == modelId
                      && ev.ElectricVehicleTemplate.VersionId == versionId
-                     && ev.Status == StatusVehicle.Available
+                     && ev.Status == ElectricVehicleStatus.Available
                      && ev.Warehouse.EVCInventoryId != null)
                 .Select(ev => ev.ElectricVehicleTemplate.Color)
                 .Distinct()

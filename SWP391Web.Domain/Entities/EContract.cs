@@ -12,18 +12,16 @@ namespace SWP391Web.Domain.Entities
         public Guid Id { get; private set; }
         public Guid TemplateId { get; private set; }
         public string? Name { get; set; }
-        // Snapshot
-        public string? SnapshotKey { get; private set; }
         public EContractStatus Status { get; private set; } = EContractStatus.Draft;
+        public EcontractType Type { get; set; }
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
         public string CreatedBy { get; private set; } = null!;
         public string OwnerBy { get; private set; } = null!;
 
-
-        public readonly ApplicationUser Ower = null!;
+        public ApplicationUser Owner { get; private set; } = null!;
 
         private EContract() { }
-        public EContract(Guid id, Guid templateId, string? name, string createdBy, string ownerBy, EContractStatus status)
+        public EContract(Guid id, Guid templateId, string? name, string createdBy, string ownerBy, EContractStatus status, EcontractType type)
         {
             Id = id;
             TemplateId = templateId;
@@ -31,16 +29,12 @@ namespace SWP391Web.Domain.Entities
             Status = status;
             CreatedBy = createdBy;
             OwnerBy = ownerBy;
+            Type = type;
         }
 
         public void UpdateStatus(EContractStatus status)
         {
             Status = status;
-        }
-
-        public void UpdateSnapshotKey(string snapshotKey)
-        {
-            SnapshotKey = snapshotKey;
         }
 
         public EContractTemplate EContractTemplate = null!;

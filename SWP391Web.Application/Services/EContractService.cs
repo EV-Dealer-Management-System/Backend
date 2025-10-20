@@ -1,9 +1,13 @@
-﻿using EVManagementSystem.Application.DTO.EContract;
+﻿using AutoMapper;
+using EVManagementSystem.Application.DTO.EContract;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using SWP391Web.Application.DTO;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.EContract;
+using SWP391Web.Application.DTO.Warehouse;
 using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Pdf;
@@ -17,10 +21,6 @@ using System.Text;
 using System.Text.Json;
 using System.Web;
 using UglyToad.PdfPig;
-using AutoMapper;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.Playwright;
-using SWP391Web.Application.DTO.S3;
 
 namespace SWP391Web.Application.Services
 {
@@ -33,7 +33,8 @@ namespace SWP391Web.Application.Services
         private readonly IEmailService _emailService;
         private readonly IMapper _mapper;
         private readonly IS3Service _s3Service;
-        public EContractService(IConfiguration cfg, HttpClient http, IUnitOfWork unitOfWork, IVnptEContractClient vnpt, IEmailService emailService, IMapper mapper, IS3Service s3Service)
+        private readonly IWarehouseService _warehouseService;
+        public EContractService(IWarehouseService warehouseService, IConfiguration cfg, HttpClient http, IUnitOfWork unitOfWork, IVnptEContractClient vnpt, IEmailService emailService, IMapper mapper, IS3Service s3Service)
         {
             _cfg = cfg;
             _http = http;
@@ -42,6 +43,7 @@ namespace SWP391Web.Application.Services
             _emailService = emailService;
             _mapper = mapper;
             _s3Service = s3Service;
+            _warehouseService = warehouseService;
         }
 
         public async Task<string> GetAccessTokenAsync()
@@ -83,6 +85,63 @@ namespace SWP391Web.Application.Services
             return accessToken!;
         }
 
+        public async Task<ResponseDTO> CreateBookingEContractAsync(ClaimsPrincipal userClaim, Guid bookingId, CancellationToken ct)
+        {
+            try
+            {
+                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "User is not login yet"
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer is not exist"
+                    };
+                }
+
+                var token = await GetAccessTokenAsync();
+
+                var created = await CreateDocumentBookingAsync(bookingId, token, dealer, ct);
+
+                var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(created.Data!.Id), ct);
+
+                var companyName = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist");
+                var supportEmail = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist");
+
+                var companyApproverUserCode = _cfg["SmartCA:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
+                await UpdateProcessAsync(token, created.Data.Id, userId, companyApproverUserCode, created.Data.PositionA, created.Data.PositionB, created.Data.PageSign);
+                var result = await SendProcessAsync(token, created.Data.Id);
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 201,
+                    Message = "PDF is created",
+                    Result = result
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to create EContract: {ex.Message}"
+                };
+            }
+        }
+
         public async Task<ResponseDTO> CreateDraftEContractAsync(ClaimsPrincipal userClaim, CreateDealerDTO createDealerDTO, CancellationToken ct)
         {
             try
@@ -119,7 +178,7 @@ namespace SWP391Web.Application.Services
 
                 var token = await GetAccessTokenAsync();
 
-                var created = await CreateDocumentPlusAsync(userClaim, token, dealer, user, createDealerDTO.AdditionalTerm, createDealerDTO.RegionDealer, ct);
+                var created = await CreateDocumentDealerAsync(userClaim, token, dealer, user, createDealerDTO.AdditionalTerm, createDealerDTO.RegionDealer, ct);
 
                 var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(created.Data!.Id), ct);
 
@@ -296,13 +355,122 @@ namespace SWP391Web.Application.Services
             return data;
         }
 
-        private async Task<VnptResult<VnptDocumentDto>> CreateDocumentPlusAsync(ClaimsPrincipal userClaim, string token, Dealer dealer, ApplicationUser user, string? additional, string? regionDealer, CancellationToken ct)
+
+        private async Task<VnptResult<VnptDocumentDto>> CreateDocumentBookingAsync(Guid bookingId, string token, Dealer dealer, CancellationToken ct)
+        {
+            var templateCode = _cfg["EContract:BookingTemplateCode"] ?? throw new ArgumentNullException("EContract:DealerTemplateCode is not exist");
+            var template = await _unitOfWork.EContractTemplateRepository.GetbyCodeAsync(templateCode, ct);
+            if (template is null) throw new Exception($"Template with code '{templateCode}' is not exist");
+
+            var booking = await _unitOfWork.BookingEVRepository.GetBookingWithIdAsync(bookingId);
+            if (booking is null)
+            {
+                throw new Exception($"Booking with id '{bookingId}' is not exist");
+            }
+
+            var bookingDetails = await _unitOfWork.BookingDetailRepository.GetBookingDetailsByBookingIdAsync(bookingId, ct);
+            if (bookingDetails is null || !bookingDetails.Any())
+            {
+                throw new Exception($"Booking detail with booking id '{bookingId}' is not exist");
+            }
+
+            string BuildBookingRowsHtml(IEnumerable<BookingEVDetail> items)
+            {
+                var sb = new StringBuilder();
+                int i = 1;
+                foreach (var item in items)
+                {
+                    var modelName = item.Version?.Model?.ModelName ?? "(Mẫu)";
+                    var versionName = item.Version?.VersionName ?? "(Phiên bản)";
+                    var colorName = item.Color?.ColorName ?? "(Màu)";
+                    var quantity = item.Quantity;
+
+                    sb.AppendLine($@"
+                        <tr>
+                        <td class=""right"">{i}</td>
+                        <td>{modelName} – {versionName}</td>
+                        <td>{colorName}</td>
+                        <td class=""right"">{quantity}</td>
+                        </tr>");
+                    i++;
+                }
+                return sb.ToString();
+            }
+
+            var rowsHtml = BuildBookingRowsHtml(bookingDetails);
+            var totalQty = booking.TotalQuantity;
+
+            var data = new Dictionary<string, object?>
+            {
+                ["company.name"] = _cfg["Company:Name"] ?? "N/A",
+                ["company.address"] = _cfg["Company:Address"] ?? "N/A",
+                ["company.taxNo"] = _cfg["Company:TaxNo"] ?? "N/A",
+                ["dealer.name"] = dealer.Name,
+                ["dealer.address"] = dealer.Address,
+                ["dealer.taxNo"] = dealer.TaxNo,
+                ["dealer.contact"] = $"{dealer.Manager.Email}, {dealer.Manager.PhoneNumber}",
+                ["booking.date"] = booking.BookingDate.ToString("dd/MM/yyyy HH:mm"),
+                ["booking.total"] = totalQty.ToString(),
+                ["booking.note"] = booking.Note ?? string.Empty,
+                ["booking.rows"] = rowsHtml
+            };
+
+            var html = EContractPdf.ReplacePlaceholders(template.ContentHtml, data, htmlEncode: false);
+
+            var pdfBytes = await EContractPdf.RenderAsync(html);
+            var anchors = EContractPdf.FindAnchors(pdfBytes, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
+
+            var positionA = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
+            var positionB = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_B"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: 0);
+
+            var documentTypeId = int.Parse(_cfg["EContract:DocumentTypeId"] ?? throw new NullReferenceException("EContract:DocumentTypeId is not exist"));
+            var departmentId = int.Parse(_cfg["EContract:DepartmentId"] ?? throw new NullReferenceException("EContract:DepartmentId is not exist"));
+
+            var randomText = Guid.NewGuid().ToString()[..6].ToUpper();
+
+            var request = new CreateDocumentDTO
+            {
+                TypeId = documentTypeId,
+                DepartmentId = departmentId,
+                No = $"EContract-{randomText}",
+                Subject = $"Booking Confirm EContract",
+                Description = "EContract allows dealer confirm booking electric vehicle"
+            };
+
+            request.FileInfo.File = pdfBytes;
+            var fileName = $"Booking_E-Contract_{randomText}_{dealer.Name}.pdf".Trim();
+            request.FileInfo.FileName = fileName;
+
+            var createResult = await _vnpt.CreateDocumentAsync(token, request);
+
+
+            if (!Enum.IsDefined(typeof(EContractStatus), createResult.Data.Status.Value))
+            {
+                throw new Exception("Invalid EContract status value.");
+            }
+
+            var status = (EContractStatus)createResult.Data.Status.Value;
+
+            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.Id, fileName, "System", dealer.ManagerId!, status, EcontractType.BookingContract);
+
+            await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
+            await _unitOfWork.SaveAsync();
+
+            createResult.Data!.PositionA = positionA.Item1;
+            createResult.Data.PositionB = positionB.Item1;
+            createResult.Data.PageSign = positionA.Item2;
+            createResult.Data.FileName = request.FileInfo.FileName;
+
+            return createResult;
+        }
+
+        private async Task<VnptResult<VnptDocumentDto>> CreateDocumentDealerAsync(ClaimsPrincipal userClaim, string token, Dealer dealer, ApplicationUser user, string? additional, string? regionDealer, CancellationToken ct)
         {
             var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrWhiteSpace(userId))
-                throw new Exception("The user is not login yet");
+            if (string.IsNullOrWhiteSpace(userId)) throw new Exception("The user is not login yet");
 
             var templateCode = _cfg["EContract:DealerTemplateCode"] ?? throw new ArgumentNullException("EContract:DealerTemplateCode is not exist");
+
             var template = await _unitOfWork.EContractTemplateRepository.GetbyCodeAsync(templateCode, ct);
             if (template is null) throw new Exception($"Template with code '{templateCode}' is not exist");
 
@@ -348,6 +516,7 @@ namespace SWP391Web.Application.Services
 
             //html = EContractPdf.RenderHtml(html, term);
             var pdfBytes = await EContractPdf.RenderAsync(html);
+
             var anchors = EContractPdf.FindAnchors(pdfBytes, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
 
             var positionA = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
@@ -381,7 +550,7 @@ namespace SWP391Web.Application.Services
 
             var status = (EContractStatus)createResult.Data.Status.Value;
 
-            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.Id, fileName, userId, user.Id, status);
+            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.Id, fileName, userId, user.Id, status, EcontractType.DealerContract);
 
             await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
 
@@ -513,40 +682,6 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> SnapshotEcontract(Guid EcontractId, string key, CancellationToken ct)
-        {
-            try
-            {
-                var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(EcontractId, ct);
-                if (econtract is null)
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        StatusCode = 404,
-                        Message = "EContract not found."
-                    };
-
-                econtract.UpdateSnapshotKey(key);
-                await _unitOfWork.SaveAsync();
-
-                return new ResponseDTO
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    Message = "Snapshot key is updated"
-                };
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO
-                {
-                    IsSuccess = false,
-                    StatusCode = 500,
-                    Message = $"Error to update snapshot key: {ex.Message}"
-                };
-            }
-        }
-
 
         private async Task CreateDealerAccount(string documentId, CancellationToken ct)
         {
@@ -567,7 +702,7 @@ namespace SWP391Web.Application.Services
             if (addToRoleResult is null) throw new Exception($"Cannot add dealer manager to role '{StaticUserRole.DealerManager}'");
 
             await _unitOfWork.UserManagerRepository.SetPassword(dealerManager, password);
-
+            await _unitOfWork.SaveAsync();
             var data = new Dictionary<string, string>
             {
                 ["{FullName}"] = dealerManager.FullName,
@@ -578,6 +713,19 @@ namespace SWP391Web.Application.Services
                 ["{SupportEmail}"] = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist")
             };
             await _emailService.SendEmailFromTemplate(dealerManager.Email, "DealerWelcome", data);
+
+            var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(dealerManager.Id, ct);
+            if (dealer is null) throw new Exception($"Cannot find dealer with manager id '{dealerManager.Id}'");
+
+            var warehouse = new CreateWarehouseDTO
+            {
+                DealerId = dealer.Id,
+                EVCInventoryId = null,
+                WarehouseType = WarehouseType.Dealer,
+                WarehouseName = $"Kho {dealer.Name}"
+            };
+
+            await _warehouseService.CreateWarehouseAsync(warehouse);
         }
 
         public async Task<HttpResponseMessage> GetPreviewResponseAsync(string downloadUrl, string? rangeHeader = null, CancellationToken ct = default)
@@ -814,15 +962,20 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO<EContract>> GetAllEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus = default)
+        public async Task<ResponseDTO<EContract>> GetAllEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus = default, EcontractType econtractType = default)
         {
             try
             {
-                var eContractList = await _unitOfWork.EContractRepository.GetAllAsync();
+                var eContractList = await _unitOfWork.EContractRepository.GetAllAsync(includes: e => e.Include(inc => inc.Owner));
 
                 if (eContractStatus != default)
                 {
                     eContractList = eContractList.Where(ec => ec.Status == eContractStatus);
+                }
+
+                if (econtractType != default)
+                {
+                    eContractList = eContractList.Where(ec => ec.Type == econtractType);
                 }
 
                 if (pageNumber > 0 && pageSize > 0)
@@ -840,6 +993,11 @@ namespace SWP391Web.Application.Services
                 }
 
                 var getList = _mapper.Map<List<GetEContractDTO>>(eContractList);
+
+                foreach (var eContract in getList)
+                {
+                    eContract.CreatedName = (await _unitOfWork.UserManagerRepository.GetByIdAsync(eContract.CreatedBy))?.FullName;
+                }
                 return new ResponseDTO<EContract>
                 {
                     IsSuccess = true,
@@ -876,6 +1034,7 @@ namespace SWP391Web.Application.Services
 
 
                 var getEContract = _mapper.Map<GetEContractDTO>(eContract);
+                getEContract.CreatedName = (await _unitOfWork.UserManagerRepository.GetByIdAsync(eContract.CreatedBy))?.FullName;
                 return new ResponseDTO<EContract>
                 {
                     IsSuccess = true,
