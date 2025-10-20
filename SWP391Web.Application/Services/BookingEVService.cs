@@ -203,7 +203,7 @@ namespace SWP391Web.Application.Services
                 return new ResponseDTO
                 {
                     IsSuccess = true,
-                    Message = "Bookings retrieved successfully",
+                    Message = "Get all bookings successfully",
                     StatusCode = 200,
                     Result = getBookingEVs
                 };

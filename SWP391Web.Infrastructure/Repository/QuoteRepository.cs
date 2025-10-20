@@ -18,6 +18,19 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
+        public async Task<List<Quote>> GetAllQuotesWithDetailAsync()
+        {
+            return await _context.Quotes
+                .Include(q => q.QuoteDetails)
+                    .ThenInclude(qd => qd.ElectricVehicleVersion)
+                        .ThenInclude(v => v.Model)
+                .Include(q => q.QuoteDetails)
+                    .ThenInclude(qd => qd.ElectricVehicleColor)
+                .Include(q => q.QuoteDetails)
+                    .ThenInclude(qd => qd.Promotion)
+                .Include(q => q.Dealer)
+                .ToListAsync();
+        }
 
         public async Task<Quote?> GetQuoteByIdAsync(Guid quoteId)
         {
