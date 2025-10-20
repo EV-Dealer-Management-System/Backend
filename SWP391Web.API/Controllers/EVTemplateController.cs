@@ -45,5 +45,19 @@ namespace SWP391Web.API.Controllers
             var response = await _evTemplateService.UpdateEVTemplateAsync(EVTemplateId, updateEVTemplateDTO);
             return StatusCode(response.StatusCode,response);
         }
+
+        [HttpDelete("delete-template/{EVTemplateId}")]
+        public async Task<ActionResult<ResponseDTO>> DeleteEVTemplate(Guid EVTemplateId)
+        {
+            var response = await _evTemplateService.DeleteEVTemplateAsync(EVTemplateId);
+            return StatusCode(response.StatusCode,response);
+        }
+
+        [HttpGet("get-template-by-version-and-color/{versionId}/{colorId}")]
+        public async Task<ActionResult<ResponseDTO>> GetTemplesByVersionAndColor(Guid versionId, Guid colorId)
+        {
+            var response = await _evTemplateService.GetTemplatesByVersionAndColorAsync(versionId, colorId);
+            return StatusCode(response.StatusCode,response);
+        }
     }
 }

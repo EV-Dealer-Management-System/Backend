@@ -116,7 +116,7 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var models = await _unitOfWork.ElectricVehicleModelRepository.GetAllAsync();
+                var models = (await _unitOfWork.ElectricVehicleModelRepository.GetAllAsync()).Where(m => m.IsActive == true);
                 var getModels = _mapper.Map<List<GetElectricVehicleModelDTO>>(models);
                 return new ResponseDTO
                 {
