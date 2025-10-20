@@ -45,8 +45,9 @@ namespace SWP391Web.Infrastructure.Repository
         public Task<int> GetAvailableQuantityByVersionColorAsync(Guid versionId, Guid colorId)
         {
             return _context.ElectricVehicles
-                .Where(ev => ev.VersionId == versionId
-                             && ev.ColorId == colorId
+                .Include (ev => ev.ElectricVehicleTemplate)
+                .Where(ev => ev.ElectricVehicleTemplate.VersionId == versionId
+                             && ev.ElectricVehicleTemplate.ColorId == colorId
                              && ev.Status == StatusVehicle.Available
                              && ev.Warehouse.EVCInventoryId != null)
                 .CountAsync();

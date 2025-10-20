@@ -12,6 +12,7 @@ using SWP391Web.Application.DTO.ElectricVehicleColor;
 using SWP391Web.Application.DTO.ElectricVehicleModel;
 using SWP391Web.Application.DTO.ElectricVehicleVersion;
 using SWP391Web.Application.DTO.EVCInventory;
+using SWP391Web.Application.DTO.EVTemplate;
 using SWP391Web.Application.DTO.Promotion;
 using SWP391Web.Application.DTO.Quote;
 using SWP391Web.Application.DTO.QuoteDetail;
@@ -33,19 +34,7 @@ namespace SWP391Web.Application.Mappings
             CreateMap<ElectricVehicleColor, GetElectricVehicleColorDTO>().ReverseMap();
             CreateMap<ElectricVehicleModel, GetElectricVehicleModelDTO>().ReverseMap();
             CreateMap<ElectricVehicleVersion, GetElectricVehicleVersionDTO>().ReverseMap();
-            CreateMap<ElectricVehicle, GetElecticVehicleDTO>()
-                .ForMember(dest => dest.Color, opt => opt.MapFrom(src => new ViewColorName
-                {
-                    ColorId = src.ElectricVehicleTemplate.Color.Id,
-                    ColorName = src.ElectricVehicleTemplate.Color.ColorName,
-                }))
-                .ForMember(dest => dest.Version, opt => opt.MapFrom(src => new ViewVersionName
-                {
-                    VersionId = src.ElectricVehicleTemplate.Version.Id,
-                    VersionName = src.ElectricVehicleTemplate.Version.VersionName,
-                    ModelId = src.ElectricVehicleTemplate.Version.Model.Id,
-                    ModelName = src.ElectricVehicleTemplate.Version.Model.ModelName,
-                }));
+            CreateMap<ElectricVehicle, GetElecticVehicleDTO>().ReverseMap();
             CreateMap<BookingEV, GetBookingEVDTO>()
                 .ForMember(dest => dest.BookingEVDetails, opt => opt.MapFrom(src => src.BookingEVDetails)).ReverseMap();
             CreateMap<BookingEVDetail, GetBookingEVDetailDTO>()
@@ -66,6 +55,20 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.ApplicationUser.Email))
                 .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.ApplicationUser.FullName))
                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.ApplicationUser.PhoneNumber)).ReverseMap();
+            CreateMap<ElectricVehicleTemplate, GetEVTemplateDTO>()
+                .ForMember(dest => dest.Color, opt => opt.MapFrom(src => new ViewColorName
+                {
+                    ColorId = src.Color.Id,
+                    ColorName = src.Color.ColorName,
+                }))
+                .ForMember(dest => dest.Version, opt => opt.MapFrom(src => new ViewVersionName
+                {
+                    VersionId = src.Version.Id,
+                    VersionName = src.Version.VersionName,
+                    ModelId = src.Version.Model.Id,
+                    ModelName = src.Version.Model.ModelName,
+                }));
+                //.ForMember(dest => dest.ImgUrl, opt => opt.MapFrom(src => src.EVAttachments.Select(a => a.Key).ToList()));
         }
     }
 }

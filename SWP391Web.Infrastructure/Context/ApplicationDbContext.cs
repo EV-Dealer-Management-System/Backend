@@ -34,6 +34,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<QuoteDetail> QuoteDetails { get; set; }
         public DbSet<ElectricVehicleTemplate> ElectricVehicleTemplates { get; set; }
         public DbSet<DealerMember> DealerMembers { get; set; }
+        
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -225,9 +226,9 @@ namespace SWP391Web.Infrastructure.Context
             // Configure EVAttachment entity
 
             modelBuilder.Entity<EVAttachment>()
-                .HasOne(eva => eva.ElectricVehicle)
+                .HasOne(eva => eva.ElectricVehicleTemplate)
                 .WithMany(ev => ev.EVAttachments)
-                .HasForeignKey(eva => eva.ElectricVehicleId)
+                .HasForeignKey(eva => eva.ElectricVehicleTemplateId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             /******************************************************************************/

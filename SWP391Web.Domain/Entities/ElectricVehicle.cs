@@ -22,7 +22,6 @@ namespace SWP391Web.Domain.Entities
         public DateTime? DealerReceivedDate { get; set; }
 
         public Warehouse Warehouse { get; set; } = null!;
-        public ICollection<EVAttachment> EVAttachments { get; set; } = new List<EVAttachment>();
         public ElectricVehicleTemplate ElectricVehicleTemplate { get; set; } = null!;
     }
 }

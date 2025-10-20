@@ -27,6 +27,7 @@ namespace SWP391Web.Infrastructure.IRepository
         public IPromotionRepository PromotionRepository { get; }
         public IEVAttachmentRepository EVAttachmentRepository { get; }
         public IDealerMemberRepository DealerMemberRepository { get; }
+        public IEVTemplateRepository EVTemplateRepository { get; }
         Task<int> SaveAsync();
     }
 }
