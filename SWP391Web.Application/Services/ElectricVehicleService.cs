@@ -1,5 +1,6 @@
 ﻿using Amazon.Runtime.Internal.Endpoints.StandardLibrary;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.ElectricVehicle;
 using SWP391Web.Application.IServices;
@@ -138,7 +139,12 @@ namespace SWP391Web.Application.Services
                 List<ElectricVehicle> vehicles;
                 if (role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
                 {
-                    vehicles = (await _unitOfWork.ElectricVehicleRepository.GetAllAsync()).ToList();
+                    vehicles = (await _unitOfWork.ElectricVehicleRepository.GetAllAsync(
+                        includes: q => q
+                        .Include(ev => ev.ElectricVehicleTemplate)
+                            .ThenInclude(evt => evt.Version)
+                                .ThenInclude(v => v.Model)
+                        .Include(ev => ev.Warehouse))).ToList();
                 }
                 else if (role == StaticUserRole.DealerManager || role == StaticUserRole.DealerStaff)
                 {

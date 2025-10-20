@@ -240,20 +240,20 @@ namespace SWP391Web.Application.Services
                         };
                     }
 
-                    quotes = (await _unitOfWork.QuoteRepository.GetAllAsync())
+                    quotes = (await _unitOfWork.QuoteRepository.GetAllQuotesWithDetailAsync())
                                 .Where(q => q.DealerId == dealer.Id)
                                 .ToList();
                 }
                 else
                 {
-                    quotes = (await _unitOfWork.QuoteRepository.GetAllAsync()).ToList();
+                    quotes = (await _unitOfWork.QuoteRepository.GetAllQuotesWithDetailAsync()).ToList();
                 }
 
                 var getQuotes = _mapper.Map<List<GetQuoteDTO>>(quotes);
                 return new ResponseDTO
                 {
                     IsSuccess = true,
-                    Message = "Quotes retrieve successfully",
+                    Message = "Get all quotes successfully",
                     StatusCode = 200,
                     Result = getQuotes
                 };

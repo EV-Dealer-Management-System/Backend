@@ -11,5 +11,6 @@ namespace SWP391Web.Infrastructure.IRepository
     {
         Task<Quote?> GetQuoteByIdAsync(Guid quoteId);
         Task<bool> IsQuoteExistByIdAsync(Guid quoteId);
+        Task<List<Quote>> GetAllQuotesWithDetailAsync();
     }
 }
