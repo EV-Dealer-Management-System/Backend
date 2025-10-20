@@ -121,7 +121,7 @@ namespace SWP391Web.Application.Services
                 var supportEmail = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist");
 
                 var companyApproverUserCode = _cfg["SmartCA:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
-                await UpdateProcessAsync(token, created.Data.Id, "dealer.1f8ea14e696047df8d81a7c08568a9d2.manager", companyApproverUserCode, created.Data.PositionA, created.Data.PositionB, created.Data.PageSign);
+                await UpdateProcessAsync(token, created.Data.Id, userId, companyApproverUserCode, created.Data.PositionA, created.Data.PositionB, created.Data.PageSign);
                 var result = await SendProcessAsync(token, created.Data.Id);
                 return new ResponseDTO
                 {
