@@ -180,9 +180,9 @@ namespace SWP391Web.Application.Services
                 var getTemplates = _mapper.Map<List<GetEVTemplateDTO>>(templates);
                 foreach (var template in getTemplates)
                 {
-                    var attachments =  _unitOfWork.EVAttachmentRepository.GetAttachmentsByElectricVehicleTemplateId(template.Id);
+                    var attachments = _unitOfWork.EVAttachmentRepository.GetAttachmentsByElectricVehicleTemplateId(template.Id);
                     var urlList = new List<string>();
-                    foreach( var att in attachments)
+                    foreach (var att in attachments)
                     {
                         var url = _s3Service.GenerateDownloadUrl(att.Key);
                         urlList.Add(url);
