@@ -35,8 +35,8 @@ namespace SWP391Web.Application.Services
                 {
                     VersionId = createEVTemplateDTO.VersionId,
                     ColorId = createEVTemplateDTO.ColorId,
+                    Description = createEVTemplateDTO.Description,
                     Price = createEVTemplateDTO.Price,
-                    Description = createEVTemplateDTO.Description
                 };
                 if(template == null)
                 {
