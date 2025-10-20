@@ -14,5 +14,7 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> GetVehicleTemplateByIdAsync(Guid EVTemplateId);
         Task<ResponseDTO> GetAllVehicleTemplateAsync();
         Task<ResponseDTO> UpdateEVTemplateAsync(Guid EVTemplateId, UpdateEVTemplateDTO updateEVTemplateDTO);
+        Task<ResponseDTO> DeleteEVTemplateAsync(Guid EVTemplateId);
+        Task<ResponseDTO> GetTemplatesByVersionAndColorAsync(Guid versionId,Guid colorId);
     }
 }

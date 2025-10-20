@@ -15,7 +15,6 @@ namespace SWP391Web.Domain.Entities
         public decimal MotorPower { get; set; }
         public decimal BatteryCapacity { get; set; }
         public decimal RangePerCharge { get; set; }
-        public SupplyStatus SupplyStatus { get; set; }
         public decimal TopSpeed { get; set; }
         public decimal Weight { get; set; }
         public decimal Height { get; set; }

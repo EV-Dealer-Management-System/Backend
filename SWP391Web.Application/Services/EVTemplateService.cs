@@ -79,6 +79,43 @@ namespace SWP391Web.Application.Services
             }
         }
 
+        public async Task<ResponseDTO> DeleteEVTemplateAsync(Guid EVTemplateId)
+        {
+            try
+            {
+                var templates = await _unitOfWork.EVTemplateRepository.GetByIdAsync(EVTemplateId);
+                if(templates == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Template not found",
+                        StatusCode = 404
+                    };
+                }
+
+                templates.IsActive = false; //soft delete
+                _unitOfWork.EVTemplateRepository.Update(templates);
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Delete promotion successfully",
+                    StatusCode = 200,
+                };
+
+            }catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
         public async Task<ResponseDTO> GetAllVehicleTemplateAsync()
         {
             try
@@ -112,6 +149,53 @@ namespace SWP391Web.Application.Services
                     Message = "Get all Template successfully",
                     StatusCode = 200,
                     Result = getTemples
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetTemplatesByVersionAndColorAsync(Guid versionId, Guid colorId)
+        {
+            try
+            {
+                var templates = await _unitOfWork.EVTemplateRepository.GetTemplatesByVersionAndColorAsync(versionId, colorId);
+                if ( templates == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = " Template not found",
+                        StatusCode = 404,
+                    };
+                }
+
+                var getTemplates = _mapper.Map<List<GetEVTemplateDTO>>(templates);
+                foreach (var template in getTemplates)
+                {
+                    var attachments =  _unitOfWork.EVAttachmentRepository.GetAttachmentsByElectricVehicleTemplateId(template.Id);
+                    var urlList = new List<string>();
+                    foreach( var att in attachments)
+                    {
+                        var url = _s3Service.GenerateDownloadUrl(att.Key);
+                        urlList.Add(url);
+                    }
+                    template.ImgUrl = urlList;
+                }
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Get templates successfully",
+                    StatusCode = 200,
+                    Result = getTemplates
                 };
             }
             catch (Exception ex)
