@@ -26,7 +26,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .ThenInclude(et => et.Version)
                 .ThenInclude(et => et.Model)
                 .Include(ev => ev.ElectricVehicleTemplate.Color)
-                .Where(ev => ev.Status == StatusVehicle.AtDealer)
+                .Where(ev => ev.Status == ElectricVehicleStatus.AtDealer)
                 .ToListAsync();
         }
 
@@ -37,7 +37,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .Where(ev => ev.ElectricVehicleTemplate.Version.ModelId == modelId
                             && ev.ElectricVehicleTemplate.VersionId == versionId
                             && ev.ElectricVehicleTemplate.ColorId == colorId
-                            && ev.Status == StatusVehicle.Available
+                            && ev.Status == ElectricVehicleStatus.Available
                             && ev.Warehouse.EVCInventoryId != null)
                 .CountAsync();
         }
@@ -48,7 +48,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .Include (ev => ev.ElectricVehicleTemplate)
                 .Where(ev => ev.ElectricVehicleTemplate.VersionId == versionId
                              && ev.ElectricVehicleTemplate.ColorId == colorId
-                             && ev.Status == StatusVehicle.Available
+                             && ev.Status == ElectricVehicleStatus.Available
                              && ev.Warehouse.EVCInventoryId != null)
                 .CountAsync();
         }
@@ -60,7 +60,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .Where(ev => ev.Warehouse.DealerId == dealerId
                         && ev.ElectricVehicleTemplate.VersionId == versionId
                         && ev.ElectricVehicleTemplate.ColorId == colorId
-                        && ev.Status == StatusVehicle.AtDealer)
+                        && ev.Status == ElectricVehicleStatus.AtDealer)
                 .CountAsync();
         }
 
@@ -75,7 +75,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .Where( ev => ev.Warehouse.DealerId == dealerId
                         && ev.ElectricVehicleTemplate.VersionId == versionId
                         && ev.ElectricVehicleTemplate.ColorId == colorId
-                        && ev.Status == StatusVehicle.AtDealer)
+                        && ev.Status == ElectricVehicleStatus.AtDealer)
                 .OrderBy(ev => ev.ImportDate)
                 .ToListAsync();
         }
@@ -85,7 +85,7 @@ namespace SWP391Web.Infrastructure.Repository
             return await _context.ElectricVehicles
                 .Include(ev => ev.ElectricVehicleTemplate)
                 .Where(ev => ev.ElectricVehicleTemplate.Version.ModelId == modelId
-                     && ev.Status == StatusVehicle.Available
+                     && ev.Status == ElectricVehicleStatus.Available
                      && ev.Warehouse.EVCInventoryId != null)
                 .Include(ev => ev.ElectricVehicleTemplate.Version)
                 .Include(ev => ev.ElectricVehicleTemplate.Color)
@@ -101,7 +101,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .Where(ev => ev.ElectricVehicleTemplate.Version.ModelId == modelId
                              && ev.ElectricVehicleTemplate.VersionId == versionId
                              && ev.ElectricVehicleTemplate.ColorId == colorId
-                             && ev.Status == StatusVehicle.Available
+                             && ev.Status == ElectricVehicleStatus.Available
                              && ev.WarehouseId != null
                              && ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
                 .OrderBy(ev => ev.ImportDate)
@@ -139,7 +139,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .Include(ev => ev.ElectricVehicleTemplate.Color)
                 .Include(ev => ev.Warehouse)
                 .Where(ev => ev.Warehouse.DealerId == dealerId
-                            && ev.Status == StatusVehicle.AtDealer)
+                            && ev.Status == ElectricVehicleStatus.AtDealer)
                 .ToListAsync();
         }
 
@@ -151,7 +151,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .Where(ev => ev.ElectricVehicleTemplate.Version.ModelId == modelId
                              && ev.ElectricVehicleTemplate.VersionId == versionId
                              && ev.ElectricVehicleTemplate.ColorId == colorId
-                             && ev.Status == StatusVehicle.Pending
+                             && ev.Status == ElectricVehicleStatus.Pending
                              && ev.WarehouseId != null
                              && ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
                 .OrderBy(ev => ev.ImportDate)

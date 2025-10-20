@@ -58,7 +58,9 @@ namespace SWP391Web.Application.Mappings
                 }));
             CreateMap<EVCInventory, GetEVCInventoryDTO>().ReverseMap();
             CreateMap<Warehouse, GetWarehouseDTO>().ReverseMap();
-            CreateMap<EContract, GetEContractDTO>().ReverseMap();
+            CreateMap<EContract, GetEContractDTO>()
+                .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FullName)).ReverseMap();
+
             CreateMap<EContractTemplate, GetEContractTemplateDTO>().ReverseMap();
             CreateMap<Quote,GetQuoteDTO>()
                 .ForMember(dest => dest.QuoteDetails, opt => opt.MapFrom(src => src.QuoteDetails)).ReverseMap();

@@ -17,7 +17,7 @@ namespace SWP391Web.Application.DTO.ElectricVehicle
         public ViewTemplate? ElectricVehicleTemplate { get; set; }
         public ViewWarehouse? Warehouse { get; set; }
         public string VIN { get; set; } = null!;
-        public StatusVehicle Status { get; set; }
+        public ElectricVehicleStatus Status { get; set; }
         public DateTime? ManufactureDate { get; set; }
         public DateTime? ImportDate { get; set; }
         public DateTime? WarrantyExpiryDate { get; set; }

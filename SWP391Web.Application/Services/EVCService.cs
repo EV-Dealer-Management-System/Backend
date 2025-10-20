@@ -120,7 +120,7 @@ namespace SWP391Web.Application.Services
                 {
                     evmStaffs = sortBy.ToLower().Trim() switch
                     {
-                        "fullname" => isAcsending is true ? evmStaffs.OrderBy(u => u.Email) : evmStaffs.OrderByDescending(u => u.Email),
+                        "fullname" => isAcsending is true ? evmStaffs.OrderBy(u => u.FullName) : evmStaffs.OrderByDescending(u => u.FullName),
                         "createdat" => isAcsending is true ? evmStaffs.OrderBy(u => u.CreatedAt) : evmStaffs.OrderByDescending(u => u.CreatedAt),
 
                         _ => evmStaffs
