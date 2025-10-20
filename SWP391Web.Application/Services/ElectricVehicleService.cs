@@ -63,7 +63,7 @@ namespace SWP391Web.Application.Services
                         ElectricVehicleTemplateId = createElectricVehicleDTO.ElectricVehicleTemplateId,
                         WarehouseId = createElectricVehicleDTO.WarehouseId,
                         VIN = vin,
-                        Status = StatusVehicle.Available,
+                        Status = ElectricVehicleStatus.Available,
                         ManufactureDate = createElectricVehicleDTO.ManufactureDate,
                         ImportDate = createElectricVehicleDTO.ImportDate,
                         WarrantyExpiryDate = createElectricVehicleDTO.WarrantyExpiryDate,
