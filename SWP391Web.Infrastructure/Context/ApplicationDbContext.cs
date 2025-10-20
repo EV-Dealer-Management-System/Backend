@@ -196,9 +196,9 @@ namespace SWP391Web.Infrastructure.Context
             // Configure EContract entity
 
             modelBuilder.Entity<EContract>()
-                .HasOne(e => e.Ower)
-                .WithOne(o => o.EContract)
-                .HasForeignKey<EContract>(e => e.OwnerBy)
+                .HasOne(e => e.Owner)
+                .WithMany(o => o.EContracts)
+                .HasForeignKey(e => e.OwnerBy)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<EContract>()

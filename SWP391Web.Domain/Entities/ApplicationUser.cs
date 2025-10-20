@@ -10,7 +10,7 @@ namespace SWP391Web.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public ICollection<Dealer> ManagingDealers { get; set; } = new List<Dealer>();
 
-        public EContract EContract = null!;
+        public ICollection<EContract> EContracts { get; set; } = new List<EContract>();
         public Quote Quote = null!;
         public ICollection<DealerMember> DealerMembers { get; set; } = new List<DealerMember>();
     }
