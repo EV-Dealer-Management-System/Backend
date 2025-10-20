@@ -145,5 +145,72 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
+
+        public async Task<ResponseDTO> UpdateEcontractTemplateAsync(string code, UpdateEContractTemplateDTO templateDTO, CancellationToken ct)
+        {
+            try
+            {
+                var existingTemplate = await _unitOfWork.EContractTemplateRepository.GetbyCodeAsync(code, ct);
+                if (existingTemplate is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Template not found",
+                        StatusCode = 404
+                    };
+                }
+
+                if (existingTemplate.IsDeleted)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Cannot update a deleted template",
+                        StatusCode = 400
+                    };
+                }
+
+                if (templateDTO.Name is not null && templateDTO.Html is null)
+                {
+                    existingTemplate.UpdateName(templateDTO.Name);
+                }
+                else if (templateDTO.Html is not null && templateDTO.Name is null)
+                {
+                    existingTemplate.UpdateContentHtml(templateDTO.Html);
+                }
+                else if (templateDTO.Name is not null && templateDTO.Html is not null)
+                {
+                    existingTemplate.Update(templateDTO.Name, templateDTO.Html);
+                }
+                else
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No fields to update",
+                        StatusCode = 401
+                    };
+                }
+
+                _unitOfWork.EContractTemplateRepository.Update(existingTemplate);
+                await _unitOfWork.SaveAsync();
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Template updated successfully",
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"An error occurred at UpdateEcontractTemplateAsync in EContractTemplateService: {ex.Message}",
+                    StatusCode = 500
+                };
+            }
+        }
     }
 }
