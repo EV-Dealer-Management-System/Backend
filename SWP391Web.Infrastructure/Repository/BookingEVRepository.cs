@@ -17,6 +17,21 @@ namespace SWP391Web.Infrastructure.Repository
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
+
+        public async Task<List<BookingEV>> GetAllBookingWithDetailAsync()
+        {
+            {
+                return await _context.BookingEVs
+                    .Include(b => b.BookingEVDetails)
+                        .ThenInclude(bd => bd.Version)
+                            .ThenInclude(v => v.Model)
+                    .Include(b => b.BookingEVDetails)
+                        .ThenInclude(bd => bd.Color)
+                    .Include(b => b.Dealer)
+                    .ToListAsync();
+            }
+        }
+
         public async Task<BookingEV?> GetBookingWithIdAsync(Guid bookingId)
         {
           return await _context.BookingEVs
