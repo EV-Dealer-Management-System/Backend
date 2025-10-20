@@ -414,7 +414,7 @@ namespace SWP391Web.Application.Services
                         //Change status to InTransit
                         foreach( var ev in selectedVehicle)
                         {
-                            ev.Status = StatusVehicle.InTransit;
+                            ev.Status = ElectricVehicleStatus.InTransit;
                             _unitOfWork.ElectricVehicleRepository.Update(ev);
                         }
                     }

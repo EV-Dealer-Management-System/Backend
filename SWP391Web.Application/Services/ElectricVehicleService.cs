@@ -62,7 +62,7 @@ namespace SWP391Web.Application.Services
                     ElectricVehicleTemplateId = createElectricVehicleDTO.ElectricVehicleTemplateId,
                     WarehouseId = createElectricVehicleDTO.WarehouseId,
                     VIN = createElectricVehicleDTO.VIN,
-                    Status = StatusVehicle.Available,
+                    Status = ElectricVehicleStatus.Available,
                     ManufactureDate = createElectricVehicleDTO.ManufactureDate,
                     ImportDate = createElectricVehicleDTO.ImportDate,
                     WarrantyExpiryDate = createElectricVehicleDTO.WarrantyExpiryDate,
@@ -509,7 +509,7 @@ namespace SWP391Web.Application.Services
 
         }
 
-        public async Task<ResponseDTO> UpdateVehicleStatusAsync(Guid vehicleId, StatusVehicle newStatus)
+        public async Task<ResponseDTO> UpdateVehicleStatusAsync(Guid vehicleId, ElectricVehicleStatus newStatus)
         {
             try
             {
