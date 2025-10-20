@@ -11,7 +11,7 @@ namespace SWP391Web.Domain.Entities
         public ICollection<Dealer> ManagingDealers { get; set; } = new List<Dealer>();
 
         public ICollection<EContract> EContracts { get; set; } = new List<EContract>();
-        public Quote Quote = null!;
+        public ICollection<Quote> Quotes { get; set; } = new List<Quote>();
         public ICollection<DealerMember> DealerMembers { get; set; } = new List<DealerMember>();
     }
 }

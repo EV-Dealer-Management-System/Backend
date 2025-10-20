@@ -242,8 +242,8 @@ namespace SWP391Web.Infrastructure.Context
 
             modelBuilder.Entity<Quote>()
                 .HasOne(q => q.CreatedByUser)
-                .WithOne(u => u.Quote)
-                .HasForeignKey<Quote>(q => q.CreatedBy)
+                .WithMany(u => u.Quotes)
+                .HasForeignKey(q => q.CreatedBy)
                 .OnDelete(DeleteBehavior.Restrict);
 
             /******************************************************************************/
