@@ -17,13 +17,21 @@ public static class WebApplicationBuilderExtensions
     {
         builder.Services.AddAuthentication(options =>
         {
-            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        }).AddJwtBearer(options =>
-          {
+        })
+            .AddCookie("External", options =>
+            {
+                options.Cookie.Name = "ExternalLogin";
+                options.Cookie.HttpOnly = true;
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
+                options.Cookie.SameSite = SameSiteMode.None;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            })
+            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
               options.SaveToken = true;
-              options.RequireHttpsMetadata = false;
+              options.RequireHttpsMetadata = true;
               options.TokenValidationParameters = new TokenValidationParameters()
               {
                   ValidAudience = builder.Configuration["JWT:ValidAudience"],
@@ -34,7 +42,25 @@ public static class WebApplicationBuilderExtensions
                   ValidateLifetime = true,
                   ValidateIssuerSigningKey = true,
               };
-          });
+            })
+            .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+            {
+                options.ClientId = builder.Configuration["Google:ClientId"]
+                    ?? throw new InvalidOperationException("Google ClientId is not configured.");
+                options.ClientSecret = builder.Configuration["Google:ClientSecret"]
+                    ?? throw new InvalidOperationException("Google ClientSecret is not configured.");
+
+                // Đặt callback RÕ RÀNG, KHÁC với LoginPath
+                options.CallbackPath = "/signin-google";
+
+                // Google dùng cookie "External" để giữ state
+                options.SignInScheme = "External";
+
+                options.CorrelationCookie.SameSite = SameSiteMode.None;
+                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.CorrelationCookie.HttpOnly = true;
+                options.SaveTokens = true;
+            });
 
         return builder;
     }
@@ -109,25 +135,6 @@ public static class WebApplicationBuilderExtensions
 
         builder.Services.AddSingleton<IUserIdProvider, NameIdentifierUserIdProvider>();
 
-        return builder;
-    }
-
-    public static WebApplicationBuilder AddGoogleAuthentication(this WebApplicationBuilder builder)
-    {
-        builder.Services.AddAuthentication(options =>
-        {
-            options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-        })
-            .AddCookie()
-            .AddGoogle(options =>
-            {
-                options.ClientId = builder.Configuration["Google:ClientId"]
-                    ?? throw new InvalidOperationException("Google ClientId is not configured.");
-                options.ClientSecret = builder.Configuration["Google:ClientSecret"]
-                    ?? throw new InvalidOperationException("Google ClientSecret is not configured.");
-                options.CallbackPath = "/auth/signin-google";
-            });
         return builder;
     }
 }
