@@ -189,8 +189,9 @@ namespace SWP391Web.Application.Services
                 var companyName = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist");
                 var supportEmail = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist");
 
-                var decodeUrl = HttpUtility.UrlDecode(created.Data!.DownloadUrl);
-                await _emailService.SendContractEmailAsync(user.Email, user.FullName, created.Data!.Subject, decodeUrl, created.Data.PdfBytes, created.Data.FileName, companyName, supportEmail);
+                var encode = HttpUtility.UrlEncode(created.Data.DownloadUrl);
+                var url = StaticLinkUrl.ViewDaftEContractURL + encode;
+                await _emailService.SendContractEmailAsync(user.Email, user.FullName, created.Data!.Subject, url, created.Data.PdfBytes, created.Data.FileName, companyName, supportEmail);
 
                 await _unitOfWork.SaveAsync();
                 return new ResponseDTO
