@@ -13,6 +13,7 @@ namespace SWP391Web.Domain.Enums
         InProgress = 3,
         Completed = 4,
         Correcting = 5,
+        Acepted = 6,
         Cancelled = -3,
         Deleted = -2,
         Rejected = -1
