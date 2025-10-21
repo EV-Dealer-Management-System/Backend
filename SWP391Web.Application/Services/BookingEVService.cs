@@ -65,7 +65,7 @@ namespace SWP391Web.Application.Services
                     DealerId = dealer.Id,
                     Note = createBookingEVDTO.Note,
                     BookingDate = DateTime.UtcNow,
-                    Status = BookingStatus.Pending,
+                    Status = BookingStatus.Draft,
                     CreatedBy = dealer.Name,
                     TotalQuantity = createBookingEVDTO.BookingDetails.Sum(d => d.Quantity),
                 };
@@ -336,12 +336,12 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if (newStatus == BookingStatus.Pending)
+                if (newStatus == BookingStatus.Pending && bookingEV.Status != BookingStatus.Draft)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Cannot update status to pending.",
+                        Message = "Can only change to pending from draft",
                         StatusCode = 400
                     };
                 }
@@ -371,15 +371,30 @@ namespace SWP391Web.Application.Services
                         };
                     }
 
-                    if (bookingEV.Status != BookingStatus.Pending)
+                    if (bookingEV.Status != BookingStatus.Draft && bookingEV.Status != BookingStatus.Pending)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
-                            Message = "Can only cancel a pending booking.",
+                            Message = "Can only cancel a pending or draft booking.",
                             StatusCode = 400
                         };
                     }
+
+                    foreach (var dt in bookingEV.BookingEVDetails)
+                    {
+                        var vehicles = await _unitOfWork.ElectricVehicleRepository
+                            .GetPendingVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+
+                        foreach (var ev in vehicles.Take(dt.Quantity))
+                        {
+                            ev.Status = ElectricVehicleStatus.Available;
+                            _unitOfWork.ElectricVehicleRepository.Update(ev);
+                        }
+                    }
+
+                    bookingEV.Status = BookingStatus.Cancelled;
+
                 }
 
                 if (newStatus == BookingStatus.Approved)
@@ -463,36 +478,31 @@ namespace SWP391Web.Application.Services
                         }
                     }
                 }
-                
-                if (newStatus == BookingStatus.Cancelled)
+
+                if (bookingEV.Status == BookingStatus.Draft && newStatus == BookingStatus.Pending)
                 {
                     foreach (var dt in bookingEV.BookingEVDetails)
                     {
-                        var pendingVehicles = await _unitOfWork.ElectricVehicleRepository
-                            .GetPendingVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+                        var availableVehicles = await _unitOfWork.ElectricVehicleRepository
+                            .GetAvailableVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
 
-                        if (pendingVehicles == null || !pendingVehicles.Any())
-                        {
+                        if (availableVehicles.Count() < dt.Quantity)
                             return new ResponseDTO
                             {
                                 IsSuccess = false,
-                                Message = "No vehicles in pending status.",
-                                StatusCode = 404
+                                Message = "No vehicles available for booking.",
+                                StatusCode = 400,
                             };
-                        }
-
-                        var selectedVehicles = pendingVehicles
-                            .OrderBy(ev => ev.ImportDate)
-                            .Take(dt.Quantity)
-                            .ToList();
-
-                        foreach (var ev in selectedVehicles)
+                                
+                        foreach (var ev in availableVehicles.Take(dt.Quantity))
                         {
-                            ev.Status = ElectricVehicleStatus.Available;
+                            ev.Status = ElectricVehicleStatus.Pending;
                             _unitOfWork.ElectricVehicleRepository.Update(ev);
                         }
                     }
                 }
+
+
                 bookingEV.Status = newStatus;
                 _unitOfWork.BookingEVRepository.Update(bookingEV);
                 await _unitOfWork.SaveAsync();
