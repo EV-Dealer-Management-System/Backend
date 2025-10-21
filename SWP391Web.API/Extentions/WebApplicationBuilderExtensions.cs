@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -107,6 +109,25 @@ public static class WebApplicationBuilderExtensions
 
         builder.Services.AddSingleton<IUserIdProvider, NameIdentifierUserIdProvider>();
 
+        return builder;
+    }
+
+    public static WebApplicationBuilder AddGoogleAuthentication(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+        })
+            .AddCookie()
+            .AddGoogle(options =>
+            {
+                options.ClientId = builder.Configuration["Google:ClientId"]
+                    ?? throw new InvalidOperationException("Google ClientId is not configured.");
+                options.ClientSecret = builder.Configuration["Google:ClientSecret"]
+                    ?? throw new InvalidOperationException("Google ClientSecret is not configured.");
+                options.CallbackPath = "/auth/signin-google";
+            });
         return builder;
     }
 }

@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.IService;
+using SWP391Web.Domain.Constants;
 
 namespace SWP391Web.API.Controllers
 {
@@ -42,6 +45,35 @@ namespace SWP391Web.API.Controllers
         {
             var response = await _authService.ChangePassword(changePasswordDTO, User);
             return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost]
+        [Route("google-callback")]
+        public async Task<ActionResult<ResponseDTO>> GoogleCallBack([FromQuery] string? returnUrl)
+        {
+            if(!(User?.Identity?.IsAuthenticated ?? false))
+            {
+                return Unauthorized();
+            }
+
+            var response = await _authService.HandleGoogleCallbackAsync(User);
+            if (!response.IsSuccess)
+                return StatusCode(response.StatusCode, response);
+
+            var token = ((dynamic)response.Result).AccessToken;
+            var url = (returnUrl ?? $"{StaticLinkUrl.WebUrl}/login-success") + $"?token={token}";
+            return Redirect(url);
+        }
+
+        [HttpGet]
+        [Route("signin-google")]
+        public IActionResult SignInGoogle([FromQuery] string? returnUrl)
+        {
+            var properties = new AuthenticationProperties
+            {
+                RedirectUri = Url.Action(nameof(GoogleCallBack), "Auth", new { returnUrl }, Request.Scheme)
+            };
+            return Challenge(properties, GoogleDefaults.AuthenticationScheme);
         }
     }
 }

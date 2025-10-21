@@ -81,7 +81,7 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _userManager.ResetPasswordAsync(user, token, newPassword);
         }
-        
+
         public async Task<IdentityResult> SetPassword(ApplicationUser user, string newPassword)
         {
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
@@ -102,6 +102,21 @@ namespace SWP391Web.Infrastructure.Repository
         {
             var roles = await _userManager.GetRolesAsync(user);
             return await _userManager.RemoveFromRolesAsync(user, roles);
+        }
+
+        public async Task<IdentityResult> CreateAsync(ApplicationUser user)
+        {
+            return await _userManager.CreateAsync(user);
+        }
+
+        public async Task<IdentityResult> AddLoginGoogleAsync(ApplicationUser user)
+        {
+            return await _userManager.AddLoginAsync(user, new UserLoginInfo("Google", user.Id, "Google"));
+        }
+
+        public async Task<IList<UserLoginInfo>> HasLogin(ApplicationUser user)
+        {
+            return await _userManager.GetLoginsAsync(user);
         }
     }
 }

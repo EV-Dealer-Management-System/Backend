@@ -259,5 +259,81 @@ namespace SWP391Web.Application.Service
                 };
             }
         }
+
+        public async Task<ResponseDTO> HandleGoogleCallbackAsync(ClaimsPrincipal userClaims)
+        {
+            try
+            {
+                var email = userClaims.FindFirst(ClaimTypes.Email)?.Value;
+                var name = userClaims.FindFirst(ClaimTypes.Name)?.Value;
+                var googleSub = userClaims.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    return new ResponseDTO { 
+                        IsSuccess = false, 
+                        StatusCode = 404, 
+                        Message = "User not found in internal system."
+                    };
+                }
+
+                var user = await _unitOfWork.UserManagerRepository.GetByEmailAsync(email);
+
+                if (user is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "User not found"
+                    };
+                }
+                var logins = await _unitOfWork.UserManagerRepository.HasLogin(user);
+                var hasGoogleLinked = logins.Any(login => login.LoginProvider == "Google" && login.ProviderKey == googleSub);
+                if (!hasGoogleLinked)
+                {
+                    var linkResult = await _unitOfWork.UserManagerRepository.AddLoginGoogleAsync(user);
+                    if (!linkResult.Succeeded)
+                    {
+                        var msg = string.Join("; ", linkResult.Errors.Select(e => e.Description));
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            StatusCode = 500,
+                            Message = $"Failed to link Google account: {msg}"
+                        };
+                    }
+                }
+
+                var accessToken = await _tokenService.GenerateJwtAccessTokenAysnc(user);
+                var refreshToken = await _tokenService.GenerateJwtRefreshTokenAsync(user, rememberMe: true);
+
+                await _unitOfWork.SaveAsync();
+                var getUser = _mapper.Map<GetApplicationUserDTO>(user);
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Google login successful",
+                    Result = new { 
+                        AccessToken = 
+                        accessToken, 
+                        RefreshToken =
+                        refreshToken, 
+                        UserData = getUser
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error at HandleGoogleCallbackAsync: {ex.Message}"
+                };
+            }
+        }
+
     }
 }

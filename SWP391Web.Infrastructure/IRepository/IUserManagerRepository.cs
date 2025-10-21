@@ -22,5 +22,8 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<IdentityResult> ChangePasswordAsync(ApplicationUser user, string currentPassword, string newPassword);
         Task<IList<ApplicationUser>?> GetUsersInRoleAsync(string roleName);
         Task<IdentityResult> RemoveAllRole(ApplicationUser user);
+        Task<IdentityResult> CreateAsync(ApplicationUser user);
+        Task<IdentityResult> AddLoginGoogleAsync(ApplicationUser user);
+        Task<IList<UserLoginInfo>> HasLogin(ApplicationUser user);
     }
 }
