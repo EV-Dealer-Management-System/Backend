@@ -39,6 +39,10 @@ builder.Services.AddEndpointsApiExplorer();
 // Base on Extensions.ServiceCollectionExtensions
 builder.Services.RegisterService();
 
+// Register Google Authentication
+// Base on Extensions.WebApplicationBuilderExtensions
+builder.AddGoogleAuthentication();
+
 // Register Authentication service
 // Base on Extensions.WebApplicationBuilderExtensions
 builder.AddAuthenticationService();
