@@ -41,7 +41,7 @@ builder.Services.RegisterService();
 
 // Register Google Authentication
 // Base on Extensions.WebApplicationBuilderExtensions
-builder.AddGoogleAuthentication();
+//builder.AddGoogleAuthentication();
 
 // Register Authentication service
 // Base on Extensions.WebApplicationBuilderExtensions

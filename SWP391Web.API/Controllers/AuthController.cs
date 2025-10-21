@@ -47,21 +47,24 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
-        [HttpPost]
+        [HttpGet]
         [Route("google-callback")]
         public async Task<ActionResult<ResponseDTO>> GoogleCallBack([FromQuery] string? returnUrl)
         {
-            if(!(User?.Identity?.IsAuthenticated ?? false))
+            var cookie = await HttpContext.AuthenticateAsync("External");
+            if (!cookie.Succeeded || cookie.Principal is null)
             {
                 return Unauthorized();
             }
 
-            var response = await _authService.HandleGoogleCallbackAsync(User);
+            var response = await _authService.HandleGoogleCallbackAsync(cookie.Principal);
             if (!response.IsSuccess)
                 return StatusCode(response.StatusCode, response);
 
+            await HttpContext.SignOutAsync("External");
+
             var token = ((dynamic)response.Result).AccessToken;
-            var url = (returnUrl ?? $"{StaticLinkUrl.WebUrl}/login-success") + $"?token={token}";
+            var url = (returnUrl ?? $"{StaticLinkUrl.WebUrl}/login-success#token={token}");
             return Redirect(url);
         }
 
