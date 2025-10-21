@@ -287,6 +287,41 @@ namespace SWP391Web.Application.Services
             }
         }
 
+        public async Task<ResponseDTO> GetVehicleByBookingIdAsync(Guid bookingId)
+        {
+            try
+            {
+                var vehicles = await _unitOfWork.BookingEVRepository.GetVehiclesByBookingIdAsync(bookingId);
+
+                if (!vehicles.Any())
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No vehicles found",
+                        StatusCode = 404
+                    };
+
+                var result = _mapper.Map<List<GetVehicleByBookingDTO>>(vehicles);
+
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Get vehicle from booking successfully",
+                    StatusCode = 200,
+                    Result = result
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
         public async Task<ResponseDTO> UpdateBookingStatusAsync(ClaimsPrincipal user, Guid bookingId, BookingStatus newStatus)
         {
             try
@@ -490,7 +525,7 @@ namespace SWP391Web.Application.Services
                             return new ResponseDTO
                             {
                                 IsSuccess = false,
-                                Message = "No vehicles available for booking.",
+                                Message = "Not enough vehicles for booking.",
                                 StatusCode = 400,
                             };
                                 

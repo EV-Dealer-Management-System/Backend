@@ -101,6 +101,25 @@ namespace SWP391Web.Application.Mappings
                     ModelName = src.Version.Model.ModelName,
                 }));
                 //.ForMember(dest => dest.ImgUrl, opt => opt.MapFrom(src => src.EVAttachments.Select(a => a.Key).ToList()));
+            CreateMap<ElectricVehicle, GetVehicleByBookingDTO>()
+                .ForMember(dest => dest.ElectricVehicleId, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.Color, opt => opt.MapFrom(src => new ViewColorName
+                {
+                    ColorId = src.ElectricVehicleTemplate.Color.Id,
+                    ColorName = src.ElectricVehicleTemplate.Color.ColorName,
+                }))
+                .ForMember(dest => dest.Version, opt => opt.MapFrom(src => new ViewVersionName
+                {
+                    VersionId = src.ElectricVehicleTemplate.Version.Id,
+                    VersionName = src.ElectricVehicleTemplate.Version.VersionName,
+                    ModelId = src.ElectricVehicleTemplate.Version.Model.Id,
+                    ModelName = src.ElectricVehicleTemplate.Version.Model.ModelName,
+                }))
+                .ForMember(dest => dest.Warehouse, opt => opt.MapFrom(src => new ViewWarehouse
+                {
+                    WarehouseId = src.Warehouse.Id,
+                    Name = src.Warehouse.WarehouseName,
+                }));
         }
     }
 }

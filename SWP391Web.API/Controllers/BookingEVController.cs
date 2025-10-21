@@ -42,5 +42,11 @@ namespace SWP391Web.API.Controllers
             var response = await _bookingEVService.UpdateBookingStatusAsync(User, bookingId, newStatus);
             return StatusCode(response.StatusCode, response);
         }
+        [HttpGet("get-vehicles-by-booking-id/{bookingId}")]
+        public async Task<ActionResult<ResponseDTO>> GetVehicleByBookingId([FromRoute] Guid bookingId)
+        {
+            var response = await _bookingEVService.GetVehicleByBookingIdAsync(bookingId);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }
