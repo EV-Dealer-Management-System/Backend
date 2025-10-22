@@ -10,5 +10,7 @@ namespace SWP391Web.Domain.Constants
     {
         public const string WebUrl = "https://electricvehiclesystem.click";
         public const string ViewDaftEContractURL = WebUrl + "/Econtract/View?downloadUrl=";
+        public const string HostWebsite = "electricvehiclesystem.click";
+        public const string HostApi = "api.electricvehiclesystem.click";
     }
 }

@@ -26,6 +26,7 @@ public static class WebApplicationBuilderExtensions
                 options.Cookie.HttpOnly = true;
                 options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
                 options.Cookie.SameSite = SameSiteMode.None;
+                options.SlidingExpiration = true;
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             })
             .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
@@ -50,15 +51,12 @@ public static class WebApplicationBuilderExtensions
                 options.ClientSecret = builder.Configuration["Google:ClientSecret"]
                     ?? throw new InvalidOperationException("Google ClientSecret is not configured.");
 
-                // Đặt callback RÕ RÀNG, KHÁC với LoginPath
                 options.CallbackPath = "/signin-google";
 
-                // Google dùng cookie "External" để giữ state
                 options.SignInScheme = "External";
 
                 options.CorrelationCookie.SameSite = SameSiteMode.None;
                 options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
-                options.CorrelationCookie.HttpOnly = true;
                 options.SaveTokens = true;
             });
 

@@ -1,4 +1,6 @@
-﻿using AutoMapper;
+﻿using Amazon.Runtime.Internal.Util;
+using AutoMapper;
+using Microsoft.Extensions.Caching.Memory;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.IService;
 using SWP391Web.Domain.Constants;
@@ -14,12 +16,14 @@ namespace SWP391Web.Application.Service
         private readonly IEmailService _emailService;
         private readonly ITokenService _tokenService;
         private readonly IMapper _mapper;
-        public AuthService(IUnitOfWork unitOfWork, IEmailService emailService, ITokenService tokenService, IMapper mapper)
+        private readonly IMemoryCache _cache;
+        public AuthService(IUnitOfWork unitOfWork, IEmailService emailService, ITokenService tokenService, IMapper mapper, IMemoryCache cache)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         }
 
         public async Task<ResponseDTO> LoginUser(LoginUserDTO loginUserDTO)
@@ -267,8 +271,17 @@ namespace SWP391Web.Application.Service
                 var email = userClaims.FindFirst(ClaimTypes.Email)?.Value;
                 var name = userClaims.FindFirst(ClaimTypes.Name)?.Value;
                 var googleSub = userClaims.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (googleSub is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 400,
+                        Message = "Google Sub (NameIdentifier) claim is missing."
+                    };
+                }
 
-                if (string.IsNullOrWhiteSpace(email))
+                    if (string.IsNullOrWhiteSpace(email))
                 {
                     return new ResponseDTO { 
                         IsSuccess = false, 
@@ -292,14 +305,15 @@ namespace SWP391Web.Application.Service
                 var hasGoogleLinked = logins.Any(login => login.LoginProvider == "Google" && login.ProviderKey == googleSub);
                 if (!hasGoogleLinked)
                 {
-                    var linkResult = await _unitOfWork.UserManagerRepository.AddLoginGoogleAsync(user);
+                    var linkResult = await _unitOfWork.UserManagerRepository.AddLoginGoogleAsync(user, googleSub);
                     if (!linkResult.Succeeded)
                     {
                         var msg = string.Join("; ", linkResult.Errors.Select(e => e.Description));
+                        var status = msg.Contains("already exists", StringComparison.OrdinalIgnoreCase) ? 409 : 500;
                         return new ResponseDTO
                         {
                             IsSuccess = false,
-                            StatusCode = 500,
+                            StatusCode = status,
                             Message = $"Failed to link Google account: {msg}"
                         };
                     }
@@ -315,11 +329,9 @@ namespace SWP391Web.Application.Service
                     IsSuccess = true,
                     StatusCode = 200,
                     Message = "Google login successful",
-                    Result = new { 
-                        AccessToken = 
-                        accessToken, 
-                        RefreshToken =
-                        refreshToken, 
+                    Result = new AuthResultDTO{ 
+                        AccessToken = accessToken, 
+                        RefreshToken = refreshToken, 
                         UserData = getUser
                     }
                 };
@@ -335,5 +347,10 @@ namespace SWP391Web.Application.Service
             }
         }
 
+        public Task StoreAsync(string ticket, AuthResultDTO value, TimeSpan ttl)
+        {
+            _cache.Set(ticket, value, ttl);
+            return Task.CompletedTask;
+        }
     }
 }

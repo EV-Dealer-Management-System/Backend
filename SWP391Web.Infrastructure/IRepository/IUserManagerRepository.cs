@@ -23,7 +23,7 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<IList<ApplicationUser>?> GetUsersInRoleAsync(string roleName);
         Task<IdentityResult> RemoveAllRole(ApplicationUser user);
         Task<IdentityResult> CreateAsync(ApplicationUser user);
-        Task<IdentityResult> AddLoginGoogleAsync(ApplicationUser user);
+        Task<IdentityResult> AddLoginGoogleAsync(ApplicationUser user, string googleSub);
         Task<IList<UserLoginInfo>> HasLogin(ApplicationUser user);
     }
 }
