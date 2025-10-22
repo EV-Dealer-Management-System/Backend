@@ -107,6 +107,18 @@ namespace SWP391Web.API.Controllers
             return Challenge(props, GoogleDefaults.AuthenticationScheme);
         }
 
+        [AllowAnonymous]
+        [HttpGet("exchange")]
+        public async Task<IActionResult> Exchange([FromQuery] string ticket)
+        {
+            if (string.IsNullOrWhiteSpace(ticket)) return BadRequest(new { message = "Missing ticket" });
+
+            var payload = await _authService.RedeemAsync(ticket);
+            if (payload is null) return Unauthorized(new { message = "Ticket invalid or expired" });
+
+            return Ok(payload);
+        }
+
         private string SafeReturn(string? returnUrl)
         {
             var @default = $"{StaticLinkUrl.WebUrl}/login-success";

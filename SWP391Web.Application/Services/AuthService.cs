@@ -281,11 +281,12 @@ namespace SWP391Web.Application.Service
                     };
                 }
 
-                    if (string.IsNullOrWhiteSpace(email))
+                if (string.IsNullOrWhiteSpace(email))
                 {
-                    return new ResponseDTO { 
-                        IsSuccess = false, 
-                        StatusCode = 404, 
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
                         Message = "User not found in internal system."
                     };
                 }
@@ -329,9 +330,10 @@ namespace SWP391Web.Application.Service
                     IsSuccess = true,
                     StatusCode = 200,
                     Message = "Google login successful",
-                    Result = new AuthResultDTO{ 
-                        AccessToken = accessToken, 
-                        RefreshToken = refreshToken, 
+                    Result = new AuthResultDTO
+                    {
+                        AccessToken = accessToken,
+                        RefreshToken = refreshToken,
                         UserData = getUser
                     }
                 };
@@ -352,5 +354,14 @@ namespace SWP391Web.Application.Service
             _cache.Set(ticket, value, ttl);
             return Task.CompletedTask;
         }
+
+        public Task<AuthResultDTO?> RedeemAsync(string ticket) 
+        { 
+            if (_cache.TryGetValue<AuthResultDTO>(ticket, out var payload)) 
+            { 
+                _cache.Remove(ticket); 
+                return Task.FromResult<AuthResultDTO?>(payload); 
+            } 
+            return Task.FromResult<AuthResultDTO?>(null); }
     }
 }

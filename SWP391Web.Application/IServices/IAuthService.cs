@@ -11,5 +11,6 @@ namespace SWP391Web.Application.IService
         Task<ResponseDTO> ChangePassword(ChangePasswordDTO changePasswordDTO, ClaimsPrincipal userClaims);
         Task<ResponseDTO> HandleGoogleCallbackAsync(ClaimsPrincipal userClaims);
         Task StoreAsync(string ticket, AuthResultDTO value, TimeSpan ttl);
+        Task<AuthResultDTO?> RedeemAsync(string ticket);
     }
 }
