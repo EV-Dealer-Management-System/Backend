@@ -1,10 +1,15 @@
 ﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.IService;
 using SWP391Web.Domain.Constants;
+using System.Reflection;
+using System.Text.Json;
+using static System.Net.WebRequestMethods;
 
 namespace SWP391Web.API.Controllers
 {
@@ -13,6 +18,13 @@ namespace SWP391Web.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private static readonly HashSet<string> AllowedHosts = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "localhost",
+            "localhost:5173",
+            StaticLinkUrl.HostWebsite,
+            StaticLinkUrl.HostApi
+        };
         public AuthController(IAuthService authService)
         {
             _authService = authService ?? throw new ArgumentNullException(nameof(authService));
@@ -47,6 +59,7 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        [AllowAnonymous]
         [HttpGet]
         [Route("google-callback")]
         public async Task<ActionResult<ResponseDTO>> GoogleCallBack([FromQuery] string? returnUrl)
@@ -54,29 +67,51 @@ namespace SWP391Web.API.Controllers
             var cookie = await HttpContext.AuthenticateAsync("External");
             if (!cookie.Succeeded || cookie.Principal is null)
             {
-                return Unauthorized();
+                var err = Uri.EscapeDataString("Google auth failed");
+                return Redirect($"{SafeReturn(returnUrl)}?error={err}");
             }
 
-            var response = await _authService.HandleGoogleCallbackAsync(cookie.Principal);
-            if (!response.IsSuccess)
-                return StatusCode(response.StatusCode, response);
-
+            var res = await _authService.HandleGoogleCallbackAsync(cookie.Principal);
             await HttpContext.SignOutAsync("External");
 
-            var token = ((dynamic)response.Result).AccessToken;
-            var url = (returnUrl ?? $"{StaticLinkUrl.WebUrl}/login-success#token={token}");
-            return Redirect(url);
+            if (!res.IsSuccess)
+            {
+                var err = Uri.EscapeDataString(res.Message ?? "Google login failed");
+                return Redirect($"{SafeReturn(returnUrl)}?error={err}");
+            }
+
+            var vm = JsonSerializer.Deserialize<AuthResultDTO>(JsonSerializer.Serialize(res.Result), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
+            if (vm is null || string.IsNullOrWhiteSpace(vm.AccessToken))
+                return StatusCode(500, new { message = "No AccessToken in Result" });
+
+            var ticket = Guid.NewGuid().ToString("N");
+            await _authService.StoreAsync(ticket, vm, TimeSpan.FromMinutes(2));
+
+            var sep = SafeReturn(returnUrl).Contains('?') ? "&" : "?";
+            return Redirect($"{SafeReturn(returnUrl)}{sep}ticket={ticket}");
         }
 
+        [AllowAnonymous]
         [HttpGet]
         [Route("signin-google")]
         public IActionResult SignInGoogle([FromQuery] string? returnUrl)
         {
-            var properties = new AuthenticationProperties
+            var defaultReturn = $"{StaticLinkUrl.WebUrl}/login-success";
+            var safeReturn = returnUrl ?? defaultReturn;
+
+            var props = new AuthenticationProperties
             {
-                RedirectUri = Url.Action(nameof(GoogleCallBack), "Auth", new { returnUrl }, Request.Scheme)
+                RedirectUri = Url.Action(nameof(GoogleCallBack), "Auth", new { returnUrl = safeReturn }, Request.Scheme)
             };
-            return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+            return Challenge(props, GoogleDefaults.AuthenticationScheme);
+        }
+
+        private string SafeReturn(string? returnUrl)
+        {
+            var @default = $"{StaticLinkUrl.WebUrl}/login-success";
+            if (string.IsNullOrWhiteSpace(returnUrl)) return @default;
+            return returnUrl;
         }
     }
 }

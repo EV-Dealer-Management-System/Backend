@@ -109,9 +109,10 @@ namespace SWP391Web.Infrastructure.Repository
             return await _userManager.CreateAsync(user);
         }
 
-        public async Task<IdentityResult> AddLoginGoogleAsync(ApplicationUser user)
+        public async Task<IdentityResult> AddLoginGoogleAsync(ApplicationUser user, string googleSub)
         {
-            return await _userManager.AddLoginAsync(user, new UserLoginInfo("Google", user.Id, "Google"));
+            var info = new UserLoginInfo("Google", googleSub, "Google");
+            return await _userManager.AddLoginAsync(user, info);
         }
 
         public async Task<IList<UserLoginInfo>> HasLogin(ApplicationUser user)
