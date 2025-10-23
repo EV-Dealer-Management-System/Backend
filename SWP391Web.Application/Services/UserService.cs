@@ -56,7 +56,7 @@ namespace SWP391Web.Application.Services
                     Note = createCustomerDTO.Note,
                 };
 
-                await _unitOfWork.CustomerRepository.AddAsync(customer,CancellationToken.None);
+                //await _unitOfWork.CustomerRepository.AddAsync(customer,CancellationToken.None);
                 await _unitOfWork.SaveAsync();
 
                 return new ResponseDTO
@@ -101,7 +101,7 @@ namespace SWP391Web.Application.Services
                         Message = "Dealer not found."
                     };
                 }
-                var customers = await _unitOfWork.CustomerRepository.GetAllAsync();
+                var customers = ""; // await _unitOfWork.CustomerRepository.GetAllAsync();
                 var customerDTOs = _mapper.Map<List<GetCustomerDTO>>(customers);
                 return new ResponseDTO
                 {
@@ -149,7 +149,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var customer = await _unitOfWork.CustomerRepository.GetByIdAsync(customerId);
+                var customer = ""; //await _unitOfWork.CustomerRepository.GetByIdAsync(customerId);
 
                 if (customer == null)
                 {
