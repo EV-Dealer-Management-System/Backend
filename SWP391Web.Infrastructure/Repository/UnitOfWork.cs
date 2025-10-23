@@ -9,7 +9,6 @@ namespace SWP391Web.Infrastructure.Repository
     {
         private readonly ApplicationDbContext _context;
         public IUserManagerRepository UserManagerRepository { get; private set; }
-        public ICustomerRepository CustomerRepository { get; private set; }
         public IEmailTemplateRepository EmailTemplateRepository { get; private set; }
         public ICustomerOrderRepository CustomerOrderRepository { get; private set; }
         public IDealerRepository DealerRepository { get; private set; }
@@ -34,7 +33,6 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
 
             UserManagerRepository = new UserManagerRepository(userManagerRepository, _context);
-            CustomerRepository = new CustomerRepository(_context);
             EmailTemplateRepository = new EmailTemplateRepository(_context);
             CustomerOrderRepository = new CustomerOrderRepository(_context);
             DealerRepository = new DealerRepository(_context);

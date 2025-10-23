@@ -15,8 +15,6 @@ namespace SWP391Web.API.Controllers
         {
             _customerService = customerService ?? throw new ArgumentNullException(nameof(customerService));
         }
-
-        [Authorize]
         [HttpGet]
         [Route("get-customers-by-id/{customerId}")]
         public async Task<ActionResult<ResponseDTO>> GetCustomersById(Guid customerId)

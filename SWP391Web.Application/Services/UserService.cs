@@ -10,12 +10,12 @@ using System.Security.Claims;
 
 namespace SWP391Web.Application.Services
 {
-    public class CustomerService : ICustomerService
+    public class UserService : ICustomerService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public CustomerService(IUnitOfWork unitOfWork, IMapper mapper)
+        public UserService(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -150,6 +150,7 @@ namespace SWP391Web.Application.Services
                 }
 
                 var customer = await _unitOfWork.CustomerRepository.GetByIdAsync(customerId);
+
                 if (customer == null)
                 {
                     return new ResponseDTO

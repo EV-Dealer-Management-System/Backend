@@ -15,7 +15,7 @@ namespace SWP391Web.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public string? Note { get; set; }
 
-        public ApplicationUser User { get; set; } = null!;
         public ICollection<CustomerOrder> CustomerOrders { get; set; } = new List<CustomerOrder>();
+        public ICollection<Dealer> Dealers { get; set; } = new List<Dealer>();
     }
 }
