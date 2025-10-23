@@ -15,5 +15,8 @@ namespace SWP391Web.Domain.Entities
         public int Quantity { get; set; }
         public decimal? Discount { get; set; }
         public decimal TotalPrice { get; set; }
+
+        public CustomerOrder CustomerOrder { get; set; } = null!;
+        public ElectricVehicle ElectricVehicle { get; set; } = null!;
     }
 }
