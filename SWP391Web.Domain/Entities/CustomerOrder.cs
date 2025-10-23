@@ -12,5 +12,9 @@ namespace SWP391Web.Domain.Entities
         public DateTime CreatedAt { get; set; }
         public decimal TotalAmount { get; set; }
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
+
+        public Customer Customer { get; set; } = null!;
+        public Quote Quote { get; set; } = null!;
+        public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     }
 }

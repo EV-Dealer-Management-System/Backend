@@ -34,7 +34,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<QuoteDetail> QuoteDetails { get; set; }
         public DbSet<ElectricVehicleTemplate> ElectricVehicleTemplates { get; set; }
         public DbSet<DealerMember> DealerMembers { get; set; }
-        
+        public DbSet<OrderDetail> OrderDetails { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -321,6 +321,37 @@ namespace SWP391Web.Infrastructure.Context
                 .WithMany(c => c.ElectricVehicleTemplates)
                 .HasForeignKey(evt => evt.ColorId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure CustomerOrder entity
+
+            modelBuilder.Entity<CustomerOrder>()
+                .HasOne(co => co.Quote)
+                .WithMany(q => q.CustomerOrders)
+                .HasForeignKey(co => co.QuoteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CustomerOrder>()
+                .HasOne(co => co.Customer)
+                .WithMany(c => c.CustomerOrders)
+                .HasForeignKey(co => co.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure OrderDetail entity
+
+            modelBuilder.Entity<OrderDetail>()
+                .HasOne(od => od.CustomerOrder)
+                .WithMany(co => co.OrderDetails)
+                .HasForeignKey(od => od.CustomerOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<OrderDetail>()
+                .HasOne(od => od.ElectricVehicle)
+                .WithMany(v => v.OrderDetails)
+                .HasForeignKey(od => od.ElectricVehicleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
         }
     }
 }
