@@ -16,6 +16,7 @@ namespace SWP391Web.Domain.Entities
         public QuoteStatus Status { get; set; }
         public decimal TotalAmount { get; set; }
         public string? Note { get; set; }
+        
 
         public Dealer Dealer { get; set; } = null!;
         public ICollection<QuoteDetail> QuoteDetails { get; set; } = new List<QuoteDetail>();

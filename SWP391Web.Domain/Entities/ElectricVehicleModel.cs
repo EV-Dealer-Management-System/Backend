@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SWP391Web.Domain.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,6 +14,7 @@ namespace SWP391Web.Domain.Entities
         public string? Description { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public bool IsActive { get; set; } = true;
+        public StatusModel Status { get; set; } = StatusModel.Available;
         public ICollection<ElectricVehicleVersion> Versions { get; set; } = new List<ElectricVehicleVersion>();
         public Promotion? Promotion { get; set; }
     }

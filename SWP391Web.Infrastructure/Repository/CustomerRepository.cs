@@ -13,12 +13,14 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public async Task<Customer?> GetByUserIdAsync(string userId)
+        public async Task<Customer?> GetByIdAsync(Guid customerId)
         {
-            return await _context.Customers
-                .Include(c => c.User)
-                .Where(c => c.UserId == userId)
-                .FirstOrDefaultAsync();
+            return await _context.Customers.FirstOrDefaultAsync(c => c.Id == customerId);
+        }
+
+        public async Task<bool> IsExistByIdAsync(Guid customerId)
+        {
+            return await _context.Customers.AnyAsync(c => c.Id == customerId);
         }
     }
 }

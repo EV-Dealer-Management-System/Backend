@@ -6,12 +6,9 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Domain.Enums
 {
-    public enum QuoteStatus
+    public enum StatusModel
     {
-        Pending = 0,
-        Accepted = 1,
-        Rejected = 2,
-        Expired = 3
-
+        Available = 1,
+        Unavailable = 2,
     }
 }

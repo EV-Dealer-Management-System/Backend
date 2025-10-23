@@ -9,6 +9,7 @@ namespace SWP391Web.Infrastructure.IRepository
 {
     public interface ICustomerRepository : IRepository<Customer>
     {
-        Task<Customer?> GetByUserIdAsync(string userId);
+        Task<Customer?> GetByIdAsync(Guid customerId);
+        Task<bool> IsExistByIdAsync(Guid customerId);
     }
 }

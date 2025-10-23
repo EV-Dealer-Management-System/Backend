@@ -18,10 +18,10 @@ namespace SWP391Web.API.Controllers
 
         [Authorize]
         [HttpGet]
-        [Route("get-customers-profile")]
-        public async Task<ActionResult<ResponseDTO>> GetCustomersProfile()
+        [Route("get-customers-by-id/{customerId}")]
+        public async Task<ActionResult<ResponseDTO>> GetCustomersById(Guid customerId)
         {
-            var response = await _customerService.GetCustomerProfile(User);
+            var response = await _customerService.GetCustomerById(User,customerId);
             return StatusCode(response.StatusCode, response);
         }
     }
