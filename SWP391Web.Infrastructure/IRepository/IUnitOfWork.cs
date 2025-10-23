@@ -9,7 +9,6 @@ namespace SWP391Web.Infrastructure.IRepository
     public interface IUnitOfWork
     {
         public IUserManagerRepository UserManagerRepository { get; }
-        public ICustomerRepository CustomerRepository { get; }
         public IEmailTemplateRepository EmailTemplateRepository { get; }
         public ICustomerOrderRepository CustomerOrderRepository { get; }
         public IDealerRepository DealerRepository { get; }
