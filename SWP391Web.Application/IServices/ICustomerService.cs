@@ -5,6 +5,6 @@ namespace SWP391Web.Application.IServices
 {
     public interface ICustomerService
     {
-        Task<ResponseDTO> GetCustomerProfile(ClaimsPrincipal user);
+        Task<ResponseDTO> GetUserProfile(ClaimsPrincipal user);
     }
 }
