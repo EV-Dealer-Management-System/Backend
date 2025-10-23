@@ -144,6 +144,87 @@ namespace SWP391Web.Application.Services
             }
         }
 
+        public async Task<ResponseDTO> GetAllDealerAsync(string? filterOn, string? filterQuery, string? sortBy, bool? isAcsending, int pageNumber, int PageSize, CancellationToken ct)
+        {
+            try
+            {
+                Expression<Func<Dealer, bool>> baseFilter = d => d.DealerStatus == DealerStatus.Active;
+
+                if (!string.IsNullOrWhiteSpace(filterOn) && (!string.IsNullOrWhiteSpace(filterQuery)))
+                {
+                    var query = filterQuery.Trim().ToLower();
+                    baseFilter = filterOn.Trim().ToLower() switch
+                    {
+                        "name" => d => d.DealerStatus == DealerStatus.Active &&
+                                       d.Name != null &&
+                                       d.Name.ToLower().Contains(query),
+
+                        _ => d => d.DealerStatus == DealerStatus.Active
+                    };
+                }
+
+                string sortField = (sortBy ?? "createdat").Trim().ToLower();
+                bool asc = isAcsending ?? true;
+
+                (IReadOnlyList<Dealer> items, int total) result = (new List<Dealer>(), 0);
+                Func<IQueryable<Dealer>, IQueryable<Dealer>> includes = q => q.Include(dm => dm.Manager);
+
+                switch (sortField)
+                {
+                    case "name":
+                        result = _unitOfWork.DealerRepository.GetPagedAsync(
+                            filter: baseFilter,
+                            includes: includes,
+                            orderBy: d => d.Name!,
+                            ascending: asc,
+                            pageNumber: pageNumber,
+                            pageSize: PageSize,
+                            ct: ct).Result;
+                        break;
+
+                    default:
+                        result = _unitOfWork.DealerRepository.GetPagedAsync(
+                            filter: baseFilter,
+                            includes: includes,
+                            orderBy: d => d.Id,
+                            ascending: asc,
+                            pageNumber: pageNumber,
+                            pageSize: PageSize,
+                            ct: ct).Result;
+                        break;
+                }
+
+                var data = _mapper.Map<List<GetDealerDTO>>(result.items);
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Get dealers successfully.",
+                    Result = new
+                    {
+                        Data = data,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = PageSize,
+                            TotalItems = result.total,
+                            TotalPages = (int)Math.Ceiling((double)result.total / PageSize)
+                        }
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to get all dealers at DealerService: {ex.Message}"
+                };
+            }
+        }
+
         public async Task<ResponseDTO> GetAllDealerStaffAsync(ClaimsPrincipal claimUser, string? filterOn, string? filterQuery, string? sortBy, bool? isAscending, int pageNumber, int pageSize, CancellationToken ct)
         {
             try
