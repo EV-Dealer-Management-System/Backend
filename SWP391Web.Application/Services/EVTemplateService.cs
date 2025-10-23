@@ -166,8 +166,31 @@ namespace SWP391Web.Application.Services
         {
             try
             {
+                var version = await _unitOfWork.ElectricVehicleVersionRepository.GetByIdsAsync(versionId);
+                if (version == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = " Version not found",
+                        StatusCode = 404,
+                    };
+                }
+
+                var color = await _unitOfWork.ElectricVehicleColorRepository.GetByIdsAsync(colorId);
+                if(color == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = " Color not found",
+                        StatusCode = 404,
+                    };
+                }
+                
+
                 var templates = await _unitOfWork.EVTemplateRepository.GetTemplatesByVersionAndColorAsync(versionId, colorId);
-                if ( templates == null)
+                if ( templates == null || !templates.Any())
                 {
                     return new ResponseDTO
                     {
