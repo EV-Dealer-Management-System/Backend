@@ -26,7 +26,7 @@ namespace SWP391Web.Application.Mappings
         public AutoMappingProfile()
         {
             CreateMap<ApplicationUser, GetApplicationUserDTO>().ReverseMap();
-            //CreateMap<Customer, GetCustomerDTO>();
+            CreateMap<Customer, GetCustomerDTO>().ReverseMap();
             CreateMap<ElectricVehicleColor, GetElectricVehicleColorDTO>().ReverseMap();
             CreateMap<ElectricVehicleModel, GetElectricVehicleModelDTO>().ReverseMap();
             CreateMap<ElectricVehicleVersion, GetElectricVehicleVersionDTO>().ReverseMap();

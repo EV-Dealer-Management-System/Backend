@@ -80,13 +80,5 @@ namespace SWP391Web.API.Controllers
             var response = await _electricVehicleService.GetDealerInventoryAsync(User);
             return StatusCode(response.StatusCode, response);
         }
-
-        [HttpGet("get-sample-vehicles")]
-        public async Task<ActionResult<ResponseDTO>> GetSampleVehiclesAsync()
-        {
-            var response = await _electricVehicleService.GetSampleVehiclesAsync(User);
-            return StatusCode(response.StatusCode, response);
-        }
-
     }
 }

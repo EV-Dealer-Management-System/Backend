@@ -34,12 +34,6 @@ namespace SWP391Web.API.Controllers
             var response = await _electricVehicleVersionService.GetVersionByIdAsync(versionId);
             return StatusCode(response.StatusCode, response);
         }
-        [HttpGet("get-version-by-name/{versionName}")]
-        public async Task<ActionResult<ResponseDTO>> GetVersionByNameAsync([FromRoute] string versionName)
-        {
-            var response = await _electricVehicleVersionService.GetVersionByNameAsync(versionName);
-            return StatusCode(response.StatusCode, response);
-        }
         [HttpPut("update-version/{versionId}")]
         public async Task<ActionResult<ResponseDTO>> UpdateVersionAsync(Guid versionId, [FromBody] UpdateElectricVehicleVersionDTO updateElectricVehicleVersionDTO)
         {
@@ -53,7 +47,12 @@ namespace SWP391Web.API.Controllers
             var response = await _electricVehicleVersionService.GetAllAvailableVersionsByModelIdAsync(modelId);
             return StatusCode(response.StatusCode, response);
         }
-
+        [HttpDelete("detele-version-by-id/{versionId}")]
+        public async Task<ActionResult<ResponseDTO>> DeleteVersionByIdAsync([FromRoute] Guid versionId)
+        {
+            var response = await _electricVehicleVersionService.DeleteVersionAsync(versionId);
+            return StatusCode(response.StatusCode, response);
+        }
 
     }
 }

@@ -15,13 +15,11 @@ namespace SWP391Web.API.Controllers
         {
             _customerService = customerService ?? throw new ArgumentNullException(nameof(customerService));
         }
-
-        [Authorize]
         [HttpGet]
-        [Route("get-user-profile")]
-        public async Task<ActionResult<ResponseDTO>> GetCustomersProfile()
+        [Route("get-customers-by-id/{customerId}")]
+        public async Task<ActionResult<ResponseDTO>> GetCustomersById(Guid customerId)
         {
-            var response = await _customerService.GetUserProfile(User);
+            var response = await _customerService.GetCustomerById(User,customerId);
             return StatusCode(response.StatusCode, response);
         }
     }
