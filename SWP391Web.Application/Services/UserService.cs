@@ -8,17 +8,17 @@ using System.Security.Claims;
 
 namespace SWP391Web.Application.Services
 {
-    public class CustomerService : ICustomerService
+    public class UserService : ICustomerService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public CustomerService(IUnitOfWork unitOfWork, IMapper mapper)
+        public UserService(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
-        public async Task<ResponseDTO> GetCustomerProfile(ClaimsPrincipal user)
+        public async Task<ResponseDTO> GetUserProfile(ClaimsPrincipal user)
         {
             try
             {
@@ -33,7 +33,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var customer = await _unitOfWork.CustomerRepository.GetByUserIdAsync(userId);
+                var customer = await _unitOfWork.UserManagerRepository.GetByIdAsync(userId);
                 if (customer == null)
                 {
                     return new ResponseDTO
