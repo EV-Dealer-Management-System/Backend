@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.IRepository;
 using System;
@@ -43,6 +44,36 @@ namespace SWP391Web.Infrastructure.Repository
                 .Include(b => b.Dealer)
                 .FirstOrDefaultAsync(b => b.Id == bookingId);
         }
+        public async Task<List<ElectricVehicle?>> GetVehiclesByBookingIdAsync(Guid bookingId)
+        {
+            var bookingDetails = await _context.BookingEVDetails
+                .Where(bd => bd.BookingId == bookingId)
+                .ToListAsync();
+
+            var vehicles = new List<ElectricVehicle>();
+
+            foreach (var detail in bookingDetails)
+            {
+                var matchedVehicles = await _context.ElectricVehicles
+                    .Include(ev => ev.ElectricVehicleTemplate)
+                        .ThenInclude(t => t.Version)
+                            .ThenInclude(v => v.Model)
+                    .Include(ev => ev.ElectricVehicleTemplate.Color)
+                    .Include(ev => ev.Warehouse)
+                    .Where(ev =>
+                        ev.Status == ElectricVehicleStatus.Pending &&
+                        ev.ElectricVehicleTemplate.VersionId == detail.VersionId &&
+                        ev.ElectricVehicleTemplate.ColorId == detail.ColorId)
+                    .OrderBy(ev => ev.ImportDate)
+                    .Take(detail.Quantity)
+                    .ToListAsync();
+
+                vehicles.AddRange(matchedVehicles);
+            }
+
+            return vehicles;
+        }
+
 
         public async Task<bool> IsBookingExistsById(Guid bookingId)
         {
