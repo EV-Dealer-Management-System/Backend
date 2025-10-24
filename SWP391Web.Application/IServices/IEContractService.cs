@@ -10,7 +10,7 @@ namespace SWP391Web.Application.IServices
 {
     public interface IEContractService
     {
-        Task<string> GetAccessTokenAsync();
+        Task<ResponseDTO<GetAccessTokenDTO>> GetAccessTokenAsync();
         Task<ProcessLoginInfoDto> GetAccessTokenAsyncByCode(string processCode, CancellationToken ct = default);
         Task<byte[]> DownloadAsync(string url);
 
