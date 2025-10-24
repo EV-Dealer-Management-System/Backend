@@ -233,11 +233,10 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> CreateEContractAsync(ClaimsPrincipal userClaim, CreateEContractDTO createEContractDTO, CancellationToken ct)
+        public async Task<ResponseDTO> CreateEContractAsync(ClaimsPrincipal userClaim, Guid eContractId, CancellationToken ct)
         {
             try
             {
-                var eContractId = createEContractDTO.EContractId;
                 var eContract = await _unitOfWork.EContractRepository.GetByIdAsync(eContractId, ct);
                 if (eContract is null)
                     return new ResponseDTO
@@ -262,7 +261,7 @@ namespace SWP391Web.Application.Services
 
                 var roleId = new List<Guid> 
                 { 
-                    Guid.Parse(_cfg["EContract:RoleId"] ?? throw new ArgumentNullException(nameof(createEContractDTO), "EContract:RoleId is not exist")) 
+                    Guid.Parse(_cfg["EContract:RoleId"] ?? throw new Exception("EContract:RoleId is not exist")) 
                 };
 
                 var vnptUser = new VnptUserUpsert
@@ -289,7 +288,18 @@ namespace SWP391Web.Application.Services
 
                 var companyApproverUserCode = _cfg["EContractClient:CompanyApproverUserCode"] ?? throw new ArgumentNullException("EContractClient:CompanyApproverUserCode is not exist");
 
-                var uProcess = await UpdateProcessAsync(access.Data!.AccessToken, eContractId.ToString(), companyApproverUserCode, dealerManagerId, createEContractDTO.positionA, createEContractDTO.positionB, createEContractDTO.pageSign);
+                var draftEContract = await GetVnptEContractByIdAsync(eContractId.ToString(), ct);
+                if (!draftEContract.Success)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Cannot get draft EContract from VNPT"
+                    };
+                }
+
+                var uProcess = await UpdateProcessAsync(access.Data!.AccessToken, eContractId.ToString(), companyApproverUserCode, dealerManagerId, draftEContract.Data!.PositionA!, draftEContract.Data!.PositionA!, draftEContract.Data.PageSign);
 
                 var sent = await SendProcessAsync(access.Data!.AccessToken, eContractId.ToString());
 
