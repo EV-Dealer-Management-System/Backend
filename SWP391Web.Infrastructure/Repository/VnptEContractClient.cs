@@ -22,7 +22,7 @@ namespace SWP391Web.Infrastructure.Repository
         {
             _cfg = cfg;
             _http = http;
-            _baseUrl = _cfg["SmartCA:BaseUrl"];
+            _baseUrl = _cfg["VNPT-EContract-Client:BaseUrl"];
         }
 
         private static void Bearer(HttpRequestMessage request, string token)

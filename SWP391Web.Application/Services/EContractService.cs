@@ -48,9 +48,9 @@ namespace SWP391Web.Application.Services
 
         public async Task<string> GetAccessTokenAsync()
         {
-            var username = _cfg["SmartCA:username"] ?? throw new Exception("Cannot find username in SmartCA");
-            var password = _cfg["SmartCA:password"] ?? throw new Exception("Cannot find password in SmartCA");
-            int? companyId = null;
+            var username = _cfg["VNPT-EContract-Client:Username"] ?? throw new Exception("Cannot find username in VNPT-EContract-Client");
+            var password = _cfg["VNPT-EContract-Client:Password"] ?? throw new Exception("Cannot find password in VNPT-EContract-Client");
+            int? companyId = _cfg["VNPT-EContract-Client:CompanyId"] is not null ? int.Parse(_cfg["VNPT-EContract-Client:CompanyId"]!) : throw new Exception("Cannot find company ID in VNPT-EContract-Client");
 
             var payload = new { username, password, companyId };
             var jsonPayload = JsonSerializer.Serialize(payload, new JsonSerializerOptions
@@ -58,7 +58,7 @@ namespace SWP391Web.Application.Services
                 DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
             });
 
-            var urlGetToken = $"{_cfg["SmartCA:BaseUrl"]}/api/v2/auth/password-login";
+            var urlGetToken = $"{_cfg["VNPT-EContract-Client:BaseUrl"]}/api/auth/password-login";
             using var req = new HttpRequestMessage(HttpMethod.Post, urlGetToken);
             req.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
@@ -120,7 +120,7 @@ namespace SWP391Web.Application.Services
                 var companyName = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist");
                 var supportEmail = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist");
 
-                var companyApproverUserCode = _cfg["SmartCA:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
+                var companyApproverUserCode = _cfg["VNPT-EContract-Client:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
                 await UpdateProcessAsync(token, created.Data.Id, userId, companyApproverUserCode, created.Data.PositionA, created.Data.PositionB, created.Data.PageSign);
                 var result = await SendProcessAsync(token, created.Data.Id);
                 return new ResponseDTO
@@ -263,7 +263,7 @@ namespace SWP391Web.Application.Services
 
                 var upsert = await CreateOrUpdateUsersAsync(token, vnptUserList);
 
-                var companyApproverUserCode = _cfg["SmartCA:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
+                var companyApproverUserCode = _cfg["VNPT-EContract-Client:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
 
                 var uProcess = await UpdateProcessAsync(token, eContractId.ToString(), companyApproverUserCode, dealerManagerId, createEContractDTO.positionA, createEContractDTO.positionB, createEContractDTO.pageSign);
 
@@ -746,7 +746,7 @@ namespace SWP391Web.Application.Services
             if (string.IsNullOrWhiteSpace(processCode))
                 throw new ArgumentException("processCode is required", nameof(processCode));
 
-            var url = $"{_cfg["SmartCA:BaseUrl"]}/api/auth/process-code-login";
+            var url = $"{_cfg["VNPT-EContract-Client:BaseUrl"]}/api/auth/process-code-login";
             var payload = new { processCode };
 
             using var req = new HttpRequestMessage(HttpMethod.Post, url)
