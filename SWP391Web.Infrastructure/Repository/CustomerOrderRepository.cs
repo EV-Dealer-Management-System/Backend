@@ -12,6 +12,11 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context;
         }
 
+        public int GenerateOrderNumber()
+        {
+            return _context.CustomerOrders.Count() + 1;
+        }
+
         public async Task<CustomerOrder?> GetByIdAsync(Guid customerId)
         {
             return await _context.CustomerOrders.FindAsync(customerId);
