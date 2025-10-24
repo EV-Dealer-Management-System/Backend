@@ -104,8 +104,8 @@ public static class WebApplicationBuilderExtensions
         builder.Services.AddHttpClient<IEContractService, EContractService>(client =>
         {
             client.BaseAddress = new Uri(
-                builder.Configuration["SmartCA:BaseUrl"]
-                ?? throw new Exception("Cannot find base url in SmartCA"));
+                builder.Configuration["VNPT-EContract-Client:BaseUrl"]
+                ?? throw new Exception("Cannot find base url in VNPT-EContract-Client"));
 
             client.Timeout = TimeSpan.FromSeconds(30);
 
