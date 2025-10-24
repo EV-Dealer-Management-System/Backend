@@ -36,6 +36,37 @@ namespace SWP391Web.Application.Services
                         Message = "Promotion is exist"
                     };
                 }
+                if (createPromotionDTO.ModelId.HasValue)
+                {
+                    var existByModel = await _unitOfWork.PromotionRepository
+                        .GetActivePromotionByModelIdAsync(createPromotionDTO.ModelId.Value);
+
+                    if (existByModel != null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            StatusCode = 400,
+                            Message = "This model already has an active promotion."
+                        };
+                    }
+                }
+
+                if (createPromotionDTO.VersionId.HasValue)
+                {
+                    var existByVersion = await _unitOfWork.PromotionRepository
+                        .GetActivePromotionByVersionIdAsync(createPromotionDTO.VersionId.Value);
+
+                    if (existByVersion != null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            StatusCode = 400,
+                            Message = "This version already has an active promotion."
+                        };
+                    }
+                }
 
                 if (createPromotionDTO.StartDate >= createPromotionDTO.EndDate)
                 {

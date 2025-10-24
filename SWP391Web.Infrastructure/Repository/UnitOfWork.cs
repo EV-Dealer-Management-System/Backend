@@ -28,6 +28,7 @@ namespace SWP391Web.Infrastructure.Repository
         public IDealerMemberRepository DealerMemberRepository { get; private set; }
         public IEVTemplateRepository EVTemplateRepository { get; private set; }
         public IBookingDetailRepository BookingDetailRepository { get; private set; }
+        public ICustomerRepository CustomerRepository { get; private set; }
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -52,6 +53,7 @@ namespace SWP391Web.Infrastructure.Repository
             DealerMemberRepository = new DealerMemberRepository(_context);
             EVTemplateRepository = new EVTemplateRepository(_context);
             BookingDetailRepository = new BookingDetailRepository(_context);
+            CustomerRepository = new CustomerRepository(_context);
         }
         public async Task<int> SaveAsync()
         {

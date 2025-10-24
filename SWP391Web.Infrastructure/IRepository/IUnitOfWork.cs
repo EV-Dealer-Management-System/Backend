@@ -28,6 +28,7 @@ namespace SWP391Web.Infrastructure.IRepository
         public IDealerMemberRepository DealerMemberRepository { get; }
         public IEVTemplateRepository EVTemplateRepository { get; }
         public IBookingDetailRepository BookingDetailRepository { get; }
+        public ICustomerRepository CustomerRepository { get; }
         Task<int> SaveAsync();
     }
 }

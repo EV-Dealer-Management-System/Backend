@@ -18,5 +18,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<Dealer?> GetDealerByUserIdAsync(string userId, CancellationToken ct);
         Task<Dealer?> GetDealerByManagerIdAsync(string managerId, CancellationToken ct);
         Task<Dealer?> GetDealerByManagerOrStaffAsync(string userdId, CancellationToken ct);
+        Task<Dealer?> GetTrackedDealerByManagerOrStaffAsync(string userId, CancellationToken ct);
     }
 }
