@@ -116,6 +116,8 @@ app.MapGet("/health", () => Results.Ok("Healthy"));
 
 app.UseRouting();
 
+app.UseCors("FrontEnd");
+
 app.Use(async (ctx, next) =>
 {
     ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
@@ -128,8 +130,6 @@ app.UseCookiePolicy(new CookiePolicyOptions
     MinimumSameSitePolicy = SameSiteMode.None,
     Secure = CookieSecurePolicy.Always
 });
-
-app.UseCors("FrontEnd");
 
 app.UseAuthentication();
 app.UseAuthorization();

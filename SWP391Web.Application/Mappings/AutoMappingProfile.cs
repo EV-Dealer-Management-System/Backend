@@ -4,6 +4,7 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.BookingEV;
 using SWP391Web.Application.DTO.BookingEVDetail;
 using SWP391Web.Application.DTO.Customer;
+using SWP391Web.Application.DTO.CustomerOrder;
 using SWP391Web.Application.DTO.Dealer;
 using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.DTO.EContractTemplate;
@@ -27,6 +28,8 @@ namespace SWP391Web.Application.Mappings
         {
             CreateMap<ApplicationUser, GetApplicationUserDTO>().ReverseMap();
             CreateMap<Customer, GetCustomerDTO>().ReverseMap();
+            CreateMap<CustomerOrder, GetCustomerOrderDTO>()
+                .ForMember(dest => dest.QuoteDetails, opt => opt.MapFrom(src => src.Quote.QuoteDetails)).ReverseMap();
             CreateMap<ElectricVehicleColor, GetElectricVehicleColorDTO>().ReverseMap();
             CreateMap<ElectricVehicleModel, GetElectricVehicleModelDTO>().ReverseMap();
             CreateMap<ElectricVehicleVersion, GetElectricVehicleVersionDTO>().ReverseMap();
