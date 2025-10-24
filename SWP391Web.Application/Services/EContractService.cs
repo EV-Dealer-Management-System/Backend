@@ -46,11 +46,11 @@ namespace SWP391Web.Application.Services
             _warehouseService = warehouseService;
         }
 
-        public async Task<string> GetAccessTokenAsync()
+        public async Task<ResponseDTO<GetAccessTokenDTO>> GetAccessTokenAsync()
         {
-            var username = _cfg["SmartCA:username"] ?? throw new Exception("Cannot find username in SmartCA");
-            var password = _cfg["SmartCA:password"] ?? throw new Exception("Cannot find password in SmartCA");
-            int? companyId = null;
+            var username = _cfg["EContractClient:Username"] ?? throw new Exception("Cannot find username in EContractClient");
+            var password = _cfg["EContractClient:Password"] ?? throw new Exception("Cannot find password in EContractClient");
+            int? companyId = _cfg["EContractClient:CompanyId"] is not null ? int.Parse(_cfg["EContractClient:CompanyId"]!) : throw new Exception("Cannot find company ID in EContractClient");
 
             var payload = new { username, password, companyId };
             var jsonPayload = JsonSerializer.Serialize(payload, new JsonSerializerOptions
@@ -58,7 +58,7 @@ namespace SWP391Web.Application.Services
                 DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
             });
 
-            var urlGetToken = $"{_cfg["SmartCA:BaseUrl"]}/api/v2/auth/password-login";
+            var urlGetToken = $"{_cfg["EContractClient:BaseUrl"]}/api/auth/password-login";
             using var req = new HttpRequestMessage(HttpMethod.Post, urlGetToken);
             req.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
@@ -67,22 +67,43 @@ namespace SWP391Web.Application.Services
             var body = await res.Content.ReadAsStringAsync();
 
             if (!res.IsSuccessStatusCode)
-                throw new HttpRequestException($"login failed {(int)res.StatusCode} {res.ReasonPhrase} @ {res.RequestMessage?.RequestUri}\n{body}");
+                return new ResponseDTO<GetAccessTokenDTO>
+                {
+                    IsSuccess = false,
+                    StatusCode = (int)res.StatusCode,
+                    Message = $"Cannot get access token from EContract: {body}"
+                };
 
             using var doc = JsonDocument.Parse(body);
             var root = doc.RootElement;
 
             var dataEl = root.GetProperty("data");
             string? accessToken = dataEl.ValueKind == JsonValueKind.String ? dataEl.GetString() :
-            (dataEl.ValueKind == JsonValueKind.Object && dataEl.TryGetProperty("token", out var t1)) ? t1.GetString() :
+            (dataEl.ValueKind == JsonValueKind.Object && dataEl.TryGetProperty("access", out var t1)) ? t1.GetString() :
             (dataEl.ValueKind == JsonValueKind.Object && dataEl.TryGetProperty("accessToken", out var t2)) ? t2.GetString() :
             null;
 
-
             if (string.IsNullOrWhiteSpace(accessToken))
-                throw new Exception($"Missing access token in response at GetAccessTokenAsync: {body}");
+                return new ResponseDTO<GetAccessTokenDTO>
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = "Cannot find access token in EContract response"
+                };
 
-            return accessToken!;
+            var userId = int.Parse(_cfg["EContractClient:UserId"] ?? throw new Exception("Cannot find user ID in EContractClient"));
+
+            return new ResponseDTO<GetAccessTokenDTO>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                Message = "Get access token successfully",
+                Data = new GetAccessTokenDTO
+                {
+                    AccessToken = accessToken,
+                    UserId = userId
+                }
+            };
         }
 
         public async Task<ResponseDTO> CreateBookingEContractAsync(ClaimsPrincipal userClaim, Guid bookingId, CancellationToken ct)
@@ -111,18 +132,18 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var token = await GetAccessTokenAsync();
+                var access = await GetAccessTokenAsync();
 
-                var created = await CreateDocumentBookingAsync(bookingId, token, dealer, ct);
+                var created = await CreateDocumentBookingAsync(bookingId, access.Data.AccessToken, dealer, ct);
 
                 var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(created.Data!.Id), ct);
 
                 var companyName = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist");
                 var supportEmail = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist");
 
-                var companyApproverUserCode = _cfg["SmartCA:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
-                await UpdateProcessAsync(token, created.Data.Id, userId, companyApproverUserCode, created.Data.PositionA, created.Data.PositionB, created.Data.PageSign);
-                var result = await SendProcessAsync(token, created.Data.Id);
+                var companyApproverUserCode = _cfg["EContractClient:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
+                await UpdateProcessAsync(access.Data.AccessToken, created.Data.Id, userId, companyApproverUserCode, created.Data.PositionA, created.Data.PositionB, created.Data.PageSign);
+                var result = await SendProcessAsync(access.Data.AccessToken, created.Data.Id);
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -176,15 +197,14 @@ namespace SWP391Web.Application.Services
                     Manager = user
                 };
 
-                var token = await GetAccessTokenAsync();
+                var access = await GetAccessTokenAsync();
 
-                var created = await CreateDocumentDealerAsync(userClaim, token, dealer, user, createDealerDTO.AdditionalTerm, createDealerDTO.RegionDealer, ct);
+                var created = await CreateDocumentDealerAsync(userClaim, access.Data!.AccessToken, dealer, user, createDealerDTO.AdditionalTerm, createDealerDTO.RegionDealer, ct);
 
                 var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(created.Data!.Id), ct);
 
                 await _unitOfWork.UserManagerRepository.CreateAsync(user, "ChangeMe@" + Guid.NewGuid().ToString()[..5]);
                 await _unitOfWork.DealerRepository.AddAsync(dealer, ct);
-
 
                 var companyName = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist");
                 var supportEmail = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist");
@@ -213,11 +233,10 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> CreateEContractAsync(ClaimsPrincipal userClaim, CreateEContractDTO createEContractDTO, CancellationToken ct)
+        public async Task<ResponseDTO> CreateEContractAsync(ClaimsPrincipal userClaim, Guid eContractId, CancellationToken ct)
         {
             try
             {
-                var eContractId = createEContractDTO.EContractId;
                 var eContract = await _unitOfWork.EContractRepository.GetByIdAsync(eContractId, ct);
                 if (eContract is null)
                     return new ResponseDTO
@@ -227,7 +246,7 @@ namespace SWP391Web.Application.Services
                         Message = "Cannot find EContract"
                     };
 
-                var token = await GetAccessTokenAsync();
+                var access = await GetAccessTokenAsync();
 
                 var dealerManagerId = eContract.OwnerBy;
 
@@ -240,6 +259,10 @@ namespace SWP391Web.Application.Services
                         Message = "Cannot find dealer manager"
                     };
 
+                var roleId = new List<Guid> 
+                { 
+                    Guid.Parse(_cfg["EContract:RoleId"] ?? throw new Exception("EContract:RoleId is not exist")) 
+                };
 
                 var vnptUser = new VnptUserUpsert
                 {
@@ -255,19 +278,30 @@ namespace SWP391Web.Application.Services
                     GenerateSelfSignedCertEnabled = false,
                     Status = 1,
                     DepartmentIds = [4106],
-                    RoleIds = [Guid.Parse("0aa2afc9-39c5-4652-baec-08ddc28cdda2")]
+                    RoleIds = roleId
 
                 };
 
                 var vnptUserList = new[] { vnptUser };
 
-                var upsert = await CreateOrUpdateUsersAsync(token, vnptUserList);
+                var upsert = await CreateOrUpdateUsersAsync(access.Data!.AccessToken, vnptUserList);
 
-                var companyApproverUserCode = _cfg["SmartCA:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
+                var companyApproverUserCode = _cfg["EContractClient:CompanyApproverUserCode"] ?? throw new ArgumentNullException("EContractClient:CompanyApproverUserCode is not exist");
 
-                var uProcess = await UpdateProcessAsync(token, eContractId.ToString(), companyApproverUserCode, dealerManagerId, createEContractDTO.positionA, createEContractDTO.positionB, createEContractDTO.pageSign);
+                var draftEContract = await GetVnptEContractByIdAsync(eContractId.ToString(), ct);
+                if (!draftEContract.Success)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Cannot get draft EContract from VNPT"
+                    };
+                }
 
-                var sent = await SendProcessAsync(token, eContractId.ToString());
+                var uProcess = await UpdateProcessAsync(access.Data!.AccessToken, eContractId.ToString(), companyApproverUserCode, dealerManagerId, draftEContract.Data!.PositionA!, draftEContract.Data!.PositionA!, draftEContract.Data.PageSign);
+
+                var sent = await SendProcessAsync(access.Data!.AccessToken, eContractId.ToString());
 
 
                 if (!Enum.IsDefined(typeof(EContractStatus), sent.Data.Status.Value))
@@ -644,8 +678,6 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                econtract.UpdateStatus((EContractStatus)signResult.Data.Status.Value);
-
                 if (!signResult.Success)
                 {
                     return new ResponseDTO
@@ -660,6 +692,8 @@ namespace SWP391Web.Application.Services
                 if (signResult.Data.Status.Value == (int)EContractStatus.Completed)
                 {
                     await CreateDealerAccount(signResult.Data.Id.ToString(), ct);
+                    econtract.UpdateStatus(EContractStatus.Completed);
+                    _unitOfWork.EContractRepository.Update(econtract);
                 }
 
                 await _unitOfWork.SaveAsync();
@@ -746,7 +780,7 @@ namespace SWP391Web.Application.Services
             if (string.IsNullOrWhiteSpace(processCode))
                 throw new ArgumentException("processCode is required", nameof(processCode));
 
-            var url = $"{_cfg["SmartCA:BaseUrl"]}/api/auth/process-code-login";
+            var url = $"{_cfg["EContractClient:BaseUrl"]}/api/auth/process-code-login";
             var payload = new { processCode };
 
             using var req = new HttpRequestMessage(HttpMethod.Post, url)
@@ -777,7 +811,7 @@ namespace SWP391Web.Application.Services
 
             dataEl = root.GetProperty("data");
             string? accessToken = null;
-            if (dataEl.TryGetProperty("token", out var tokenEl))
+            if (dataEl.TryGetProperty("access", out var tokenEl))
             {
                 if (tokenEl.ValueKind == JsonValueKind.String)
                 {
@@ -832,8 +866,8 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var token = await GetAccessTokenAsync();
-                var response = await _vnpt.AddSmartCA(token, addNewSmartCADTO);
+                var access = await GetAccessTokenAsync();
+                var response = await _vnpt.AddSmartCA(access.Data!.AccessToken, addNewSmartCADTO);
                 if (!response.Success)
                 {
                     var errors = string.Join(", ", response.Messages);
@@ -851,8 +885,8 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var token = await GetAccessTokenAsync();
-                var response = await _vnpt.GetSmartCAInformation(token, userId);
+                var access = await GetAccessTokenAsync();
+                var response = await _vnpt.GetSmartCAInformation(access.Data!.AccessToken, userId);
                 if (!response.Success)
                 {
                     var errors = string.Join(", ", response.Messages);
@@ -870,8 +904,8 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var token = await GetAccessTokenAsync();
-                var response = await _vnpt.UpdateSmartCA(token, updateSmartDTO);
+                var access = await GetAccessTokenAsync();
+                var response = await _vnpt.UpdateSmartCA(access.Data!.AccessToken, updateSmartDTO);
                 if (!response.Success)
                 {
                     var errors = string.Join(", ", response.Messages);
@@ -889,7 +923,7 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var token = await GetAccessTokenAsync();
+                var access = await GetAccessTokenAsync();
                 var contract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(updateEContractDTO.Id), ct);
                 if (contract is null)
                     return new VnptResult<UpdateEContractResponse>($"Cannot find EContract with id '{updateEContractDTO.Id}'");
@@ -942,7 +976,7 @@ namespace SWP391Web.Application.Services
                     new MemoryStream(filePdf), 0, filePdf.Length, "file", updateEContractDTO.Subject + ".pdf"
                 );
 
-                var response = await _vnpt.UpdateEContract(token, updateEContractDTO.Id, updateEContractDTO.Subject, formFile);
+                var response = await _vnpt.UpdateEContract(access.Data!.AccessToken, updateEContractDTO.Id, updateEContractDTO.Subject, formFile);
                 if (!response.Success)
                 {
                     var errors = string.Join(", ", response.Messages);
@@ -1059,13 +1093,21 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var token = await GetAccessTokenAsync();
-                var response = await _vnpt.GetEContractByIdAsync(token, eContractId);
+                var access = await GetAccessTokenAsync();
+                var response = await _vnpt.GetEContractByIdAsync(access.Data!.AccessToken, eContractId);
                 if (!response.Success)
                 {
                     var errors = string.Join(", ", response.Messages);
                     throw new Exception($"Error to get EContract by id: {errors}");
                 }
+
+                var filePdf = await _vnpt.DownloadAsync(response.Data!.DownloadUrl!);
+                var anchors = EContractPdf.FindAnchors(filePdf, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
+                var positionA = GetVnptEContractPosition(filePdf, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
+                var positionB = GetVnptEContractPosition(filePdf, anchors["ĐẠI_DIỆN_BÊN_B"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: 0);
+                response.Data.PositionA = positionA.Item1;
+                response.Data.PositionB = positionB.Item1;
+                response.Data.PageSign = positionA.Item2;
                 return response;
             }
             catch (Exception ex)
@@ -1078,8 +1120,8 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var token = await GetAccessTokenAsync();
-                var response = await _vnpt.GetEContractList(token, pageNumber, pageSize, eContractStatus);
+                var access = await GetAccessTokenAsync();
+                var response = await _vnpt.GetEContractList(access.Data!.AccessToken, pageNumber, pageSize, eContractStatus);
                 if (!response.Success)
                 {
                     var errors = string.Join(", ", response.Messages);

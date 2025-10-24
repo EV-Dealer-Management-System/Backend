@@ -119,6 +119,10 @@ namespace SWP391Web.Application.Mappings
                     WarehouseId = src.Warehouse.Id,
                     Name = src.Warehouse.WarehouseName,
                 }));
+
+            CreateMap<Dealer, GetDealerDTO>()
+                .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager.FullName))
+                .ForMember(dest => dest.ManagerEmail, opt => opt.MapFrom(src => src.Manager.Email)).ReverseMap();
         }
     }
 }

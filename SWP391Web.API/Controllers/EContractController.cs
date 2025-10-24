@@ -43,15 +43,15 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult<ResponseDTO>> GetAccessToken()
         {
             var r = await _econtractService.GetAccessTokenAsync();
-            return Ok(r);
+            return StatusCode(r.StatusCode, r);
         }
 
         [HttpPost]
         [Route("ready-dealer-contracts")]
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
-        public async Task<ActionResult<ResponseDTO>> CreateEContractAsync([FromBody] CreateEContractDTO dto, CancellationToken ct)
+        public async Task<ActionResult<ResponseDTO>> CreateEContractAsync([FromQuery] Guid eContractId, CancellationToken ct)
         {
-            var r = await _econtractService.CreateEContractAsync(User, dto, ct);
+            var r = await _econtractService.CreateEContractAsync(User, eContractId, ct);
             return StatusCode(r.StatusCode, r);
         }
 

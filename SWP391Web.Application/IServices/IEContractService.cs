@@ -10,13 +10,13 @@ namespace SWP391Web.Application.IServices
 {
     public interface IEContractService
     {
-        Task<string> GetAccessTokenAsync();
+        Task<ResponseDTO<GetAccessTokenDTO>> GetAccessTokenAsync();
         Task<ProcessLoginInfoDto> GetAccessTokenAsyncByCode(string processCode, CancellationToken ct = default);
         Task<byte[]> DownloadAsync(string url);
 
         Task<ResponseDTO> SignProcess(string token, VnptProcessDTO vnptProcessDTO, CancellationToken ct);
         Task<HttpResponseMessage> GetPreviewResponseAsync(string token, string? rangeHeader = null, CancellationToken ct = default);
-        Task<ResponseDTO> CreateEContractAsync(ClaimsPrincipal userClaim, CreateEContractDTO createEContractDTO, CancellationToken ct);
+        Task<ResponseDTO> CreateEContractAsync(ClaimsPrincipal userClaim, Guid eContractId, CancellationToken ct);
         Task<VnptResult<VnptSmartCAResponse>> AddSmartCA(AddNewSmartCADTO addNewSmartCADTO);
         Task<VnptResult<VnptFullUserData>> GetSmartCAInformation(int userId);
         Task<VnptResult<VnptSmartCAResponse>> UpdateSmartCA(UpdateSmartDTO updateSmartDTO);
