@@ -35,7 +35,7 @@ namespace SWP391Web.Application.Services
                 }
 
                 var dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId, ct);
-                if (dealer == null)
+                if (dealer is null)
                 {
                     return new ResponseDTO(false)
                     {
@@ -45,7 +45,7 @@ namespace SWP391Web.Application.Services
                 }
 
                 var quote = await _unitOfWork.QuoteRepository.GetQuoteByIdAsync(createOrderDTO.QuoteId);
-                if (quote == null)
+                if (quote is null)
                 {
                     return new ResponseDTO(false)
                     {
@@ -77,7 +77,7 @@ namespace SWP391Web.Application.Services
 
                 foreach (var quoteDetail in quote.QuoteDetails)
                 {
-                    var vehicles = await _unitOfWork.ElectricVehicleRepository.GetVehicleByQuantityWithOldestImportDateAsync(quoteDetail.VersionId, quoteDetail.ColorId, dealer.Warehouse.Id, quoteDetail.Quantity);
+                    var vehicles = await _unitOfWork.ElectricVehicleRepository.GetVehicleByQuantityWithOldestImportDateForDealerAsync(quoteDetail.VersionId, quoteDetail.ColorId, dealer.Warehouse.Id, quoteDetail.Quantity);
                     foreach (var ev in vehicles)
                     {
                         var orderDetail = new OrderDetail
@@ -88,7 +88,7 @@ namespace SWP391Web.Application.Services
 
                         order.OrderDetails.Add(orderDetail);
 
-                        ev.Status = ElectricVehicleStatus.Pending;
+                        ev.Status = ElectricVehicleStatus.DealerPending;
                         _unitOfWork.ElectricVehicleRepository.Update(ev);
                     }
                 }
@@ -103,8 +103,7 @@ namespace SWP391Web.Application.Services
                     {
                         IsSuccess = true,
                         Message = "Create order successfully",
-                        StatusCode = 201,
-                        Result = order
+                        StatusCode = 201
                     };
                 }
                 else
