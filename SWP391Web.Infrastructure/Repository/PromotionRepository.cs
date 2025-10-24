@@ -37,5 +37,15 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _context.Promotions.AnyAsync(p => p.Name == name);
         }
+
+        public async Task<Promotion?> GetActivePromotionByVersionIdAsync(Guid versionId)
+        {
+            return await _context.Promotions.FirstOrDefaultAsync(p => p.VersionId == versionId && p.IsActive);
+        }
+
+        public async Task<Promotion?> GetActivePromotionByModelIdAsync(Guid modelId)
+        {
+            return await _context.Promotions.FirstOrDefaultAsync(p => p.ModelId == modelId && p.IsActive);
+        }
     }
 }

@@ -13,6 +13,8 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<Promotion?> GetPromotionByNameAsync(string name);
         Task<bool> IsExistPromotionByNameExceptAsync(string name ,Guid expectId);
         Task<bool> IsExistPromotionByNameAsync(string name);
+        Task<Promotion?> GetActivePromotionByVersionIdAsync(Guid versionId);
+        Task<Promotion?> GetActivePromotionByModelIdAsync(Guid modelId);
 
     }
 }
