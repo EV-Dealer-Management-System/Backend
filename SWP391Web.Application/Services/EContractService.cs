@@ -796,32 +796,36 @@ namespace SWP391Web.Application.Services
 
             using var doc = JsonDocument.Parse(body);
             var root = doc.RootElement;
-            if (!root.TryGetProperty("data", out var dataEl) ||
-                dataEl.ValueKind == JsonValueKind.Null ||
-                dataEl.ValueKind == JsonValueKind.Undefined)
+            JsonElement dataEl;
+            if (root.TryGetProperty("data", out var dataProp) &&
+                dataProp.ValueKind == JsonValueKind.Object)
             {
-                if (root.TryGetProperty("messages", out var msgsEl) && msgsEl.ValueKind == JsonValueKind.Array)
-                {
-                    var msgs = string.Join("; ", msgsEl.EnumerateArray()
-                                                       .Select(m => m.ValueKind == JsonValueKind.String ? m.GetString() : m.ToString()));
-                    //throw new HttpRequestException($"HTTP {(int)res.StatusCode} {res.ReasonPhrase}\n{req.Method} {req.RequestUri}\n{body}");
-                    throw new Exception("The code is used");
-                }
+                dataEl = dataProp;
+            }
+            // 2️⃣ Nếu API trả về trực tiếp "token" và "document"
+            else if (root.TryGetProperty("token", out var tokenProp) &&
+                     root.TryGetProperty("document", out var docProp))
+            {
+                dataEl = root; // gán root để đọc token/doc như cũ
+            }
+            else
+            {
+                throw new Exception("Unexpected response format: " + body);
             }
 
             dataEl = root.GetProperty("data");
             string? accessToken = null;
-            if (dataEl.TryGetProperty("access", out var tokenEl))
+            if (dataEl.TryGetProperty("token", out var tokenEl))
             {
-                if (tokenEl.ValueKind == JsonValueKind.String)
-                {
-                    accessToken = tokenEl.GetString();
-                }
-                else if (tokenEl.ValueKind == JsonValueKind.Object &&
-                         tokenEl.TryGetProperty("accessToken", out var atEl) &&
-                         atEl.ValueKind == JsonValueKind.String)
+                if (tokenEl.ValueKind == JsonValueKind.Object &&
+                    tokenEl.TryGetProperty("accessToken", out var atEl) &&
+                    atEl.ValueKind == JsonValueKind.String)
                 {
                     accessToken = atEl.GetString();
+                }
+                else if (tokenEl.ValueKind == JsonValueKind.String)
+                {
+                    accessToken = tokenEl.GetString();
                 }
             }
 
