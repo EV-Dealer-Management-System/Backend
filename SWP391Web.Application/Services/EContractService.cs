@@ -1090,6 +1090,14 @@ namespace SWP391Web.Application.Services
                     var errors = string.Join(", ", response.Messages);
                     throw new Exception($"Error to get EContract by id: {errors}");
                 }
+
+                var filePdf = await _vnpt.DownloadAsync(response.Data!.DownloadUrl!);
+                var anchors = EContractPdf.FindAnchors(filePdf, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
+                var positionA = GetVnptEContractPosition(filePdf, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
+                var positionB = GetVnptEContractPosition(filePdf, anchors["ĐẠI_DIỆN_BÊN_B"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: 0);
+                response.Data.PositionA = positionA.Item1;
+                response.Data.PositionB = positionB.Item1;
+                response.Data.PageSign = positionA.Item2;
                 return response;
             }
             catch (Exception ex)

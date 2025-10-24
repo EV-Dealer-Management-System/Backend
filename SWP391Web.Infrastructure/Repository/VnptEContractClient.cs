@@ -121,9 +121,14 @@ namespace SWP391Web.Infrastructure.Repository
         => await PostAsync<VnptDocumentDto>(token, $"/api/documents/send-process/{documentId}", null);
 
 
-        public Task<byte[]> DownloadAsync(string url)
+        public async Task<byte[]> DownloadAsync(string url)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(url))
+                throw new ArgumentException("Download URL is required", nameof(url));
+
+            using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsByteArrayAsync();
         }
 
         public async Task<VnptResult<ProcessRespone>> SignProcess(string token, VnptProcessDTO vnptProcessDTO)
