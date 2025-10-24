@@ -104,8 +104,8 @@ public static class WebApplicationBuilderExtensions
         builder.Services.AddHttpClient<IEContractService, EContractService>(client =>
         {
             client.BaseAddress = new Uri(
-                builder.Configuration["VNPT-EContract-Client:BaseUrl"]
-                ?? throw new Exception("Cannot find base url in VNPT-EContract-Client"));
+                builder.Configuration["EContractClient:BaseUrl"]
+                ?? throw new Exception("Cannot find base url in EContractClient"));
 
             client.Timeout = TimeSpan.FromSeconds(30);
 
