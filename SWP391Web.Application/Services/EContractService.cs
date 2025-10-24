@@ -678,8 +678,6 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                econtract.UpdateStatus((EContractStatus)signResult.Data.Status.Value);
-
                 if (!signResult.Success)
                 {
                     return new ResponseDTO
@@ -694,6 +692,8 @@ namespace SWP391Web.Application.Services
                 if (signResult.Data.Status.Value == (int)EContractStatus.Completed)
                 {
                     await CreateDealerAccount(signResult.Data.Id.ToString(), ct);
+                    econtract.UpdateStatus(EContractStatus.Completed);
+                    _unitOfWork.EContractRepository.Update(econtract);
                 }
 
                 await _unitOfWork.SaveAsync();
