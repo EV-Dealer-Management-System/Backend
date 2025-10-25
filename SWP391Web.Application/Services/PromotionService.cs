@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Aspose.Words.Tables;
+using AutoMapper;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Promotion;
 using SWP391Web.Application.IServices;
@@ -203,19 +204,33 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var promotions = (await _unitOfWork.PromotionRepository.GetAllAsync())
-                    .Where(p => p.IsActive == true);
+                var allPromotions = await _unitOfWork.PromotionRepository.GetAllAsync();
 
-                var getPromotion = _mapper.Map<List<GetPromotionDTO>>(promotions);
+                //Deactivate expired promotions
+                foreach (var promo in allPromotions)
+                {
+                    if (promo.IsActive && promo.EndDate < DateTime.UtcNow)
+                    {
+                        promo.IsActive = false;
+                        _unitOfWork.PromotionRepository.Update(promo);
+                    }
+                }
+                await _unitOfWork.SaveAsync();
+
+                //Take only active promotions
+                var validPromotions = allPromotions
+                    .Where(p => p.IsActive && p.StartDate <= DateTime.UtcNow && p.EndDate >= DateTime.UtcNow)
+                    .ToList();
+
+                var getPromotions = _mapper.Map<List<GetPromotionDTO>>(validPromotions);
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    Message = "Get all promotion successfully",
-                    Result = getPromotion
+                    Message = "Get active promotions successfully",
+                    Result = getPromotions
                 };
-
             }
             catch (Exception ex)
             {
@@ -233,13 +248,13 @@ namespace SWP391Web.Application.Services
             try
             {
                 var promotion = await _unitOfWork.PromotionRepository.GetPromotionByIdAsync(promotionId);
-                if (promotion == null)
+                if (promotion == null || !promotion.IsActive || promotion.StartDate > DateTime.UtcNow || promotion.EndDate < DateTime.UtcNow)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
                         StatusCode = 404,
-                        Message = "Promotion not exist"
+                        Message = "Promotion not exist or expired"
                     };
                 }
 
@@ -289,6 +304,82 @@ namespace SWP391Web.Application.Services
                 };
             }
             catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetPromotionsForQuoteAsync(Guid? modelId, Guid? versionId)
+        {
+            try
+            {
+                var allPromotions = await _unitOfWork.PromotionRepository.GetAllAsync();
+
+                //Deactive promotion expired
+                foreach(var p in allPromotions)
+                {
+                    if(p.IsActive && p.EndDate < DateTime.UtcNow)
+                    {
+                        p.IsActive = false;
+                        _unitOfWork.PromotionRepository.Update(p);
+                    }
+                }
+
+                await _unitOfWork.SaveAsync();
+
+                //Take valid promotion
+                var validPromotions = allPromotions
+                    .Where(p => p.IsActive && p.StartDate <= DateTime.UtcNow && p.EndDate >= DateTime.UtcNow).ToList();
+
+                //Take promotion have model and version
+                var specificPromotions = validPromotions
+                    .Where(p => p.ModelId.HasValue
+                           && p.VersionId.HasValue
+                           && p.VersionId == versionId
+                           && p.ModelId == modelId)
+                    .ToList();
+
+                // take all promotion
+                var globalPromotion = validPromotions
+                    .Where(p => !p.ModelId.HasValue && !p.VersionId.HasValue)
+                    .ToList();
+
+                // valid model and version
+                if (modelId.HasValue && versionId.HasValue)
+                {
+                    var modelExists = await _unitOfWork.ElectricVehicleModelRepository.IsModelExistsById(modelId.Value);
+                    var versionExists = await _unitOfWork.ElectricVehicleVersionRepository.IsVersionExistsById(versionId.Value);
+
+                    if (!modelExists || !versionExists)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            StatusCode = 404,
+                            Message = "Selected Model or Version does not exist."
+                        };
+                    }
+                }
+
+                var totalPromotion = specificPromotions.Concat(globalPromotion).ToList();
+
+                var getPromotions = _mapper.Map<List<GetPromotionDTO>>(totalPromotion);
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Get promotion for quote successfully",
+                    StatusCode = 200,
+                    Result = getPromotions
+                };
+
+            }
+            catch(Exception ex)
             {
                 return new ResponseDTO
                 {

@@ -46,6 +46,7 @@ namespace SWP391Web.API.Extentions
             services.AddScoped<IDealerService, DealerService>();
             services.AddScoped<IEVTemplateService, EVTemplateService>();
             services.AddScoped<IPaymentService, PaymentService>();
+            services.AddScoped<IAppointmentSettingService, AppointmentSettingService>();
 
             // Register Infrastructure Repositories
             services.AddScoped<IUnitOfWork, UnitOfWork>();

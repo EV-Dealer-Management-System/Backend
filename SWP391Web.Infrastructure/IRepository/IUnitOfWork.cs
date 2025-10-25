@@ -29,6 +29,8 @@ namespace SWP391Web.Infrastructure.IRepository
         public IEVTemplateRepository EVTemplateRepository { get; }
         public IBookingDetailRepository BookingDetailRepository { get; }
         public ICustomerRepository CustomerRepository { get; }
+        public IAppointmentSettingRepository AppointmentSettingRepository { get; }
+        public IAppointmentRepository AppointmentRepository { get; }
         Task<int> SaveAsync();
     }
 }

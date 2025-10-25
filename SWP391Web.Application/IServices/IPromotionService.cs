@@ -15,6 +15,7 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> CreatePromotionAsync(CreatePromotionDTO createPromotionDTO);
         Task<ResponseDTO> UpdatePromotionAsync(Guid promotionId,UpdatePromotionDTO updatePromotionDTO);
         Task<ResponseDTO> DeletePromotionAsync(Guid promotionId);
+        Task<ResponseDTO> GetPromotionsForQuoteAsync(Guid? modelId, Guid? versionId);
         Task<ResponseDTO> GetPromotionByNameAsync(string name);
     }
 }
