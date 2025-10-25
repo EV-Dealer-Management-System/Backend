@@ -12,6 +12,10 @@ namespace SWP391Web.Infrastructure.Repository
         {
             _context = context;
         }
+        public int GenerateOrderNumber()
+        {
+            return _context.CustomerOrders.Count() + 1;
+        }
 
         public async Task<CustomerOrder?> GetByIdAsync(Guid customerOrderId)
         {
@@ -22,6 +26,12 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<bool>? IsExistByIdAsync(Guid id)
         {
             return await _context.CustomerOrders.AnyAsync(c => c.Id == id);
+        }
+
+        public async Task<CustomerOrder?> GetByOrderNoAsync(int customerOrderNo)
+        {
+            return await _context.CustomerOrders
+                .FirstOrDefaultAsync(c => c.OrderNo == customerOrderNo);
         }
     }
 }

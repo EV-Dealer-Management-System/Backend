@@ -1,10 +1,10 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using SWP391Web.Domain.ValueObjects;
-using SWP391Web.Infrastructure.IRepository;
+using SWP391Web.Infrastructure.IClient;
 using System.Text;
 
-namespace SWP391Web.Infrastructure.Repository
+namespace SWP391Web.Infrastructure.Client
 {
     public class GHNClient : IGHNClient
     {

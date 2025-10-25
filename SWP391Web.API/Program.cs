@@ -82,12 +82,14 @@ builder.Services.AddCors(opt =>
     );
 });
 
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
 var forwardOptions = new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    ForwardLimit = null
 };
 forwardOptions.KnownNetworks.Clear();
 forwardOptions.KnownProxies.Clear();

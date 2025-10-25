@@ -10,7 +10,9 @@ using SWP391Web.Application.Service;
 using SWP391Web.Application.Services;
 using SWP391Web.Application.Validations;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Infrastructure.Client;
 using SWP391Web.Infrastructure.Context;
+using SWP391Web.Infrastructure.IClient;
 using SWP391Web.Infrastructure.IRepository;
 using SWP391Web.Infrastructure.Repository;
 
@@ -43,6 +45,8 @@ namespace SWP391Web.API.Extentions
             services.AddScoped<IQuoteService, QuoteService>();
             services.AddScoped<IDealerService, DealerService>();
             services.AddScoped<IEVTemplateService, EVTemplateService>();
+            services.AddScoped<IPaymentService, PaymentService>();
+            services.AddScoped<IAppointmentSettingService, AppointmentSettingService>();
 
             // Register Infrastructure Repositories
             services.AddScoped<IUnitOfWork, UnitOfWork>();
