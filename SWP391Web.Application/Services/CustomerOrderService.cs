@@ -80,7 +80,7 @@ namespace SWP391Web.Application.Services
                     Status = OrderStatus.Pending,
                 };
 
-                await _unitOfWork.CustomerOrderRepository.AddAsync(customerOrder,CancellationToken.None);
+                await _unitOfWork.CustomerOrderRepository.AddAsync(customerOrder, CancellationToken.None);
                 await _unitOfWork.SaveAsync();
 
                 var getCustomerOrder = _mapper.Map<GetCustomerOrderDTO>(customerOrder);

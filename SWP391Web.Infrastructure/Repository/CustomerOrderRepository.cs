@@ -23,5 +23,11 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _context.CustomerOrders.AnyAsync(c => c.Id == id);
         }
+
+        public async Task<CustomerOrder?> GetByOrderNoAsync(int customerOrderNo)
+        {
+            return await _context.CustomerOrders
+                .FirstOrDefaultAsync(c => c.OrderNo == customerOrderNo);
+        }
     }
 }
