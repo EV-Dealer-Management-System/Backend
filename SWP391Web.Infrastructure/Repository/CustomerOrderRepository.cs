@@ -31,6 +31,7 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<CustomerOrder?> GetByOrderNoAsync(int customerOrderNo)
         {
             return await _context.CustomerOrders
+                .Include(co => co.OrderDetails)
                 .FirstOrDefaultAsync(c => c.OrderNo == customerOrderNo);
         }
     }
