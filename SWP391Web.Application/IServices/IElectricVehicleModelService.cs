@@ -11,6 +11,7 @@ namespace SWP391Web.Application.IServices
     public interface IElectricVehicleModelService
     {
         Task<ResponseDTO> GetAllModelsAsync();
+        Task<ResponseDTO> GetAllWithVersionAsync();
         Task<ResponseDTO> GetModelByIdAsync(Guid modelId);
         Task<ResponseDTO> CreateModelAsync(CreateElectricVehicleModelDTO createElectricVehicleModelDTO);
         Task<ResponseDTO> UpdateModelAsync(Guid modelId, UpdateElectricVehicleModelDTO updateElectricVehicleModelDTO);
