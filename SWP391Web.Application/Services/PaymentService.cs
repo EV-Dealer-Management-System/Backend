@@ -224,7 +224,7 @@ namespace SWP391Web.Application.Services
                     }
                     await HandleVNPayCustomerOrder(order, decimal.Parse(ipnDTO.vnp_Amount) / 100);
 
-                    DateTime dateTime = DateTime.ParseExact(ipnDTO.vnp_PayDate, "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
+                    var dateTime = DateTime.ParseExact(ipnDTO.vnp_PayDate, "yyyyMMddHHmmss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal).ToUniversalTime();
                     var Transaction = new Transaction
                     {
                         CustomerOrderId = order.Id,
