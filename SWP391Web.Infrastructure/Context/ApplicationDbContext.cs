@@ -35,6 +35,8 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<ElectricVehicleTemplate> ElectricVehicleTemplates { get; set; }
         public DbSet<DealerMember> DealerMembers { get; set; }
         public DbSet<OrderDetail> OrderDetails { get; set; }
+        public DbSet<AppointmentSetting> AppointmentSettings { get; set; }
+        public DbSet<Appointment> Appointments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

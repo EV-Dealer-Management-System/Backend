@@ -4,18 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWP391Web.Domain.Entities
+namespace SWP391Web.Application.DTO.AppointmentSetting
 {
-    public class AppointmentSetting
+    public class CreateAppointmentDTO
     {
-        public Guid Id { get; set; }
-        public string? ManagerId { get; set; }
+        public string ManagerId { get; set; } = null!;
         public Guid? DealerId { get; set; }
         public bool AllowOverlappingAppointments { get; set; }
         public int MaxConcurrentAppointments { get; set; }
         public TimeSpan OpenTime { get; set; }
         public TimeSpan CloseTime { get; set; }
         public int MinIntervalBetweenAppointments { get; set; }
-        public DateTime CreatedAt { get; set; }
     }
 }
