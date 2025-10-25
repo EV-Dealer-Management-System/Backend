@@ -1,6 +1,6 @@
 ﻿using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.IServices;
-using SWP391Web.Infrastructure.IRepository;
+using SWP391Web.Infrastructure.IClient;
 using System;
 using System.Collections.Generic;
 using System.Linq;

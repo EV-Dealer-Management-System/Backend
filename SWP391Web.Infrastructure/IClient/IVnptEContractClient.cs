@@ -4,7 +4,7 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
 
-namespace SWP391Web.Infrastructure.IRepository
+namespace SWP391Web.Infrastructure.IClient
 {
     public interface IVnptEContractClient
     {
@@ -19,7 +19,7 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<VnptResult<VnptSmartCAResponse>> UpdateSmartCA(string token, UpdateSmartDTO updateSmartDTO);
         Task<VnptResult<UpdateEContractResponse>> UpdateEContract(string token, string id, string subject, IFormFile file);
         Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetEContractList(string token, int? pageNumber, int? pageSize, EContractStatus eContractStatus);
-        Task<VnptResult<VnptDocumentDto >> GetEContractByIdAsync(string token, string eContractId);
+        Task<VnptResult<VnptDocumentDto>> GetEContractByIdAsync(string token, string eContractId);
         Task<byte[]> DownloadAsync(string url);
     }
 }

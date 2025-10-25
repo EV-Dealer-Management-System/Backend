@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWP391Web.Infrastructure.IRepository
+namespace SWP391Web.Infrastructure.IClient
 {
     public interface IGHNClient
     {

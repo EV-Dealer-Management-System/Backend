@@ -15,6 +15,7 @@ using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
+using SWP391Web.Infrastructure.IClient;
 using SWP391Web.Infrastructure.IRepository;
 using System.Security.Claims;
 using System.Text;

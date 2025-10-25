@@ -2,15 +2,15 @@
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO;
 using SWP391Web.Domain.ValueObjects;
-using SWP391Web.Infrastructure.IRepository;
 using System.Net.Http.Headers;
 using System.Text;
 using Newtonsoft.Json;
 using SWP391Web.Domain.Enums;
 using System.Net.Http;
 using Microsoft.AspNetCore.Http;
+using SWP391Web.Infrastructure.IClient;
 
-namespace SWP391Web.Infrastructure.Repository
+namespace SWP391Web.Infrastructure.Client
 {
     public class VnptEContractClient : IVnptEContractClient
     {
@@ -198,6 +198,6 @@ namespace SWP391Web.Infrastructure.Repository
 
         public async Task<VnptResult<VnptDocumentDto>> GetEContractByIdAsync(string token, string eContractId)
             => await GetAsync<VnptDocumentDto>(token, $"/api/documents/{eContractId}");
-        
+
     }
 }
