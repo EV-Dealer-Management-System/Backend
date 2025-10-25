@@ -7,5 +7,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<CustomerOrder?> GetByIdAsync(Guid customerOrderId);
         Task<bool>? IsExistByIdAsync(Guid id);
         Task<CustomerOrder?> GetByOrderNoAsync(int customerOrderNo);
+        int GenerateOrderNumber();
     }
 }

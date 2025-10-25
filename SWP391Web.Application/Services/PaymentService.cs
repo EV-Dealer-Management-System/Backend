@@ -7,9 +7,11 @@ using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
+using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SWP391Web.Application.Services
 {
@@ -174,7 +176,7 @@ namespace SWP391Web.Application.Services
             return ipv4;
         }
 
-        public async Task<ResponseDTO> HandleVNPayIpn(VNPayIPNDTO ipnDTO)
+        public async Task<ResponseDTO> HandleVNPayIpn(VNPayIPNDTO ipnDTO, CancellationToken ct)
         {
             try
             {
@@ -220,8 +222,23 @@ namespace SWP391Web.Application.Services
                             }
                         };
                     }
-
                     await HandleVNPayCustomerOrder(order, decimal.Parse(ipnDTO.Vnp_Amount));
+
+                    DateTime dateTime = DateTime.ParseExact(ipnDTO.Vnp_PayDate, "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
+                    var Transaction = new Transaction
+                    {
+                        CustomerOrderId = order.Id,
+                        Amount = decimal.Parse(ipnDTO.Vnp_Amount) / 100,
+                        Provider = "VNPay",
+                        OrderRef = ipnDTO.Vnp_TxnRef,
+                        Currency = "VND",
+                        Status = TransactionStatus.Success,
+                        CreatedAt = dateTime
+                    };
+
+                    await _unitOfWork.TransactionRepository.AddAsync(Transaction, ct);
+                    await _unitOfWork.SaveAsync();
+
                     return new ResponseDTO()
                     {
                         StatusCode = 200,

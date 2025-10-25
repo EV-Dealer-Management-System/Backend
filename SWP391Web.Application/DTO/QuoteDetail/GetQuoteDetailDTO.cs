@@ -21,7 +21,7 @@ namespace SWP391Web.Application.DTO.QuoteDetail
 
     public class ViewPromotionName
     {
-        public Guid PromotionId { get; set; }
+        public Guid? PromotionId { get; set; }
         public string? PromotionName { get; set; }
     }
 }

@@ -26,9 +26,9 @@ namespace SWP391Web.API.Controllers
 
         [HttpGet]
         [Route("IPN")]
-        public async Task<IActionResult> VNPayIPN([FromQuery] VNPayIPNDTO ipnDTO)
+        public async Task<IActionResult> VNPayIPN([FromQuery] VNPayIPNDTO ipnDTO, CancellationToken ct)
         {
-            var response = await _paymentService.HandleVNPayIpn(ipnDTO);
+            var response = await _paymentService.HandleVNPayIpn(ipnDTO, ct);
 
             if (response.Result is VNPayIpnResponse ok)
             {

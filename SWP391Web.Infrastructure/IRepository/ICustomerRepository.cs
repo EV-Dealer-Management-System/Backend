@@ -11,5 +11,7 @@ namespace SWP391Web.Infrastructure.IRepository
     {
         Task<Customer?> GetByIdAsync(Guid customerId);
         Task<bool> IsExistByIdAsync(Guid customerId);
+        Task<Customer?> GetByEmailAync(string email);
+        Task<Customer?> GetByPhoneNumber(string phoneNumber);
     }
 }
