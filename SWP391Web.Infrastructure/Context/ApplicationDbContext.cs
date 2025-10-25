@@ -352,6 +352,14 @@ namespace SWP391Web.Infrastructure.Context
                 .HasForeignKey(od => od.ElectricVehicleId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            /******************************************************************************/
+            // Configure Transaction entity
+            
+            modelBuilder.Entity<Transaction>()
+                .HasOne(tr => tr.CustomerOrder)
+                .WithMany(co => co.Transactions)
+                .HasForeignKey(tr => tr.CustomerOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

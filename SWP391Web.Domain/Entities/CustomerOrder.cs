@@ -17,5 +17,6 @@ namespace SWP391Web.Domain.Entities
         public Customer Customer { get; set; } = null!;
         public Quote Quote { get; set; } = null!;
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
+        public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
     }
 }
