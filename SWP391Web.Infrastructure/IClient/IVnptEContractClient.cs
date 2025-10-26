@@ -21,5 +21,6 @@ namespace SWP391Web.Infrastructure.IClient
         Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetEContractList(string token, int? pageNumber, int? pageSize, EContractStatus eContractStatus);
         Task<VnptResult<VnptDocumentDto>> GetEContractByIdAsync(string token, string eContractId);
         Task<byte[]> DownloadAsync(string url);
+        Task<VnptResult<DeleteEContractDraftResponse>> DeleteEContractDraft(string token, Guid econtractId);
     }
 }
