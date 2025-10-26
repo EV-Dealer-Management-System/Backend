@@ -37,6 +37,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<OrderDetail> OrderDetails { get; set; }
         public DbSet<AppointmentSetting> AppointmentSettings { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
+        public DbSet<DepositSetting> DepositSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -394,8 +395,33 @@ namespace SWP391Web.Infrastructure.Context
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<AppointmentSetting>()
+                .HasOne(ap => ap.Manager)
+                .WithOne(m => m.AppointmentSetting)
+                .HasForeignKey<AppointmentSetting>(ap => ap.ManagerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<AppointmentSetting>()
                 .HasIndex(ap => ap.DealerId)
                 .IsUnique();
+
+            /*****************************************************************************/
+            // Configure DepositSetting entity
+
+            modelBuilder.Entity<DepositSetting>()
+                .HasIndex(ds => ds.Id)
+                .IsUnique();
+
+            modelBuilder.Entity<DepositSetting>()
+                .HasOne(ds => ds.Dealer)
+                .WithOne(d => d.DepositSetting)
+                .HasForeignKey<DepositSetting>(ds => ds.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DepositSetting>()
+                .HasOne(ds => ds.Manager)
+                .WithOne(m => m.DepositSetting)
+                .HasForeignKey<DepositSetting>(ds => ds.ManagerId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
