@@ -7,9 +7,11 @@ using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
+using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SWP391Web.Application.Services
 {
@@ -174,7 +176,7 @@ namespace SWP391Web.Application.Services
             return ipv4;
         }
 
-        public async Task<ResponseDTO> HandleVNPayIpn(VNPayIPNDTO ipnDTO)
+        public async Task<ResponseDTO> HandleVNPayIpn(VNPayIPNDTO ipnDTO, CancellationToken ct)
         {
             try
             {
@@ -193,7 +195,7 @@ namespace SWP391Web.Application.Services
                 var signData = string.Join("&", data.Select(kvp => $"{kvp.Key}={FormEncode(kvp.Value)}"));
                 var result = HmacSha512(_hashSecret, signData);
 
-                if (!string.Equals(result, ipnDTO.Vnp_SecureHash, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(result, ipnDTO.vnp_SecureHash, StringComparison.OrdinalIgnoreCase))
                 {
                     return new ResponseDTO()
                     {
@@ -203,9 +205,9 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if (ipnDTO.Vnp_ResponseCode == "00" && ipnDTO.Vnp_TransactionStatus == "00")
+                if (ipnDTO.vnp_ResponseCode == "00" && ipnDTO.vnp_TransactionStatus == "00")
                 {
-                    var order = await _unitOfWork.CustomerOrderRepository.GetByOrderNoAsync(int.Parse(ipnDTO.Vnp_TxnRef));
+                    var order = await _unitOfWork.CustomerOrderRepository.GetByOrderNoAsync(int.Parse(ipnDTO.vnp_TxnRef));
                     if (order is null)
                     {
                         return new ResponseDTO
@@ -220,8 +222,30 @@ namespace SWP391Web.Application.Services
                             }
                         };
                     }
+                    await HandleVNPayCustomerOrder(order, decimal.Parse(ipnDTO.vnp_Amount) / 100);
 
-                    await HandleVNPayCustomerOrder(order, decimal.Parse(ipnDTO.Vnp_Amount));
+                    DateTime dateTime = DateTime.ParseExact(ipnDTO.vnp_PayDate, "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
+                    var Transaction = new Transaction
+                    {
+                        CustomerOrderId = order.Id,
+                        Amount = decimal.Parse(ipnDTO.vnp_Amount) / 100,
+                        Provider = "VNPay",
+                        OrderRef = ipnDTO.vnp_TxnRef,
+                        Currency = "VND",
+                        Status = TransactionStatus.Success,
+                        CreatedAt = dateTime
+                    };
+
+                    await _unitOfWork.TransactionRepository.AddAsync(Transaction, ct);
+                    try
+                    {
+                        await _unitOfWork.SaveAsync();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("Transaction save failed: " + e.Message);
+                    }
+
                     return new ResponseDTO()
                     {
                         StatusCode = 200,
