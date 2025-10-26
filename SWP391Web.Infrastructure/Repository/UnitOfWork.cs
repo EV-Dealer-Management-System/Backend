@@ -32,6 +32,7 @@ namespace SWP391Web.Infrastructure.Repository
         public IAppointmentSettingRepository AppointmentSettingRepository { get; private set; }
         public IAppointmentRepository AppointmentRepository { get; private set; }
         public ITransactionRepository TransactionRepository { get; private set; }
+        public IDepositSettingRepository DepositSettingRepository { get; private set; }
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -59,6 +60,7 @@ namespace SWP391Web.Infrastructure.Repository
             CustomerRepository = new CustomerRepository(_context);
             AppointmentSettingRepository = new AppointmentSettingRepository(_context);
             TransactionRepository = new TransactionRepository(_context);
+            DepositSettingRepository = new DepositSettingRepository(_context);
             //AppointmentSettingRepository = new AppointmentSettingRepository(_context);
             //AppointmentRepository = new AppointmentRepository(_context);
         }
