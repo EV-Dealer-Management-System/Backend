@@ -22,6 +22,7 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<Dealer?> GetByIdAsync(Guid dealerId, CancellationToken ct)
         {
             return await _context.Dealers
+                .Include(dl => dl.Warehouse)
                 .Where(dl => dl.Id == dealerId).FirstOrDefaultAsync(ct);
         }
 
@@ -29,6 +30,7 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _context.Dealers
                 .AsNoTracking()
+                .Include(dl => dl.Warehouse)
                 .Where(dl => dl.DealerMembers.Any(dm => dm.ApplicationUserId == userId && dm.IsActive == true))
                 .FirstOrDefaultAsync(ct);
         }

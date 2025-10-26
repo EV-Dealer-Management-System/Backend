@@ -106,6 +106,13 @@ namespace SWP391Web.Infrastructure.Client
             return await SendAsync<T>(request);
         }
 
+        private async Task<VnptResult<T>> DeleteAsync<T>(string token, string url)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Delete, _baseUrl + url);
+            Bearer(request, token);
+            return await SendAsync<T>(request);
+        }
+
         private async Task<VnptResult<T>> GetAsync<T>(string token, string url)
         {
             var request = new HttpRequestMessage(HttpMethod.Get, _baseUrl + url);
@@ -199,5 +206,7 @@ namespace SWP391Web.Infrastructure.Client
         public async Task<VnptResult<VnptDocumentDto>> GetEContractByIdAsync(string token, string eContractId)
             => await GetAsync<VnptDocumentDto>(token, $"/api/documents/{eContractId}");
 
+        public async Task<VnptResult<DeleteEContractDraftResponse>> DeleteEContractDraft(string token, Guid econtractId)
+            => await DeleteAsync<DeleteEContractDraftResponse>(token, $"/api/documents/delete/{econtractId}?permanent=true");
     }
 }

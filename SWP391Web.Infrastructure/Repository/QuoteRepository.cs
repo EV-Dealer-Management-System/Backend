@@ -35,6 +35,7 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<Quote?> GetQuoteByIdAsync(Guid quoteId)
         {
             return await _context.Quotes
+                .Include(q => q.CustomerOrders)
                 .Include(q => q.QuoteDetails)
                     .ThenInclude(qd => qd.ElectricVehicleVersion)
                         .ThenInclude(v => v.Model)

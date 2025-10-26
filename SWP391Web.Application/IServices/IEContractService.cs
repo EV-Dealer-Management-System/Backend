@@ -27,5 +27,6 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO<EContract>> GetEContractByIdAsync(string eContractId, CancellationToken ct);
         Task<VnptResult<GetEContractResponse<DocumentListItemDto>>> GetAllVnptEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus);
         Task<ResponseDTO> CreateBookingEContractAsync(ClaimsPrincipal userClaim, Guid bookingId, CancellationToken ct);
+        Task<ResponseDTO> DeleteEContractDraft(Guid EContractId, CancellationToken ct);
     }
 }

@@ -45,7 +45,7 @@ namespace SWP391Web.Infrastructure.Repository
         public Task<int> GetAvailableQuantityByVersionColorAsync(Guid versionId, Guid colorId)
         {
             return _context.ElectricVehicles
-                .Include (ev => ev.ElectricVehicleTemplate)
+                .Include(ev => ev.ElectricVehicleTemplate)
                 .Where(ev => ev.ElectricVehicleTemplate.VersionId == versionId
                              && ev.ElectricVehicleTemplate.ColorId == colorId
                              && ev.Status == ElectricVehicleStatus.Available
@@ -53,7 +53,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .CountAsync();
         }
         // Count vehicle in dealer 's inventory
-        public async Task<int> GetAvailableVehicleAsync(Guid dealerId , Guid versionId , Guid colorId)
+        public async Task<int> GetAvailableVehicleAsync(Guid dealerId, Guid versionId, Guid colorId)
         {
             return await _context.ElectricVehicles
                 .Include(ev => ev.ElectricVehicleTemplate)
@@ -64,7 +64,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .CountAsync();
         }
 
-        public async Task<List<ElectricVehicle>> GetAvailableVehicleByDealerAsync(Guid dealerId , Guid versionId , Guid colorId)
+        public async Task<List<ElectricVehicle>> GetAvailableVehicleByDealerAsync(Guid dealerId, Guid versionId, Guid colorId)
         {
             return await _context.ElectricVehicles
                 .Include(ev => ev.ElectricVehicleTemplate)
@@ -72,7 +72,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .ThenInclude(v => v.Model)
                 .Include(ev => ev.ElectricVehicleTemplate.Color)
                 .Include(ev => ev.Warehouse)
-                .Where( ev => ev.Warehouse.DealerId == dealerId
+                .Where(ev => ev.Warehouse.DealerId == dealerId
                         && ev.ElectricVehicleTemplate.VersionId == versionId
                         && ev.ElectricVehicleTemplate.ColorId == colorId
                         && ev.Status == ElectricVehicleStatus.AtDealer)
@@ -114,7 +114,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .FirstOrDefaultAsync(v => v.Id == vehicleId);
         }
 
-        public  async Task<ElectricVehicle?> GetByVersionColorAndWarehouseAsync(Guid versionId, Guid colorId, Guid warehouseId)
+        public async Task<ElectricVehicle?> GetByVersionColorAndWarehouseAsync(Guid versionId, Guid colorId, Guid warehouseId)
         {
             return await _context.ElectricVehicles
                 .Include(v => v.Warehouse)
@@ -155,6 +155,21 @@ namespace SWP391Web.Infrastructure.Repository
                              && ev.WarehouseId != null
                              && ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
                 .OrderBy(ev => ev.ImportDate)
+                .ToListAsync();
+        }
+
+        public async Task<List<ElectricVehicle>> GetVehicleByQuantityWithOldestImportDateForDealerAsync(Guid versionId, Guid colorId, Guid warehouseId, int quantity)
+        {
+            return await _context.ElectricVehicles
+                .Include(ev => ev.Warehouse)
+                .Include(ev => ev.ElectricVehicleTemplate)
+                .Where(ev => ev.WarehouseId == warehouseId
+                     && ev.ElectricVehicleTemplate.VersionId == versionId
+                     && ev.ElectricVehicleTemplate.ColorId == colorId
+                     && ev.Status == ElectricVehicleStatus.AtDealer
+                     && ev.Warehouse.WarehouseType == WarehouseType.Dealer)
+                .OrderBy(ev => ev.ImportDate)
+                .Take(quantity)
                 .ToListAsync();
         }
 
