@@ -57,7 +57,7 @@ namespace SWP391Web.Infrastructure.Repository
             BookingDetailRepository = new BookingDetailRepository(_context);
             CustomerRepository = new CustomerRepository(_context);
             AppointmentSettingRepository = new AppointmentSettingRepository(_context);
-            //AppointmentRepository = new AppointmentRepository(_context);
+            AppointmentRepository = new AppointmentRepository(_context);
         }
         public async Task<int> SaveAsync()
         {

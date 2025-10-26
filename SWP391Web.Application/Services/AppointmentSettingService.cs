@@ -170,138 +170,21 @@ namespace SWP391Web.Application.Services
             throw new NotImplementedException();
         }
 
-        public async Task<ResponseDTO> GetAllAppointmentAsync(ClaimsPrincipal user)
+        public async Task<ResponseDTO> GetAppointmentByIdAsync(Guid appointmentId)
         {
             try
             {
-                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var role = user.FindFirst(ClaimTypes.Role)?.Value;
-
-                if (userId == null || role == null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Invalid user claims",
-                        StatusCode = 401
-                    };
-                }
-
-                if (role == StaticUserRole.Admin)
-                {
-                    // Admin can view all appointment settings
-                    var allSettings = await _unitOfWork.AppointmentSettingRepository.GetAllAsync();
-                    if (allSettings == null || !allSettings.Any())
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "No appointment settings found",
-                            StatusCode = 404
-                        };
-                    }
-
-                    var mapped = _mapper.Map<List<GetAppointSettingDTO>>(allSettings);
-                    return new ResponseDTO
-                    {
-                        IsSuccess = true,
-                        Message = "All appointment settings retrieved successfully",
-                        StatusCode = 200,
-                        Result = mapped
-                    };
-                }
-
-                if (role == StaticUserRole.DealerManager)
-                {
-                    //Dealer Manager can view their dealer's appointment settings
-                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, CancellationToken.None);
-                    if (dealer == null)
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "Dealer not found for this manager",
-                            StatusCode = 404
-                        };
-                    }
-
-                    var dealerSetting = await _unitOfWork.AppointmentSettingRepository.GetByDealerIdAsync(dealer.Id);
-                    if (dealerSetting == null)
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "Appointment setting not found for this dealer",
-                            StatusCode = 404
-                        };
-                    }
-
-                    var mapped = _mapper.Map<GetAppointSettingDTO>(dealerSetting);
-                    return new ResponseDTO
-                    {
-                        IsSuccess = true,
-                        Message = "Dealer appointment setting retrieved successfully",
-                        StatusCode = 200,
-                        Result = mapped
-                    };
-                }
-
-                // Other roles are not authorized to view appointment settings
-                return new ResponseDTO
-                {
-                    IsSuccess = false,
-                    Message = "You do not have permission to view appointment settings",
-                    StatusCode = 403
-                };
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO
-                {
-                    IsSuccess = false,
-                    Message = ex.Message,
-                    StatusCode = 500
-                };
-            }
-        }
-
-        public async Task<ResponseDTO> GetAppointmentByDealerIdAsync(ClaimsPrincipal user)
-        {
-            try
-            {
-                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (userId == null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "User not found",
-                        StatusCode = 404
-                    };
-                }
-                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, CancellationToken.None);
-                if (dealer == null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Dealer not found",
-                        StatusCode = 404
-                    };
-                }
-
-                var appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetByDealerIdAsync(dealer.Id);
+                var appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetById(appointmentId);
                 if (appointmentSetting == null)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Appointment setting not found for this dealer",
+                        Message = "Appointment setting not found",
                         StatusCode = 404
                     };
                 }
                 var getAppointmentSetting = _mapper.Map<GetAppointSettingDTO>(appointmentSetting);
-
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -309,9 +192,8 @@ namespace SWP391Web.Application.Services
                     StatusCode = 200,
                     Result = getAppointmentSetting
                 };
-
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
                 return new ResponseDTO
                 {
@@ -321,6 +203,102 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
+
+        //public async Task<ResponseDTO> GetAllAppointmentAsync(ClaimsPrincipal user)
+        //{
+        //    try
+        //    {
+        //        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        var role = user.FindFirst(ClaimTypes.Role)?.Value;
+
+        //        if (userId == null || role == null)
+        //        {
+        //            return new ResponseDTO
+        //            {
+        //                IsSuccess = false,
+        //                Message = "Invalid user claims",
+        //                StatusCode = 401
+        //            };
+        //        }
+
+        //        if (role == StaticUserRole.Admin)
+        //        {
+        //            // Admin can view all appointment settings
+        //            var allSettings = await _unitOfWork.AppointmentSettingRepository.GetAllAsync();
+        //            if (allSettings == null || !allSettings.Any())
+        //            {
+        //                return new ResponseDTO
+        //                {
+        //                    IsSuccess = false,
+        //                    Message = "No appointment settings found",
+        //                    StatusCode = 404
+        //                };
+        //            }
+
+        //            var mapped = _mapper.Map<List<GetAppointSettingDTO>>(allSettings);
+        //            return new ResponseDTO
+        //            {
+        //                IsSuccess = true,
+        //                Message = "All appointment settings retrieved successfully",
+        //                StatusCode = 200,
+        //                Result = mapped
+        //            };
+        //        }
+
+        //        if (role == StaticUserRole.DealerManager)
+        //        {
+        //            //Dealer Manager can view their dealer's appointment settings
+        //            var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, CancellationToken.None);
+        //            if (dealer == null)
+        //            {
+        //                return new ResponseDTO
+        //                {
+        //                    IsSuccess = false,
+        //                    Message = "Dealer not found for this manager",
+        //                    StatusCode = 404
+        //                };
+        //            }
+
+        //            var dealerSetting = await _unitOfWork.AppointmentSettingRepository.GetByDealerIdAsync(dealer.Id);
+        //            if (dealerSetting == null)
+        //            {
+        //                return new ResponseDTO
+        //                {
+        //                    IsSuccess = false,
+        //                    Message = "Appointment setting not found for this dealer",
+        //                    StatusCode = 404
+        //                };
+        //            }
+
+        //            var mapped = _mapper.Map<GetAppointSettingDTO>(dealerSetting);
+        //            return new ResponseDTO
+        //            {
+        //                IsSuccess = true,
+        //                Message = "Dealer appointment setting retrieved successfully",
+        //                StatusCode = 200,
+        //                Result = mapped
+        //            };
+        //        }
+
+        //        // Other roles are not authorized to view appointment settings
+        //        return new ResponseDTO
+        //        {
+        //            IsSuccess = false,
+        //            Message = "You do not have permission to view appointment settings",
+        //            StatusCode = 403
+        //        };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new ResponseDTO
+        //        {
+        //            IsSuccess = false,
+        //            Message = ex.Message,
+        //            StatusCode = 500
+        //        };
+        //    }
+        //}
+
         public async Task<ResponseDTO> UpdateAppointmentAsync(ClaimsPrincipal user ,Guid appointmentId, UpdateAppointSettingDTO updateAppointmentDTO)
         {
             try
