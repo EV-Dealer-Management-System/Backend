@@ -260,9 +260,9 @@ namespace SWP391Web.Application.Services
                         Message = "Cannot find dealer manager"
                     };
 
-                var roleId = new List<Guid> 
-                { 
-                    Guid.Parse(_cfg["EContract:RoleId"] ?? throw new Exception("EContract:RoleId is not exist")) 
+                var roleId = new List<Guid>
+                {
+                    Guid.Parse(_cfg["EContract:RoleId"] ?? throw new Exception("EContract:RoleId is not exist"))
                 };
 
                 var vnptUser = new VnptUserUpsert
@@ -1137,6 +1137,66 @@ namespace SWP391Web.Application.Services
             catch (Exception ex)
             {
                 return new VnptResult<GetEContractResponse<DocumentListItemDto>>($"Exception when get all vnpt EContract: {ex.Message}");
+            }
+        }
+
+        public async Task<ResponseDTO> DeleteEContractDraft(Guid EContractId, CancellationToken ct)
+        {
+            try
+            {
+                var token = await GetAccessTokenAsync();
+
+                var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(EContractId, ct);
+                if (econtract is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "EContract not found.",
+                    };
+                }
+
+                if (econtract.Status != EContractStatus.Draft)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 400,
+                        Message = "Only EContract with Draft status can be deleted.",
+                    };
+                }
+
+                var deleteResult = await _vnpt.DeleteEContractDraft(token.Data!.AccessToken, EContractId);
+
+                if (deleteResult.Data!.Status!.Value == (int)EContractStatus.Draft)
+                {
+                    _unitOfWork.EContractRepository.Remove(econtract);
+                    await _unitOfWork.SaveAsync();
+
+                    return new ResponseDTO
+                    {
+                        IsSuccess = true,
+                        StatusCode = 200,
+                        Message = "EContract draft deleted successfully"
+                    };
+                }
+
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = "Error to delete EContract draft that status not correct."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to delete EContract draft: {ex.Message}"
+                };
             }
         }
     }
