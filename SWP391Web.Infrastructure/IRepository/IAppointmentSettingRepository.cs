@@ -9,7 +9,8 @@ namespace SWP391Web.Infrastructure.IRepository
 {
     public interface IAppointmentSettingRepository :  IRepository<AppointmentSetting>
     {
-        Task<AppointmentSetting> GetByDealerIdAsync(Guid dealerId);
-        Task<AppointmentSetting> GetDefaultAsync(Guid id);
+        Task<AppointmentSetting?> GetById(Guid id);
+        Task<AppointmentSetting?> GetByDealerIdAsync(Guid dealerId);
+        Task<AppointmentSetting?> GetDefaultAsync();
     }
 }

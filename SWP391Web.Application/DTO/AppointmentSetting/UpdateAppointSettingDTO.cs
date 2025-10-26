@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Application.DTO.AppointmentSetting
 {
-    public class UpdateAppointmentDTO
+    public class UpdateAppointSettingDTO
     {
         public bool? AllowOverlappingAppointments { get; set; }
         public int? MaxConcurrentAppointments { get; set; }
