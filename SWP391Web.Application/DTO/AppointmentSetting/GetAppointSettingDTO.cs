@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Application.DTO.AppointmentSetting
 {
-    internal class GetAppointmentDTO
+    internal class GetAppointSettingDTO
     {
         public Guid Id { get; set; }
         public string? ManagerId { get; set; }   

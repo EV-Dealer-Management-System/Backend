@@ -6,10 +6,8 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Application.DTO.AppointmentSetting
 {
-    public class CreateAppointmentDTO
+    public class CreateAppointSettingDTO
     {
-        public string ManagerId { get; set; } = null!;
-        public Guid? DealerId { get; set; }
         public bool AllowOverlappingAppointments { get; set; }
         public int MaxConcurrentAppointments { get; set; }
         public TimeSpan OpenTime { get; set; }
