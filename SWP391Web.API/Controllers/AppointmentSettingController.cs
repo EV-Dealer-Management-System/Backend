@@ -18,39 +18,39 @@ namespace SWP391Web.API.Controllers
             _appointmentSettingService = appointmentSettingService ?? throw new ArgumentNullException(nameof(appointmentSettingService));
         }
 
-        [HttpGet]
+        [HttpPost("create-appointment-setting")]
+        public async Task<ActionResult<ResponseDTO>> CreateAppointmentAsync([FromBody] CreateAppointSettingDTO createAppointmentDTO)
+        {
+            var response = await _appointmentSettingService.CreateAppointmentAsync(User, createAppointmentDTO);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpGet("get-all-appointment-setting")]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _appointmentSettingService.GetAllAppointmentAsync();
-            return StatusCode(result.StatusCode, result);
+            var response = await _appointmentSettingService.GetAllAppointmentAsync(User);
+            return StatusCode(response.StatusCode, response);
         }
 
-        [HttpGet("get-appointment-by-dealer-id/{dealerId}")]
-        public async Task<ActionResult<ResponseDTO>> GetByDealerIdAsync(Guid dealerId)
+        [HttpGet("get-appointment-setting-by-dealer-id/{dealerId}")]
+        public async Task<ActionResult<ResponseDTO>> GetByDealerIdAsync()
         {
-            var result = await _appointmentSettingService.GetAppointmentByDealerIdAsync(dealerId);
-            return StatusCode(result.StatusCode, result);
+            var response = await _appointmentSettingService.GetAppointmentByDealerIdAsync(User);
+            return StatusCode(response.StatusCode, response);
         }
 
-        [HttpPost("create-appointment")]
-        public async Task<ActionResult<ResponseDTO>> CreateAppointmentAsync([FromBody] CreateAppointmentDTO createAppointmentDTO)
+        [HttpPut("update-appointment-setting-by-id/{appointmentId}")]
+        public async Task<ActionResult<ResponseDTO>> UpdateAppointmentSettingAsync([FromRoute]Guid appointmentId, [FromBody]UpdateAppointSettingDTO updateAppointmentDTO)
         {
-            var result = await _appointmentSettingService.CreateAppointmentAsync(createAppointmentDTO);
-            return StatusCode(result.StatusCode, result);
+            var response = await _appointmentSettingService.UpdateAppointmentAsync(User,appointmentId,updateAppointmentDTO);
+            return StatusCode(response.StatusCode, response);
         }
 
-        [HttpPut("update-appointment-by-id/{appointmentId}")]
-        public async Task<IActionResult> Update([FromRoute]Guid appointmentId, [FromBody]UpdateAppointmentDTO updateAppointmentDTO)
-        {
-            var result = await _appointmentSettingService.UpdateAppointmentAsync(appointmentId,updateAppointmentDTO);
-            return StatusCode(result.StatusCode, result);
-        }
-
-        [HttpDelete("delete-appointment/{appointmentId}")]
-        public async Task<IActionResult> Delete(Guid appointmentId)
-        {
-            var result = await _appointmentSettingService.DeleteAppointmentAsync(appointmentId);
-            return StatusCode(result.StatusCode, result);
-        }
+        //[HttpDelete("delete-appointment/{appointmentId}")]
+        //public async Task<IActionResult> Delete(Guid appointmentId)
+        //{
+        //    var result = await _appointmentSettingService.DeleteAppointmentAsync(appointmentId);
+        //    return StatusCode(result.StatusCode, result);
+        //}
     }
 }

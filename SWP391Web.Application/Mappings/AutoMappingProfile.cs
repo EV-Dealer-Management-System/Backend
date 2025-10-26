@@ -1,5 +1,6 @@
 ﻿using Aspose.Words.XAttr;
 using AutoMapper;
+using SWP391Web.Application.DTO.AppointmentSetting;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.BookingEV;
 using SWP391Web.Application.DTO.BookingEVDetail;
@@ -123,6 +124,7 @@ namespace SWP391Web.Application.Mappings
             CreateMap<Dealer, GetDealerDTO>()
                 .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager.FullName))
                 .ForMember(dest => dest.ManagerEmail, opt => opt.MapFrom(src => src.Manager.Email)).ReverseMap();
+            CreateMap<AppointmentSetting, GetAppointSettingDTO>().ReverseMap();
         }
     }
 }
