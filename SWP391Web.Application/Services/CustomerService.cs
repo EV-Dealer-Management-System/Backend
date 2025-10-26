@@ -62,8 +62,8 @@
                     {
                         FullName = createCustomerDTO.FullName,
                         PhoneNumber = createCustomerDTO.PhoneNumber,
+                        Email = createCustomerDTO.Email,
                         Address = createCustomerDTO.Address,
-                        CreatedAt = createCustomerDTO.CreatedAt,
                         Note = createCustomerDTO.Note
                     };
 

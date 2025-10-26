@@ -17,7 +17,7 @@ namespace SWP391Web.Application.DTO.CustomerOrder
         public int OrderNo { get; set; }
         public DateTime CreatedAt { get; set; }
         public decimal TotalAmount { get; set; }
-        public OrderStatus Status { get; set; } = OrderStatus.Pending;
+        public OrderStatus Status { get; set; }
         public List<GetQuoteDetailDTO> QuoteDetails { get; set; } = new();
     }
 }

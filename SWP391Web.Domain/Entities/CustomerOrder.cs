@@ -12,7 +12,7 @@ namespace SWP391Web.Domain.Entities
         public DateTime CreatedAt { get; set; }
         public decimal TotalAmount { get; set; }
         public decimal? DepositAmount { get; set; }
-        public OrderStatus Status { get; set; } = OrderStatus.Pending;
+        public OrderStatus Status { get; set; }
 
         public Customer Customer { get; set; } = null!;
         public Quote Quote { get; set; } = null!;

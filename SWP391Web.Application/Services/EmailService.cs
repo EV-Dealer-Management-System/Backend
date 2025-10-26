@@ -195,5 +195,16 @@ namespace SWP391Web.Application.Service
                 { "{LoginLink}", StaticLinkUrl.WebUrl }
             });
         }
+
+        public Task<bool> NotifyPaymentLinkToCustomer(string to, string customerName, int orderNo, decimal orderAmount, string paymentLink)
+        {
+            return SendEmailFromTemplate(to, "NotifyPaymentLinkToCustomer", new Dictionary<string, string>
+            {
+                { "{CustomerName}", customerName },
+                { "{OrderNo}", orderNo.ToString() },
+                { "{OrderAmount}" , orderAmount.ToString() },
+                { "{PaymentLink}", paymentLink }
+            });
+        }
     }
 }

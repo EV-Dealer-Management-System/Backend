@@ -18,12 +18,15 @@ namespace SWP391Web.Application.Services
     {
         public readonly IUnitOfWork _unitOfWork;
         public readonly IMapper _mapper;
-        public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper)
+        public readonly IPaymentService _paymentService;
+        public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _paymentService = paymentService;
+
         }
-        public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO)
+        public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
         {
             try
             {
@@ -70,20 +73,34 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
+                var orderNo = _unitOfWork.CustomerOrderRepository.GenerateOrderNumber();
+
+                OrderStatus status;
+                if (createCustomerOrderDTO.IsPayFull)
+                {
+                    status = OrderStatus.FullPending;
+                }
+                else
+                {
+                    status = OrderStatus.DepositPending;
+                }
+
                 var customerOrder = new CustomerOrder
                 {
                     CustomerId = createCustomerOrderDTO.CustomerId,
                     QuoteId = quote.Id,
-                    OrderNo = createCustomerOrderDTO.OrderNo,
+                    OrderNo = orderNo,
                     CreatedAt = DateTime.UtcNow,
                     TotalAmount = quote.TotalAmount,
-                    Status = OrderStatus.Pending,
+                    Status = status,
                 };
 
-                await _unitOfWork.CustomerOrderRepository.AddAsync(customerOrder, CancellationToken.None);
+                await _unitOfWork.CustomerOrderRepository.AddAsync(customerOrder, ct);
                 await _unitOfWork.SaveAsync();
 
                 var getCustomerOrder = _mapper.Map<GetCustomerOrderDTO>(customerOrder);
+
+                await _paymentService.CreateVNPayLink(customerOrder.Id, ct);
 
                 return new ResponseDTO
                 {

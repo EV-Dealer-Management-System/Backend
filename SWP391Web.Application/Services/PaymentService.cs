@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Payment;
+using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
@@ -18,18 +19,19 @@ namespace SWP391Web.Application.Services
 {
     public class PaymentService : IPaymentService
     {
-        private readonly string _baseUrl, _tmnCode, _hashSecret, _returnUrl, _ipnUrl;
+        private readonly string _baseUrl, _tmnCode, _hashSecret, _returnUrl;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IHttpContextAccessor _http;
-        public PaymentService(IConfiguration cfg, IUnitOfWork unitOfWork, IHttpContextAccessor httpContext)
+        private readonly IEmailService _emailService;
+        public PaymentService(IConfiguration cfg, IUnitOfWork unitOfWork, IHttpContextAccessor httpContext, IEmailService emailService)
         {
             _baseUrl = cfg["VNPay:BaseUrl"] ?? throw new Exception("Cannot find VNPay:BaseUrl");
             _tmnCode = cfg["VNPay:TmnCode"] ?? throw new Exception("Cannot find VNPay:TmnCode");
             _hashSecret = cfg["VNPay:HashSecret"] ?? throw new Exception("Cannot find VNPay:HashSecret");
             _returnUrl = cfg["VNPay:ReturnUrl"] ?? throw new Exception("Cannot find VNPay:ReturnUrl");
-            //_ipnUrl = cfg["VNPay:IpnUrl"] ?? throw new Exception("Cannot find VNPay:IpnUrl");
             _unitOfWork = unitOfWork;
             _http = httpContext;
+            _emailService = emailService;
         }
         public async Task<ResponseDTO> CreateVNPayLink(Guid customerOrderId, CancellationToken ct)
         {
@@ -47,11 +49,11 @@ namespace SWP391Web.Application.Services
                 }
 
                 decimal? amount;
-                if (order.Status.Equals(OrderStatus.Confirmed) && order.DepositAmount is not null)
+                if (order.Status.Equals(OrderStatus.FullPending) && order.DepositAmount is not null)
                 {
                     amount = order.DepositAmount;
                 }
-                else if (order.Status.Equals(OrderStatus.Deposited) && order.DepositAmount is not null)
+                else if (order.Status.Equals(OrderStatus.DepositPending) && order.DepositAmount is not null)
                 {
                     amount = (order.TotalAmount - order.DepositAmount);
                 }
@@ -91,6 +93,7 @@ namespace SWP391Web.Application.Services
                 var queryString = signData + $"&vnp_SecureHashType=HMACSHA512&vnp_SecureHash={secureHash}";
                 var paymentUrl = _baseUrl + "?" + queryString;
 
+                await _emailService.NotifyPaymentLinkToCustomer(order.Customer.Email!, order.Customer.FullName!, order.OrderNo, amount.Value/100, paymentUrl);
                 return new ResponseDTO()
                 {
                     Message = "VNPay link created successfully",
@@ -135,7 +138,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        private static bool IsPrivate(System.Net.IPAddress ip)
+        private bool IsPrivate(IPAddress ip)
         {
             var s = ip.MapToIPv4().ToString();
             if (s.StartsWith("10.") || s.StartsWith("192.168.")) return true;
@@ -161,7 +164,7 @@ namespace SWP391Web.Application.Services
                 ?? http.Request.Headers["CF-Connecting-IP"].FirstOrDefault()
                 ?? http.Connection.RemoteIpAddress?.ToString();
 
-            if (!System.Net.IPAddress.TryParse(candidate, out var ip))
+            if (!IPAddress.TryParse(candidate, out var ip))
                 return "127.0.0.1";
 
             ip = ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 ? ip.MapToIPv4() : ip;
@@ -170,7 +173,7 @@ namespace SWP391Web.Application.Services
             if (IsPrivate(ip))
             {
                 var force = Environment.GetEnvironmentVariable("VNPAY_FORCE_CLIENT_IP");
-                if (!string.IsNullOrWhiteSpace(force) && System.Net.IPAddress.TryParse(force, out var forced))
+                if (!string.IsNullOrWhiteSpace(force) && IPAddress.TryParse(force, out var forced))
                     return forced.MapToIPv4().ToString();
             }
 
@@ -294,7 +297,7 @@ namespace SWP391Web.Application.Services
             }
             else
             {
-                customerOrder.Status = OrderStatus.Deposited;
+                customerOrder.Status = OrderStatus.Depositing;
             }
 
             await _unitOfWork.SaveAsync();
