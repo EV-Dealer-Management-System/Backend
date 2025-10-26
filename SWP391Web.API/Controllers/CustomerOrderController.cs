@@ -18,10 +18,10 @@ namespace SWP391Web.API.Controllers
             _customerOrderService = customerOrderService ?? throw new ArgumentNullException(nameof(customerOrderService));
         }
 
-        [HttpPost("Create-customer-order")]
-        public async Task<ActionResult<ResponseDTO>> CreateCustomerOrderAsync([FromBody] CreateCustomerOrderDTO createCustomerOrderDTO)
+        [HttpPost("create-customer-order")]
+        public async Task<ActionResult<ResponseDTO>> CreateCustomerOrderAsync([FromBody] CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
         {
-            var response = await _customerOrderService.CreateCustomerOrderAsync(User, createCustomerOrderDTO);
+            var response = await _customerOrderService.CreateCustomerOrderAsync(User, createCustomerOrderDTO, ct);
             return StatusCode(response.StatusCode,response);
         }
     }
