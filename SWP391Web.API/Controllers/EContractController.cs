@@ -202,5 +202,13 @@ namespace SWP391Web.API.Controllers
             var response = await _econtractService.CreateBookingEContractAsync(User, bookingId, ct);
             return StatusCode(response.StatusCode, response);
         }
+
+        [HttpDelete]
+        [Route("delete-econtract-draft/{econtractId}")]
+        public async Task<ActionResult<ResponseDTO>> DeleteEContractDraft([FromRoute] Guid econtractId, CancellationToken ct)
+        {
+            var r = await _econtractService.DeleteEContractDraft(econtractId, ct);
+            return StatusCode(r.StatusCode, r);
+        }
     }
 }

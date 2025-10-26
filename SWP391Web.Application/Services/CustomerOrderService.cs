@@ -1,4 +1,5 @@
-﻿using SWP391Web.Application.DTO.Auth;
+using AutoMapper;
+using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.CustomerOrder;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Entities;
@@ -15,114 +16,91 @@ namespace SWP391Web.Application.Services
 {
     public class CustomerOrderService : ICustomerOrderService
     {
-        private readonly IUnitOfWork _unitOfWork;
-        public CustomerOrderService(IUnitOfWork unitOfWork)
+        public readonly IUnitOfWork _unitOfWork;
+        public readonly IMapper _mapper;
+        public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper)
         {
-            _unitOfWork = unitOfWork;
+            _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
-        public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateOrderDTO createOrderDTO, CancellationToken ct)
+        public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO)
         {
             try
             {
                 var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return new ResponseDTO(false)
-                    {
-                        Message = "User not login yet",
-                        StatusCode = 401
-                    };
-                }
-
-                var dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId, ct);
-                if (dealer is null)
-                {
-                    return new ResponseDTO(false)
-                    {
-                        Message = "Dealer not found",
-                        StatusCode = 404
-                    };
-                }
-
-                var quote = await _unitOfWork.QuoteRepository.GetQuoteByIdAsync(createOrderDTO.QuoteId);
-                if (quote is null)
-                {
-                    return new ResponseDTO(false)
-                    {
-                        Message = "Quote not found",
-                        StatusCode = 404
-                    };
-                }
-
-                var customer = await _unitOfWork.CustomerRepository.GetByIdAsync(createOrderDTO.CustomerId);
-
-                if (customer is null)
+                if (userId == null)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Customer not found",
-                        StatusCode = 404
+                        Message = "User not found.",
+                        StatusCode = 404,
                     };
                 }
 
-                var orderNo = _unitOfWork.CustomerOrderRepository.GenerateOrderNumber();
-                var order = new CustomerOrder
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
+                if (dealer == null)
                 {
-                    CustomerId = customer.Id,
-                    QuoteId = createOrderDTO.QuoteId,
-                    OrderNo = orderNo,
-                    TotalAmount = quote.TotalAmount
-                };
-
-                foreach (var quoteDetail in quote.QuoteDetails)
-                {
-                    var vehicles = await _unitOfWork.ElectricVehicleRepository.GetVehicleByQuantityWithOldestImportDateForDealerAsync(quoteDetail.VersionId, quoteDetail.ColorId, dealer.Warehouse.Id, quoteDetail.Quantity);
-                    foreach (var ev in vehicles)
-                    {
-                        var orderDetail = new OrderDetail
-                        {
-                            ElectricVehicleId = ev.Id,
-                            CustomerOrderId = order.Id,
-                        };
-
-                        order.OrderDetails.Add(orderDetail);
-
-                        ev.Status = ElectricVehicleStatus.DealerPending;
-                        _unitOfWork.ElectricVehicleRepository.Update(ev);
-                    }
-                }
-
-                await _unitOfWork.CustomerOrderRepository.AddAsync(order, ct);
-
-                var result = await _unitOfWork.SaveAsync();
-
-                if (result > 0)
-                {
-                    return new ResponseDTO()
-                    {
-                        IsSuccess = true,
-                        Message = "Create order successfully",
-                        StatusCode = 201
-                    };
-                }
-                else
-                {
-                    return new ResponseDTO()
+                    return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Failed to create order",
-                        StatusCode = 500
+                        Message = "Dealer not found.",
+                        StatusCode = 404,
                     };
                 }
+
+                var quote = await _unitOfWork.QuoteRepository.GetQuoteByIdAsync(createCustomerOrderDTO.QuoteId);
+                if (quote == null || quote.DealerId != dealer.Id)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Quote not found.",
+                        StatusCode = 404,
+                    };
+                }
+
+                if (quote.Status != QuoteStatus.Accepted)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Quote is not accepted yet . Cann't create order.",
+                        StatusCode = 400,
+                    };
+                }
+
+                var customerOrder = new CustomerOrder
+                {
+                    CustomerId = createCustomerOrderDTO.CustomerId,
+                    QuoteId = quote.Id,
+                    OrderNo = createCustomerOrderDTO.OrderNo,
+                    CreatedAt = DateTime.UtcNow,
+                    TotalAmount = quote.TotalAmount,
+                    Status = OrderStatus.Pending,
+                };
+
+                await _unitOfWork.CustomerOrderRepository.AddAsync(customerOrder, CancellationToken.None);
+                await _unitOfWork.SaveAsync();
+
+                var getCustomerOrder = _mapper.Map<GetCustomerOrderDTO>(customerOrder);
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Create customer order successfully.",
+                    StatusCode = 201,
+                    Result = getCustomerOrder,
+                };
+
             }
             catch (Exception ex)
             {
-                return new ResponseDTO()
+                return new ResponseDTO
                 {
                     IsSuccess = false,
-                    Message = $"Error to create a order: {ex.Message}",
-                    StatusCode = 500
+                    Message = ex.Message,
+                    StatusCode = 500,
                 };
             }
         }

@@ -260,9 +260,9 @@ namespace SWP391Web.Application.Services
                         Message = "Cannot find dealer manager"
                     };
 
-                var roleId = new List<Guid> 
-                { 
-                    Guid.Parse(_cfg["EContract:RoleId"] ?? throw new Exception("EContract:RoleId is not exist")) 
+                var roleId = new List<Guid>
+                {
+                    Guid.Parse(_cfg["EContract:RoleId"] ?? throw new Exception("EContract:RoleId is not exist"))
                 };
 
                 var vnptUser = new VnptUserUpsert
@@ -679,8 +679,6 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                econtract.UpdateStatus((EContractStatus)signResult.Data.Status.Value);
-
                 if (!signResult.Success)
                 {
                     return new ResponseDTO
@@ -695,6 +693,8 @@ namespace SWP391Web.Application.Services
                 if (signResult.Data.Status.Value == (int)EContractStatus.Completed)
                 {
                     await CreateDealerAccount(signResult.Data.Id.ToString(), ct);
+                    econtract.UpdateStatus(EContractStatus.Completed);
+                    _unitOfWork.EContractRepository.Update(econtract);
                 }
 
                 await _unitOfWork.SaveAsync();
@@ -797,32 +797,36 @@ namespace SWP391Web.Application.Services
 
             using var doc = JsonDocument.Parse(body);
             var root = doc.RootElement;
-            if (!root.TryGetProperty("data", out var dataEl) ||
-                dataEl.ValueKind == JsonValueKind.Null ||
-                dataEl.ValueKind == JsonValueKind.Undefined)
+            JsonElement dataEl;
+            if (root.TryGetProperty("data", out var dataProp) &&
+                dataProp.ValueKind == JsonValueKind.Object)
             {
-                if (root.TryGetProperty("messages", out var msgsEl) && msgsEl.ValueKind == JsonValueKind.Array)
-                {
-                    var msgs = string.Join("; ", msgsEl.EnumerateArray()
-                                                       .Select(m => m.ValueKind == JsonValueKind.String ? m.GetString() : m.ToString()));
-                    //throw new HttpRequestException($"HTTP {(int)res.StatusCode} {res.ReasonPhrase}\n{req.Method} {req.RequestUri}\n{body}");
-                    throw new Exception("The code is used");
-                }
+                dataEl = dataProp;
+            }
+            // 2️⃣ Nếu API trả về trực tiếp "token" và "document"
+            else if (root.TryGetProperty("token", out var tokenProp) &&
+                     root.TryGetProperty("document", out var docProp))
+            {
+                dataEl = root; // gán root để đọc token/doc như cũ
+            }
+            else
+            {
+                throw new Exception("Unexpected response format: " + body);
             }
 
             dataEl = root.GetProperty("data");
             string? accessToken = null;
-            if (dataEl.TryGetProperty("access", out var tokenEl))
+            if (dataEl.TryGetProperty("token", out var tokenEl))
             {
-                if (tokenEl.ValueKind == JsonValueKind.String)
-                {
-                    accessToken = tokenEl.GetString();
-                }
-                else if (tokenEl.ValueKind == JsonValueKind.Object &&
-                         tokenEl.TryGetProperty("accessToken", out var atEl) &&
-                         atEl.ValueKind == JsonValueKind.String)
+                if (tokenEl.ValueKind == JsonValueKind.Object &&
+                    tokenEl.TryGetProperty("accessToken", out var atEl) &&
+                    atEl.ValueKind == JsonValueKind.String)
                 {
                     accessToken = atEl.GetString();
+                }
+                else if (tokenEl.ValueKind == JsonValueKind.String)
+                {
+                    accessToken = tokenEl.GetString();
                 }
             }
 
@@ -1133,6 +1137,66 @@ namespace SWP391Web.Application.Services
             catch (Exception ex)
             {
                 return new VnptResult<GetEContractResponse<DocumentListItemDto>>($"Exception when get all vnpt EContract: {ex.Message}");
+            }
+        }
+
+        public async Task<ResponseDTO> DeleteEContractDraft(Guid EContractId, CancellationToken ct)
+        {
+            try
+            {
+                var token = await GetAccessTokenAsync();
+
+                var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(EContractId, ct);
+                if (econtract is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "EContract not found.",
+                    };
+                }
+
+                if (econtract.Status != EContractStatus.Draft)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 400,
+                        Message = "Only EContract with Draft status can be deleted.",
+                    };
+                }
+
+                var deleteResult = await _vnpt.DeleteEContractDraft(token.Data!.AccessToken, EContractId);
+
+                if (deleteResult.Data!.Status!.Value == (int)EContractStatus.Draft)
+                {
+                    _unitOfWork.EContractRepository.Remove(econtract);
+                    await _unitOfWork.SaveAsync();
+
+                    return new ResponseDTO
+                    {
+                        IsSuccess = true,
+                        StatusCode = 200,
+                        Message = "EContract draft deleted successfully"
+                    };
+                }
+
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = "Error to delete EContract draft that status not correct."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to delete EContract draft: {ex.Message}"
+                };
             }
         }
     }

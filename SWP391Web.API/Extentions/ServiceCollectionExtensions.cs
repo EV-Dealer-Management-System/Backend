@@ -28,6 +28,7 @@ namespace SWP391Web.API.Extentions
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IRedisService, RedisService>();
             services.AddScoped<ICustomerService, CustomerService>();
+            services.AddScoped<ICustomerOrderService, CustomerOrderService>();
             services.AddScoped<IEContractService, EContractService>();
             services.AddScoped<IGHNService, GHNService>();
             services.AddScoped<IElectricVehicleColorService, ElectricVehicleColorService>();
@@ -44,7 +45,8 @@ namespace SWP391Web.API.Extentions
             services.AddScoped<IQuoteService, QuoteService>();
             services.AddScoped<IDealerService, DealerService>();
             services.AddScoped<IEVTemplateService, EVTemplateService>();
-            services.AddScoped<ICustomerOrderService, CustomerOrderService>();
+            services.AddScoped<IPaymentService, PaymentService>();
+            services.AddScoped<IAppointmentSettingService, AppointmentSettingService>();
 
             // Register Infrastructure Repositories
             services.AddScoped<IUnitOfWork, UnitOfWork>();

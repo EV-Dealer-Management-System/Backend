@@ -29,7 +29,7 @@ namespace SWP391Web.Domain.ValueObjects
         public bool HasVerified { get; set; }
 
         [JsonPropertyName("fileType")]
-        public int FileType { get; set; } // hoặc đổi sang enum FileType nếu bạn có mapping
+        public int FileType { get; set; }
 
         [JsonPropertyName("status")]
         public ValueDescription Status { get; set; } = default!;
@@ -79,7 +79,6 @@ namespace SWP391Web.Domain.ValueObjects
         [JsonPropertyName("type")]
         public DocumentTypeDto Type { get; set; } = default!;
 
-        // Chưa rõ schema -> để JsonElement cho linh hoạt
         [JsonPropertyName("processes")]
         public List<JsonElement> Processes { get; set; } = new();
 

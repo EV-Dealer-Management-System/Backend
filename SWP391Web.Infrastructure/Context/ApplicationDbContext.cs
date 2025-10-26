@@ -35,6 +35,8 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<ElectricVehicleTemplate> ElectricVehicleTemplates { get; set; }
         public DbSet<DealerMember> DealerMembers { get; set; }
         public DbSet<OrderDetail> OrderDetails { get; set; }
+        public DbSet<AppointmentSetting> AppointmentSettings { get; set; }
+        public DbSet<Appointment> Appointments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -352,6 +354,48 @@ namespace SWP391Web.Infrastructure.Context
                 .HasForeignKey(od => od.ElectricVehicleId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            /******************************************************************************/
+            // Configure Transaction entity
+            
+            modelBuilder.Entity<Transaction>()
+                .HasOne(tr => tr.CustomerOrder)
+                .WithMany(co => co.Transactions)
+                .HasForeignKey(tr => tr.CustomerOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure Appointment entity
+
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.Customer)
+                .WithMany(c => c.Appointments)
+                .HasForeignKey(a => a.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.Dealer)
+                .WithMany(d => d.Appointments)
+                .HasForeignKey(a => a.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.EVTemplate)
+                .WithMany(s => s.Appointments)
+                .HasForeignKey(a => a.EVTemplateId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure AppointmentSetting entity
+
+            modelBuilder.Entity<AppointmentSetting>()
+                .HasOne(ap => ap.Dealer)
+                .WithOne(d => d.AppointmentSetting)
+                .HasForeignKey<AppointmentSetting>(ap => ap.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<AppointmentSetting>()
+                .HasIndex(ap => ap.DealerId)
+                .IsUnique();
         }
     }
 }

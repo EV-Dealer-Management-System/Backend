@@ -31,18 +31,18 @@ public static class WebApplicationBuilderExtensions
             })
             .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
-              options.SaveToken = true;
-              options.RequireHttpsMetadata = true;
-              options.TokenValidationParameters = new TokenValidationParameters()
-              {
-                  ValidAudience = builder.Configuration["JWT:ValidAudience"],
-                  ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
-                  IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"] ?? throw new InvalidOperationException("Canot find JWT secret"))),
-                  ValidateIssuer = true,
-                  ValidateAudience = true,
-                  ValidateLifetime = true,
-                  ValidateIssuerSigningKey = true,
-              };
+                options.SaveToken = true;
+                options.RequireHttpsMetadata = true;
+                options.TokenValidationParameters = new TokenValidationParameters()
+                {
+                    ValidAudience = builder.Configuration["JWT:ValidAudience"],
+                    ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"] ?? throw new InvalidOperationException("Canot find JWT secret"))),
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                };
             })
             .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
             {
@@ -111,11 +111,10 @@ public static class WebApplicationBuilderExtensions
 
             client.DefaultRequestHeaders.Accept.Add(
                 new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-            client.DefaultRequestHeaders.ConnectionClose = true;
         })
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
     {
-        MaxConnectionsPerServer = 1,
+        MaxConnectionsPerServer = 2,
         AllowAutoRedirect = true,
         AutomaticDecompression = System.Net.DecompressionMethods.All,
         SslProtocols = System.Security.Authentication.SslProtocols.Tls12,

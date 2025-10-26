@@ -52,8 +52,13 @@ namespace SWP391Web.API.Controllers
             var response = await _promotionService.GetAllAsync();
             return StatusCode(response.StatusCode, response);
         }
-        
 
-        
+        [HttpGet("get-promotions-for-quote")]
+        public async Task<ActionResult<ResponseDTO>> GetPromotionsForQuote([FromQuery] Guid? modelId, [FromQuery] Guid? versionId)
+        {
+            var response = await _promotionService.GetPromotionsForQuoteAsync(modelId, versionId);
+            return StatusCode(response.StatusCode, response);
+
+        }
     }
 }

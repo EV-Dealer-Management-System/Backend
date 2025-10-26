@@ -10,7 +10,8 @@ namespace SWP391Web.Domain.Enums
     {
         Pending = 0,
         Confirmed = 1,
-        Completed = 2,
-        Cancelled = 3
+        Deposited = 2,
+        Completed = 3,
+        Cancelled = 4
     }
 }

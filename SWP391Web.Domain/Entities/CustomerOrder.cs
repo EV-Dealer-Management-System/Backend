@@ -11,10 +11,12 @@ namespace SWP391Web.Domain.Entities
         public int OrderNo { get; set; }
         public DateTime CreatedAt { get; set; }
         public decimal TotalAmount { get; set; }
+        public decimal? DepositAmount { get; set; }
         public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
         public Customer Customer { get; set; } = null!;
         public Quote Quote { get; set; } = null!;
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
+        public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
     }
 }
