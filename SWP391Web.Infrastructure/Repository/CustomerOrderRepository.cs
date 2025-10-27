@@ -20,6 +20,7 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<CustomerOrder?> GetByIdAsync(Guid customerOrderId)
         {
             return await _context.CustomerOrders
+                .Include(c => c.Customer)
                 .FirstOrDefaultAsync(c => c.Id == customerOrderId);
         }
 

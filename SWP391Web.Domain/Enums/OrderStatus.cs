@@ -8,10 +8,10 @@ namespace SWP391Web.Domain.Enums
 {
     public enum OrderStatus
     {
-        Pending = 0,
-        Confirmed = 1,
-        Deposited = 2,
-        Completed = 3,
-        Cancelled = 4
+        FullPending = 0,
+        DepositPending = 1,
+        Depositing = 4,
+        Completed = 5,
+        Cancelled = 6
     }
 }

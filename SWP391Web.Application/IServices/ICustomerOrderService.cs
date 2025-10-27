@@ -11,6 +11,6 @@ namespace SWP391Web.Application.IServices
 {
     public interface ICustomerOrderService
     {
-        Task<ResponseDTO> CreateCustomerOrderAsync( ClaimsPrincipal user,CreateCustomerOrderDTO createCustomerOrderDTO);
+        Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct);
     }
 }

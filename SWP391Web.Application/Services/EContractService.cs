@@ -1,7 +1,5 @@
 ﻿using AutoMapper;
-using EVManagementSystem.Application.DTO.EContract;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using SWP391Web.Application.DTO;
@@ -177,14 +175,19 @@ namespace SWP391Web.Application.Services
                         Message = "Dealer name is exist"
                     };
 
-                var user = new ApplicationUser
+                var user = await _unitOfWork.UserManagerRepository.GetByEmailAsync(createDealerDTO.EmailManager);
+
+                if (user is null)
                 {
-                    UserName = createDealerDTO.EmailManager,
-                    FullName = createDealerDTO.FullNameManager,
-                    Email = createDealerDTO.EmailManager,
-                    PhoneNumber = createDealerDTO.PhoneNumberManager,
-                    LockoutEnabled = true
-                };
+                    user = new ApplicationUser
+                    {
+                        UserName = createDealerDTO.EmailManager,
+                        FullName = createDealerDTO.FullNameManager,
+                        Email = createDealerDTO.EmailManager,
+                        PhoneNumber = createDealerDTO.PhoneNumberManager,
+                        LockoutEnabled = true
+                    };
+                }
 
                 var dealer = new Dealer
                 {
@@ -1171,7 +1174,14 @@ namespace SWP391Web.Application.Services
 
                 if (deleteResult.Data!.Status!.Value == (int)EContractStatus.Draft)
                 {
+                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(econtract.OwnerBy, ct);
                     _unitOfWork.EContractRepository.Remove(econtract);
+                    _unitOfWork.DealerRepository.Remove(dealer);
+                    var manager = await _unitOfWork.UserManagerRepository.GetByIdAsync(dealer.ManagerId);
+                    if (manager.LockoutEnabled is true)
+                    {
+                        _unitOfWork.UserManagerRepository.Remove(manager);
+                    }
                     await _unitOfWork.SaveAsync();
 
                     return new ResponseDTO

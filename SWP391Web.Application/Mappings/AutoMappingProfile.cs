@@ -8,6 +8,7 @@ using SWP391Web.Application.DTO.BookingEVDetail;
 using SWP391Web.Application.DTO.Customer;
 using SWP391Web.Application.DTO.CustomerOrder;
 using SWP391Web.Application.DTO.Dealer;
+using SWP391Web.Application.DTO.DepositSetting;
 using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.DTO.EContractTemplate;
 using SWP391Web.Application.DTO.ElectricVehicle;
@@ -127,6 +128,9 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.ManagerEmail, opt => opt.MapFrom(src => src.Manager.Email)).ReverseMap();
             CreateMap<AppointmentSetting, GetAppointSettingDTO>().ReverseMap();
             CreateMap<Appointment, GetAppointmentDTO>().ReverseMap();
+            CreateMap<DepositSetting, GetDepositSettingDTO>()
+                .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager.FullName))
+                .ForMember(dest => dest.DealerName, opt => opt.MapFrom(src => src.Dealer.Name)).ReverseMap();
         }
     }
 }
