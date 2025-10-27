@@ -1,4 +1,5 @@
 ﻿using SWP391Web.Application.DTO.EVTemplate;
+using SWP391Web.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +12,7 @@ namespace SWP391Web.Application.DTO.ElectricVehicle
     {
         public ViewVersionName? Version { get; set; }
         public ViewColorName? Color { get; set; }
+        public StatusModel Status { get; set; }
         public int Quantity { get; set; }
     }
 }
