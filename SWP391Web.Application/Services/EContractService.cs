@@ -1177,6 +1177,12 @@ namespace SWP391Web.Application.Services
                     var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(econtract.OwnerBy, ct);
                     _unitOfWork.EContractRepository.Remove(econtract);
                     _unitOfWork.DealerRepository.Remove(dealer);
+
+                    var manager = await _unitOfWork.UserManagerRepository.GetByIdAsync(dealer.ManagerId);
+                    if (manager.LockoutEnabled is true)
+                    {
+                        _unitOfWork.UserManagerRepository.Remove(manager);
+                    }
                     await _unitOfWork.SaveAsync();
 
                     return new ResponseDTO
