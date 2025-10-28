@@ -38,6 +38,8 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<AppointmentSetting> AppointmentSettings { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<DepositSetting> DepositSettings { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -47,6 +49,7 @@ namespace SWP391Web.Infrastructure.Context
             EmailSeeder.SeedEmailTemplate(modelBuilder);
             EContractSeeder.EContractTemplateSeeder.SeedDealerEContract(modelBuilder);
             EContractTermSeeder.SeedTerm(modelBuilder);
+            AdminSeeder.AdminConfigure(modelBuilder);
 
             // Customize ASP.NET Identity table names
             modelBuilder.Entity<ApplicationUser>(b =>
