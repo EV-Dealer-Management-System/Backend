@@ -10,7 +10,7 @@ namespace SWP391Web.Domain.Entities
     public class EContract
     {
         public Guid Id { get; private set; }
-        public Guid TemplateId { get; private set; }
+        public string HtmlTemaple { get; private set; }
         public string? Name { get; set; }
         public EContractStatus Status { get; private set; } = EContractStatus.Draft;
         public EcontractType Type { get; set; }
@@ -21,10 +21,10 @@ namespace SWP391Web.Domain.Entities
         public ApplicationUser Owner { get; private set; } = null!;
 
         private EContract() { }
-        public EContract(Guid id, Guid templateId, string? name, string createdBy, string ownerBy, EContractStatus status, EcontractType type)
+        public EContract(Guid id, string htmlTemaple, string? name, string createdBy, string ownerBy, EContractStatus status, EcontractType type)
         {
             Id = id;
-            TemplateId = templateId;
+            HtmlTemaple = htmlTemaple;
             Name = name;
             Status = status;
             CreatedBy = createdBy;
@@ -36,7 +36,5 @@ namespace SWP391Web.Domain.Entities
         {
             Status = status;
         }
-
-        public EContractTemplate EContractTemplate = null!;
     }
 }
