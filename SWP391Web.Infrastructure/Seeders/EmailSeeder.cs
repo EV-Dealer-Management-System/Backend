@@ -539,6 +539,98 @@ new
     Status = EmailStatus.Active
 });
 
+            modelBuilder.Entity<EmailTemplate>().HasData(
+new
+{
+    Id = Guid.Parse("A8D5E7F1-13B2-4F0C-BE9F-9D5E6C2B8F7A"),
+    TemplateName = "NotifyPaymentLinkToCustomer",
+    SenderName = "EVSystem",
+    SenderEmail = "hoangtuzami@gmail.com",
+    Category = "Payment",
+    SubjectLine = "[EVSystem] Liên kết thanh toán đơn hàng",
+    PreHeaderText = "Đơn hàng của bạn đã được tạo. Vui lòng thanh toán để hoàn tất quá trình đặt hàng.",
+    PersonalizationTags = "{CustomerName},{OrderNo},{OrderAmount},{PaymentLink}",
+    BodyContent = @"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Thanh toán đơn hàng</title>
+  <style>
+    body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; margin:0; padding:0; background:#f3f4f6; color:#333; }
+    .wrap { padding:40px 0; }
+    .card { width:640px; margin:auto; background:#fff; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; }
+    .header { background:linear-gradient(90deg,#1565C0,#42A5F5); color:#fff; text-align:center; padding:28px 20px; }
+    .header h1 { margin:0; font-size:26px; font-weight:700; }
+    .header p { margin:8px 0 0; font-size:15px; opacity:.95; }
+    .content { padding:40px 45px; line-height:1.75; }
+    .content p { font-size:15px; margin:0 0 12px; }
+    .box { background:#f9fafb; border:1px solid #e0e0e0; border-radius:10px; padding:18px 22px; margin:22px 0; }
+    .box table { width:100%; border-collapse:collapse; }
+    .box td { padding:8px 0; font-size:15px; vertical-align:top; }
+    .box td:first-child { width:190px; font-weight:600; color:#444; }
+    .btn { display:inline-block; padding:14px 32px; background:#1976D2; color:#fff !important; text-decoration:none; border-radius:8px; font-weight:600; font-size:16px; letter-spacing:.3px; transition:.25s; }
+    .btn:hover { background:#0D47A1; transform:translateY(-2px); }
+    .note { font-size:13px; color:#666; margin-top:24px; border-top:1px dashed #ddd; padding-top:16px; }
+    .footer { background:#fafafa; text-align:center; padding:22px; font-size:13px; color:#777; border-top:1px solid #eee; }
+    .footer a { color:#1976D2; text-decoration:none; }
+    @media (max-width:640px){ .card{width:95%} .content{padding:28px} }
+  </style>
+</head>
+<body>
+  <div class='wrap'>
+    <div class='card'>
+      <div class='header'>
+        <h1>Electric Vehicle Management System</h1>
+        <p>Thanh toán đơn hàng #{OrderNo}</p>
+      </div>
+      <div class='content'>
+        <p>Xin chào <strong>{CustomerName}</strong>,</p>
+        <p>Cảm ơn bạn đã đặt hàng tại EVSystem. Vui lòng thanh toán để xác nhận đơn hàng của bạn.</p>
+
+        <div class='box'>
+          <table>
+            <tr>
+              <td>Mã đơn hàng:</td>
+              <td><strong>#{OrderNo}</strong></td>
+            </tr>
+            <tr>
+              <td>Số tiền cần thanh toán:</td>
+              <td><strong>{OrderAmount} VND</strong></td>
+            </tr>
+          </table>
+        </div>
+
+        <p style='text-align:center; margin:28px 0;'>
+          <a href='{PaymentLink}' class='btn'>Thanh toán ngay</a>
+        </p>
+
+        <p class='note'>
+          💡 <strong>Lưu ý:</strong><br>
+          • Liên kết thanh toán chỉ có hiệu lực trong 15 phút kể từ thời điểm tạo.<br>
+          • Nếu bạn gặp sự cố khi thanh toán, vui lòng liên hệ bộ phận hỗ trợ EVSystem.<br>
+          • Sau khi thanh toán thành công, đơn hàng sẽ được xử lý ngay lập tức.
+        </p>
+      </div>
+      <div class='footer'>
+        <p>Trân trọng,<br><strong>EVSystem Billing Team</strong></p>
+        <p>Website: <a href='https://electricvehiclesystem.click'>electricvehiclesystem.click</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>",
+    FooterContent = "EVSystem Billing – Electric Vehicle Management System",
+    CallToAction = "<a href=\"{PaymentLink}\" class=\"btn\">Thanh toán ngay</a>",
+    Language = "Vietnamese",
+    RecipientType = "Customer",
+    CreatedBy = "System",
+    CreatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+    UpdatedBy = "System",
+    UpdatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+    Status = EmailStatus.Active
+});
 
         }
     }
