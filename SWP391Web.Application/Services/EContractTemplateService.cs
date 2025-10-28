@@ -58,24 +58,12 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetEContractTemplateByEcontractIdAsync(Guid eContractId, CancellationToken ct)
+        public async Task<ResponseDTO> GetEContractTemplateByIdAsync(Guid eContractTemplateId, CancellationToken ct)
         {
             try
             {
-                var eContract = await _unitOfWork.EContractRepository.GetByIdAsync(eContractId, ct);
-                if (eContract is null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "EContract not found",
-                        StatusCode = 404
-                    };
-                }
-
-                var template = await _unitOfWork.EContractTemplateRepository.GetbyIdAsync(eContract.TemplateId, ct);
-
-                if (template is null)
+                var template = await _unitOfWork.EContractTemplateRepository.GetbyIdAsync(eContractTemplateId, ct);
+                if (template is null || template.IsDeleted)
                 {
                     return new ResponseDTO
                     {

@@ -490,7 +490,7 @@ namespace SWP391Web.Application.Services
 
             var status = (EContractStatus)createResult.Data.Status.Value;
 
-            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.Id, fileName, "System", dealer.ManagerId!, status, EcontractType.BookingContract);
+            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.ContentHtml, fileName, "System", dealer.ManagerId!, status, EcontractType.BookingContract);
 
             await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
             await _unitOfWork.SaveAsync();
@@ -589,7 +589,7 @@ namespace SWP391Web.Application.Services
 
             var status = (EContractStatus)createResult.Data.Status.Value;
 
-            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.Id, fileName, userId, user.Id, status, EcontractType.DealerContract);
+            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.ContentHtml, fileName, userId, user.Id, status, EcontractType.DealerContract);
 
             await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
 

@@ -209,12 +209,6 @@ namespace SWP391Web.Infrastructure.Context
                 .HasForeignKey(e => e.OwnerBy)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<EContract>()
-                .HasOne(e => e.EContractTemplate)
-                .WithMany(t => t.EContracts)
-                .HasForeignKey(e => e.TemplateId)
-                .OnDelete(DeleteBehavior.Restrict);
-
             /******************************************************************************/
             // Configure Warehouse entity
 
