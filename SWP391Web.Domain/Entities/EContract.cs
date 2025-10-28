@@ -32,6 +32,12 @@ namespace SWP391Web.Domain.Entities
             Type = type;
         }
 
+        public void UpdateHtmlTemplate(string htmlTemplate, string? name)
+        {
+            HtmlTemaple = htmlTemplate;
+            Name = name;
+        }
+
         public void UpdateStatus(EContractStatus status)
         {
             Status = status;
