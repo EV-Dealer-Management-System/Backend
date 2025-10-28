@@ -118,14 +118,24 @@
                             Message = "Dealer not found."
                         };
                     }
-                    var customers = await _unitOfWork.CustomerRepository.GetAllAsync();
-                    var customerDTOs = _mapper.Map<List<GetCustomerDTO>>(customers);
+                    var allCustomers = await _unitOfWork.CustomerRepository.GetAllCustomerAsync();
+                    var customers = allCustomers.Where(c => c.Dealers.Any(d => d.Id == dealer.Id)).ToList();
+                    if(customers == null || !customers.Any())
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "customer list not found",
+                            StatusCode = 404
+                        };
+                    }
+                    var getCustomers = _mapper.Map<List<GetCustomerDTO>>(customers);
                     return new ResponseDTO
                     {
                         IsSuccess = true,
                         StatusCode = 200,
                         Message = "Customers retrieved successfully",
-                        Result = customerDTOs
+                        Result = getCustomers
                     };
 
                 }
@@ -177,13 +187,13 @@
                             Message = "Customer not found"
                         };
                     }
-                    var customerDTO = _mapper.Map<GetCustomerDTO>(customer);
+                    var getCustomer = _mapper.Map<GetCustomerDTO>(customer);
                     return new ResponseDTO
                     {
                         IsSuccess = true,
                         StatusCode = 200,
                         Message = "Customer retrieved successfully",
-                        Result = customerDTO
+                        Result = getCustomer
                     };
                 }
                 catch (Exception ex)

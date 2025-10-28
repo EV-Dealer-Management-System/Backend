@@ -13,6 +13,15 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
+        public async Task<List<Customer>> GetAllCustomerAsync()
+        {
+            return await _context.Customers
+                .Include(c => c.Dealers)
+                .ToListAsync();
+
+
+        }
+
         public async Task<Customer?> GetByEmailAync(string email)
         {
             return await _context.Customers.FirstOrDefaultAsync(c => c.Email == email);

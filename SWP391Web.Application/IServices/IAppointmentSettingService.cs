@@ -13,8 +13,7 @@ namespace SWP391Web.Application.IServices
     {
         Task<ResponseDTO> CreateAppointmentAsync(ClaimsPrincipal user, CreateAppointSettingDTO createAppointmentDTO);
         Task<ResponseDTO> DeleteAppointmentAsync(Guid appointmentId);
-        Task<ResponseDTO> GetAllAppointmentAsync(ClaimsPrincipal user);
-        Task<ResponseDTO> GetAppointmentByDealerIdAsync(ClaimsPrincipal user);
+        Task<ResponseDTO> GetAppointmentByIdAsync(Guid appointmentId);
         Task<ResponseDTO> UpdateAppointmentAsync(ClaimsPrincipal user,Guid appointmentId ,UpdateAppointSettingDTO updateAppointmentDTO);
 
     }
