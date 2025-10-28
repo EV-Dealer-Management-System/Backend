@@ -755,6 +755,8 @@ namespace SWP391Web.Application.Services
 
             var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(dealerManager.Id, ct);
             if (dealer is null) throw new Exception($"Cannot find dealer with manager id '{dealerManager.Id}'");
+            dealer.DealerStatus = DealerStatus.Active;
+            _unitOfWork.DealerRepository.Update(dealer);
 
             var warehouse = new CreateWarehouseDTO
             {

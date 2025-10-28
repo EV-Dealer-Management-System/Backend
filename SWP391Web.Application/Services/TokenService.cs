@@ -24,11 +24,13 @@ namespace SWP391Web.Application.Service
         public async Task<string> GenerateJwtAccessTokenAysnc(ApplicationUser user)
         {
             var roles = await _unitOfWork.UserManagerRepository.GetRoleAsync(user);
+            var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(user.Id, CancellationToken.None);
             var authClaims = new List<Claim>()
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim("Email", user.Email ?? string.Empty),
-                new Claim ("FullName", user.FullName ?? string.Empty)
+                new Claim("FullName", user.FullName ?? string.Empty),
+                new Claim("DealerId", dealer?.Id.ToString() ?? string.Empty)
             };
 
             foreach (var role in roles)

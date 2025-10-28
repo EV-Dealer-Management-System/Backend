@@ -21,6 +21,11 @@ namespace SWP391Web.Infrastructure.Repository
             return await _userManager.AccessFailedAsync(user);
         }
 
+        public async Task<IdentityResult> ResetAccessFailedAsync(ApplicationUser user)
+        {
+            return await _userManager.ResetAccessFailedCountAsync(user);
+        }
+
         public async Task<IdentityResult> AddToRoleAsync(ApplicationUser user, string role)
         {
             return await _userManager.AddToRoleAsync(user, role)

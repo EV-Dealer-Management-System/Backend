@@ -79,6 +79,8 @@ namespace SWP391Web.Application.Service
 
                 var getUser = _mapper.Map<GetApplicationUserDTO>(user);
 
+                await _unitOfWork.UserManagerRepository.ResetAccessFailedAsync(user);
+
                 return new ResponseDTO
                 {
                     Message = "Login successful",
