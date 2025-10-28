@@ -15,6 +15,7 @@ namespace SWP391Web.Domain.Enums
         Sold = 5,
         AtDealer = 6,
         Maintenance = 7,
-        DealerPending = 8
+        DealerPending = 8,
+        DepositBooked = 9
     }
 }

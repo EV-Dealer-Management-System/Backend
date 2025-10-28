@@ -19,12 +19,13 @@ namespace SWP391Web.Application.Services
         public readonly IUnitOfWork _unitOfWork;
         public readonly IMapper _mapper;
         public readonly IPaymentService _paymentService;
-        public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService)
+        private readonly IDepositSettingService _depositSetting;
+        public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService, IDepositSettingService depositSetting)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _paymentService = paymentService;
-
+            _depositSetting = depositSetting;
         }
         public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
         {
@@ -76,6 +77,7 @@ namespace SWP391Web.Application.Services
                 var orderNo = _unitOfWork.CustomerOrderRepository.GenerateOrderNumber();
 
                 OrderStatus status;
+                var amount = quote.TotalAmount;
                 if (createCustomerOrderDTO.IsPayFull)
                 {
                     status = OrderStatus.FullPending;
@@ -83,6 +85,8 @@ namespace SWP391Web.Application.Services
                 else
                 {
                     status = OrderStatus.DepositPending;
+                    var depositRate = await _depositSetting.GetDepositSetting(user, ct);
+                    amount = quote.TotalAmount * depositRate.Data!.MaxDepositPercentage;
                 }
 
                 var customerOrder = new CustomerOrder
@@ -91,11 +95,14 @@ namespace SWP391Web.Application.Services
                     QuoteId = quote.Id,
                     OrderNo = orderNo,
                     CreatedAt = DateTime.UtcNow,
-                    TotalAmount = quote.TotalAmount,
+                    TotalAmount = amount,
                     Status = status,
                 };
 
                 await _unitOfWork.CustomerOrderRepository.AddAsync(customerOrder, ct);
+
+                await HandleOrderDetail(quote);
+
                 await _unitOfWork.SaveAsync();
 
                 var getCustomerOrder = _mapper.Map<GetCustomerOrderDTO>(customerOrder);
@@ -119,6 +126,25 @@ namespace SWP391Web.Application.Services
                     Message = ex.Message,
                     StatusCode = 500,
                 };
+            }
+        }
+
+        private async Task HandleOrderDetail(Quote quote)
+        {
+            foreach (var quoteDetail in quote.QuoteDetails)
+            {
+                var vehicles = await _unitOfWork.ElectricVehicleRepository
+                    .GetVehicleByQuantityWithOldestImportDateForDealerAsync(
+                        quoteDetail.VersionId,
+                        quoteDetail.ColorId,
+                        quote.DealerId,
+                        quoteDetail.Quantity);
+
+                foreach(var vehicle in vehicles)
+                {
+                    vehicle.Status = ElectricVehicleStatus.Pending;
+                    _unitOfWork.ElectricVehicleRepository.Update(vehicle);
+                }
             }
         }
     }
