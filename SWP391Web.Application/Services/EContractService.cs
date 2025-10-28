@@ -303,7 +303,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var uProcess = await UpdateProcessAsync(access.Data!.AccessToken, eContractId.ToString(), companyApproverUserCode, dealerManagerId, draftEContract.Data!.PositionA!, draftEContract.Data!.PositionA!, draftEContract.Data.PageSign);
+                var uProcess = await UpdateProcessAsync(access.Data!.AccessToken, eContractId.ToString(), companyApproverUserCode, dealerManagerId, draftEContract.Data!.PositionA!, draftEContract.Data!.PositionB!, draftEContract.Data.PageSign);
 
                 var sent = await SendProcessAsync(access.Data!.AccessToken, eContractId.ToString());
 
