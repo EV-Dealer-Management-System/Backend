@@ -14,7 +14,7 @@ namespace SWP391Web.Domain.Entities
         public Guid DealerId { get; set; }
         public string? FeedbackContent { get; set; }
         public string? ImgUrl { get; set; }
-        public FeedbackStatus Status { get; set; }
+        public FeedbackStatus Status { get; set; } = FeedbackStatus.Pending;
         public DateTime CreatedAt { get; set; }
     }
 }
