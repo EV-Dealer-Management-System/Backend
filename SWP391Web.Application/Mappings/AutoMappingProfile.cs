@@ -127,6 +127,7 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager.FullName))
                 .ForMember(dest => dest.ManagerEmail, opt => opt.MapFrom(src => src.Manager.Email)).ReverseMap();
             CreateMap<AppointmentSetting, GetAppointSettingDTO>().ReverseMap();
+            CreateMap<Appointment, GetCreateAppointmentDTO>().ReverseMap();
             CreateMap<Appointment, GetAppointmentDTO>()
                 .ForMember(dest => dest.EVTemplate, opt => opt.MapFrom(src => new ViewTemplate
                 {

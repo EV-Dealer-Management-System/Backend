@@ -55,6 +55,19 @@ namespace SWP391Web.Infrastructure.Repository
                 .ToListAsync();
         }
 
+        public async Task<List<Appointment>> GetByDealerIdAndDateAsync(Guid dealerId, DateTime date)
+        {
+            var startOfDay = date.Date;
+            var endOfDay = startOfDay.AddDays(1);
+
+            return await _context.Appointments
+                .Where(a => a.DealerId == dealerId
+                            && a.StartTime >= startOfDay
+                            && a.StartTime < endOfDay
+                            && a.Status == AppointmentStatus.Active)
+                .ToListAsync();
+        }
+
         public async Task<List<Appointment>> GetByDealerIdAsync(Guid dealerId)
         {
             return await  _context.Appointments
