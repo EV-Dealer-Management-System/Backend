@@ -86,7 +86,7 @@ namespace SWP391Web.Application.Services
                 {
                     status = OrderStatus.DepositPending;
                     var depositRate = await _depositSetting.GetDepositSetting(user, ct);
-                    amount = quote.TotalAmount * depositRate.Data!.MaxDepositPercentage;
+                    amount = quote.TotalAmount * (depositRate.Data!.MaxDepositPercentage/100);
                 }
 
                 var customerOrder = new CustomerOrder
@@ -95,7 +95,7 @@ namespace SWP391Web.Application.Services
                     QuoteId = quote.Id,
                     OrderNo = orderNo,
                     CreatedAt = DateTime.UtcNow,
-                    TotalAmount = amount,
+                    TotalAmount = (int)amount,
                     Status = status,
                 };
 
@@ -137,12 +137,17 @@ namespace SWP391Web.Application.Services
                     .GetVehicleByQuantityWithOldestImportDateForDealerAsync(
                         quoteDetail.VersionId,
                         quoteDetail.ColorId,
-                        quote.DealerId,
+                        quote.Dealer.Warehouse.Id,
                         quoteDetail.Quantity);
 
                 foreach(var vehicle in vehicles)
                 {
-                    vehicle.Status = ElectricVehicleStatus.Pending;
+                    var orderDetail = new OrderDetail
+                    {
+                        CustomerOrderId = quote.CustomerOrders.First().Id,
+                        ElectricVehicleId = vehicle.Id
+                    };
+                    vehicle.Status = ElectricVehicleStatus.DealerPending;
                     _unitOfWork.ElectricVehicleRepository.Update(vehicle);
                 }
             }
