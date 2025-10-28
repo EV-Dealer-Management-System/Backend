@@ -38,6 +38,10 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<AppointmentSetting> AppointmentSettings { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<DepositSetting> DepositSettings { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<CustomerFeedback> CustomerFeedbacks { get; set; }
+        public DbSet<DealerFeedback> DealerFeedbacks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -47,6 +51,7 @@ namespace SWP391Web.Infrastructure.Context
             EmailSeeder.SeedEmailTemplate(modelBuilder);
             EContractSeeder.EContractTemplateSeeder.SeedDealerEContract(modelBuilder);
             EContractTermSeeder.SeedTerm(modelBuilder);
+            AdminSeeder.AdminConfigure(modelBuilder);
 
             // Customize ASP.NET Identity table names
             modelBuilder.Entity<ApplicationUser>(b =>
@@ -202,12 +207,6 @@ namespace SWP391Web.Infrastructure.Context
                 .HasOne(e => e.Owner)
                 .WithMany(o => o.EContracts)
                 .HasForeignKey(e => e.OwnerBy)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<EContract>()
-                .HasOne(e => e.EContractTemplate)
-                .WithMany(t => t.EContracts)
-                .HasForeignKey(e => e.TemplateId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             /******************************************************************************/
@@ -421,6 +420,30 @@ namespace SWP391Web.Infrastructure.Context
                 .HasOne(ds => ds.Manager)
                 .WithOne(m => m.DepositSetting)
                 .HasForeignKey<DepositSetting>(ds => ds.ManagerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure Notification entity
+
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.Dealer)
+                .WithMany(d => d.Notifications)
+                .HasForeignKey(n => n.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure CustomerFeedback entity
+
+            modelBuilder.Entity<CustomerFeedback>()
+                .HasOne(cf => cf.Customer)
+                .WithMany(c => c.CustomerFeedbacks)
+                .HasForeignKey(cf => cf.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CustomerFeedback>()
+                .HasOne(cf => cf.Dealer)
+                .WithMany(d => d.CustomerFeedbacks)
+                .HasForeignKey(cf => cf.DealerId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

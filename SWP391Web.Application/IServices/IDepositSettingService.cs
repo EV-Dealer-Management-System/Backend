@@ -12,7 +12,7 @@ namespace SWP391Web.Application.IServices
     public interface IDepositSettingService
     {
         Task<ResponseDTO> CreateUpdateDepositSetting(ClaimsPrincipal userClaim, decimal depositPercentage, CancellationToken ct);
-        Task<ResponseDTO> GetDepositSetting(ClaimsPrincipal userClaim, CancellationToken ct);
+        Task<ResponseDTO<GetDepositSettingDTO>> GetDepositSetting(ClaimsPrincipal userClaim, CancellationToken ct);
         Task<ResponseDTO> UpdateAllSettings(ClaimsPrincipal userClaim, UpdateAllDepositSettingsDTO settingsDTO, CancellationToken ct);
     }
 }

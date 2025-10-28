@@ -44,6 +44,8 @@ namespace SWP391Web.Infrastructure.Repository
                 .Include(q => q.QuoteDetails)
                     .ThenInclude(qd => qd.Promotion)
                 .Include(q => q.Dealer)
+                    .ThenInclude(d => d.Warehouse)
+                .Include(q => q.Dealer)
                 .FirstOrDefaultAsync(q => q.Id == quoteId);
         }
 

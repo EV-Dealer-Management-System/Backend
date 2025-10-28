@@ -10,7 +10,7 @@ namespace SWP391Web.Application.DTO.EContract
     public class GetEContractDTO
     {
         public Guid Id { get; private set; }
-        public Guid TemplateId { get; private set; }
+        public string HtmlTemaple { get; private set; } = null!;
         public string? Name { get; private set; }
         public EContractStatus Status { get; private set; }
         public EcontractType Type { get; private set; }
