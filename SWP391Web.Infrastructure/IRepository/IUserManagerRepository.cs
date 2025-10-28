@@ -25,5 +25,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<IdentityResult> CreateAsync(ApplicationUser user);
         Task<IdentityResult> AddLoginGoogleAsync(ApplicationUser user, string googleSub);
         Task<IList<UserLoginInfo>> HasLogin(ApplicationUser user);
+        Task<IdentityResult> ResetAccessFailedAsync(ApplicationUser user);
     }
 }
