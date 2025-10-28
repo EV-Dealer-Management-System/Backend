@@ -946,38 +946,8 @@ namespace SWP391Web.Application.Services
 
                 var term = await _unitOfWork.EContractTermRepository.GetByLevelAsync(dealer.DealerLevel, ct);
 
-                var data = new Dictionary<string, object?>
-                {
-                    ["company.name"] = _cfg["Company:Name"] ?? "N/A",
-                    ["company.address"] = _cfg["Company:Address"] ?? "N/A",
-                    ["company.taxNo"] = _cfg["Company:TaxNo"] ?? "N/A",
-                    ["dealer.name"] = dealer.Name,
-                    ["dealer.address"] = dealer.Address,
-                    ["dealer.taxNo"] = dealer.TaxNo,
-                    ["dealer.contact"] = $"{dealerManager.Email}, {dealerManager.PhoneNumber}",
-                    ["contract.date"] = DateTime.UtcNow.ToString("dd/MM/yyyy"),
-                    ["contract.effectiveDate"] = DateTime.UtcNow.ToString("dd/MM/yyyy"),
-                    ["contract.expiryDate"] = DateTime.UtcNow.AddDays(365).ToString("dd/MM/yyyy"),
-                    ["term.scope"] = term.Scope,
-                    ["terms.pricing"] = term.Pricing,
-                    ["terms.payment"] = term.Payment,
-                    ["terms.commitments"] = term.Commitment,
-                    ["terms.noticeDays"] = term.NoticeDay,
-                    ["terms.orderConfirmDays"] = term.OrderConfirmDays,
-                    ["terms.deliveryLocation"] = term.DeliveryLocation,
-                    ["terms.paymentMethod"] = term.PaymentMethod,
-                    ["terms.paymentDueDays"] = term.PaymentDueDays,
-                    ["terms.penaltyRate"] = term.PenaltyRate,
-                    ["terms.claimDays"] = term.ClaimDays,
-                    ["terms.terminationNoticeDays"] = term.TerminationNoticeDays,
-                    ["terms.disputeLocation"] = term.DisputeLocation,
-                    ["roles.A.representative"] = term.RoleRepresentative,
-                    ["roles.A.title"] = term.RoleTitle,
-                    ["roles.B.representative"] = dealerManager.FullName,
-                    ["roles.B.title"] = "Khách hàng"
-                };
+                var html = updateEContractDTO.HtmlFile;
 
-                var html = EContractPdf.ReplacePlaceholders(updateEContractDTO.HtmlFile, data, htmlEncode: false);
                 var filePdf = await EContractPdf.RenderAsync(html);
 
                 var formFile = new FormFile(
@@ -990,6 +960,10 @@ namespace SWP391Web.Application.Services
                     var errors = string.Join(", ", response.Messages);
                     throw new Exception($"Error to update EContract: {errors}");
                 }
+
+                contract.UpdateHtmlTemplate(html, updateEContractDTO.Subject);
+                _unitOfWork.EContractRepository.Update(contract);
+                await _unitOfWork.SaveAsync();
 
                 var anchors = EContractPdf.FindAnchors(filePdf, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
                 var positionA = GetVnptEContractPosition(filePdf, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
