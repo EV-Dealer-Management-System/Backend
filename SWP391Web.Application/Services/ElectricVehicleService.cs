@@ -247,15 +247,8 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                // get all template
-                var allTemplates = await _unitOfWork.EVTemplateRepository.GetAllAsync(
-                    includes: q => q
-                        .Include(t => t.Version)
-                            .ThenInclude(v => v.Model)
-                        .Include(t => t.Color));
+                var vehicles = new List<ElectricVehicle>();
 
-                // take template
-                List<ElectricVehicle> vehicles;
                 if (role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
                 {
                     vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllVehicleWithDetailAsync();
@@ -263,6 +256,7 @@ namespace SWP391Web.Application.Services
                 else
                 {
                     var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
+
                     if (dealer == null)
                     {
                         return new ResponseDTO
@@ -276,41 +270,48 @@ namespace SWP391Web.Application.Services
                     vehicles = await _unitOfWork.ElectricVehicleRepository.GetDealerInventoryAsync(dealer.Id);
                 }
 
-                // Gruop ev by template
-                var vehicleGroup = vehicles
-                    .GroupBy(ev => ev.ElectricVehicleTemplateId)
+                if (vehicles == null || !vehicles.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No vehicle in inventory",
+                        StatusCode = 404
+                    };
+                }
+
+                var getDealerInventory = vehicles
+                    .GroupBy(ev => new
+                    {
+                        ModelId = ev.ElectricVehicleTemplate.Version.Model.Id,
+                        ModelName = ev.ElectricVehicleTemplate.Version.Model.ModelName,
+                        VersionId = ev.ElectricVehicleTemplate.Version.Id,
+                        VersionName = ev.ElectricVehicleTemplate.Version.VersionName,
+                        ColorId = ev.ElectricVehicleTemplate.Color.Id,
+                        ColorName = ev.ElectricVehicleTemplate.Color.ColorName
+                    })
                     .Select(g => new
                     {
-                        TemplateId = g.Key,
-                        Quantity = g.Count()
+                        ModelId = g.Key.ModelId,
+                        ModelName = g.Key.ModelName,
+                        VersionId = g.Key.VersionId,
+                        VersionName = g.Key.VersionName,
+                        ColorId = g.Key.ColorId,
+                        ColorName = g.Key.ColorName,
+                        Quantity = g.Count(),
+                        VINs = g.Select(v => v.VIN).ToList()
                     })
-                    .ToDictionary(x => x.TemplateId, x => x.Quantity);
-
-                // template + quantity + status
-                var inventory = allTemplates.Select(t => new
-                {
-                    ModelId = t.Version.Model.Id,
-                    ModelName = t.Version.Model.ModelName,
-                    VersionId = t.Version.Id,
-                    VersionName = t.Version.VersionName,
-                    ColorId = t.Color.Id,
-                    ColorName = t.Color.ColorName,
-                    Quantity = vehicleGroup.ContainsKey(t.Id) ? vehicleGroup[t.Id] : 0,
-                    StatusModel = vehicleGroup.ContainsKey(t.Id) && vehicleGroup[t.Id] > 0
-                        ? StatusModel.Available
-                        : StatusModel.Unavailable
-                })
-                .OrderBy(x => x.ModelName)
-                .ThenBy(x => x.VersionName)
-                .ThenBy(x => x.ColorName)
-                .ToList();
+                    .OrderBy(x => x.ModelName)
+                    .ThenBy(x => x.VersionName)
+                    .ThenBy(x => x.ColorName)
+                    .ToList();
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     StatusCode = 200,
                     Message = "Get Dealer Inventory successfully",
-                    Result = inventory
+                    Result = getDealerInventory
                 };
             }
             catch (Exception ex)
@@ -324,6 +325,99 @@ namespace SWP391Web.Application.Services
             }
         }
 
+        public async Task<ResponseDTO?> GetEVCInventoryAsync(ClaimsPrincipal user)
+        {
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
+
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "User not found"
+                    };
+                }
+
+                if (role != StaticUserRole.Admin && role != StaticUserRole.EVMStaff)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 403,
+                        Message = "Access denied. Only Admin and EVM Staff can view company inventory."
+                    };
+                }
+
+                var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllEVCVehiclesWithDetailAsync();
+
+                var companyVehicles = vehicles
+                    .Where(v => v.Warehouse != null && v.Warehouse.WarehouseType == WarehouseType.EVInventory)
+                    .ToList();
+
+                if (!companyVehicles.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "No vehicles found in company inventory."
+                    };
+                }
+
+                var groupedInventory = companyVehicles
+                    .GroupBy(v => new
+                    {
+                        ModelId = v.ElectricVehicleTemplate.Version.Model.Id,
+                        ModelName = v.ElectricVehicleTemplate.Version.Model.ModelName,
+                        VersionId = v.ElectricVehicleTemplate.Version.Id,
+                        VersionName = v.ElectricVehicleTemplate.Version.VersionName,
+                        ColorId = v.ElectricVehicleTemplate.Color.Id,
+                        ColorName = v.ElectricVehicleTemplate.Color.ColorName
+                    })
+                    .Select(g => new
+                    {
+                        g.Key.ModelId,
+                        g.Key.ModelName,
+                        g.Key.VersionId,
+                        g.Key.VersionName,
+                        g.Key.ColorId,
+                        g.Key.ColorName,
+                        Quantity = g.Count(),
+                        Vehicles = g.Select(v => new
+                        {
+                            v.VIN,
+                            v.WarehouseId,
+                            WarehouseName = v.Warehouse.WarehouseName
+                        }).ToList()
+                    })
+                    .OrderBy(x => x.ModelName)
+                    .ThenBy(x => x.VersionName)
+                    .ThenBy(x => x.ColorName)
+                    .ToList();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Get company inventory successfully",
+                    Result = groupedInventory
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = ex.Message
+                };
+            }
+        }
+        
         public async Task<ResponseDTO> GetVehicleByIdAsync(Guid vehicleId)
         {
             try

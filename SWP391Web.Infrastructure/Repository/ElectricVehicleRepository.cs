@@ -19,12 +19,24 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
+        public async Task<List<ElectricVehicle>> GetAllEVCVehiclesWithDetailAsync()
+        {
+            return await _context.ElectricVehicles
+                .Include(ev => ev.ElectricVehicleTemplate)
+                    .ThenInclude(et => et.Version)
+                        .ThenInclude(v => v.Model)
+                .Include(ev => ev.ElectricVehicleTemplate.Color)
+                .Include(ev => ev.Warehouse)
+                .Where(ev => ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
+                .ToListAsync();
+        }
+
         public async Task<List<ElectricVehicle>> GetAllVehicleWithDetailAsync()
         {
             return await _context.ElectricVehicles
                 .Include(ev => ev.ElectricVehicleTemplate)
-                .ThenInclude(et => et.Version)
-                .ThenInclude(et => et.Model)
+                    .ThenInclude(et => et.Version)
+                        .ThenInclude(et => et.Model)
                 .Include(ev => ev.ElectricVehicleTemplate.Color)
                 .Where(ev => ev.Status == ElectricVehicleStatus.AtDealer)
                 .ToListAsync();
