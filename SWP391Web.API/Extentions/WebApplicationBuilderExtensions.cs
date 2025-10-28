@@ -42,6 +42,9 @@ public static class WebApplicationBuilderExtensions
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
+
+                    RoleClaimType = ClaimTypes.Role,
+                    NameClaimType = ClaimTypes.NameIdentifier
                 };
                 options.Events = new JwtBearerEvents
                 {

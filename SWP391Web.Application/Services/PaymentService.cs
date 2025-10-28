@@ -1,4 +1,3 @@
-
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.SignalR;
@@ -236,7 +235,8 @@ namespace SWP391Web.Application.Services
                     }
                     await HandleVNPayCustomerOrder(order, decimal.Parse(ipnDTO.vnp_Amount) / 100, ct);
 
-                    DateTime dateTime = DateTime.ParseExact(ipnDTO.vnp_PayDate, "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
+                    DateTime dateTimeLocal = DateTime.ParseExact(ipnDTO.vnp_PayDate, "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
+                    DateTime dateTimeUtc = DateTime.SpecifyKind(dateTimeLocal, DateTimeKind.Unspecified).ToUniversalTime();
                     var Transaction = new Transaction
                     {
                         CustomerOrderId = order.Id,
@@ -245,7 +245,7 @@ namespace SWP391Web.Application.Services
                         OrderRef = ipnDTO.vnp_TxnRef,
                         Currency = "VND",
                         Status = TransactionStatus.Success,
-                        CreatedAt = dateTime
+                        CreatedAt = dateTimeUtc
                     };
 
                     await _unitOfWork.TransactionRepository.AddAsync(Transaction, ct);
@@ -377,7 +377,7 @@ namespace SWP391Web.Application.Services
             await _unitOfWork.NotificationRepository.AddAsync(notification, ct);
             await _unitOfWork.SaveAsync();
 
-            await _hubContext.Clients.Group($"Dealer_{dealerId}_{StaticUserRole.DealerManager}").SendAsync("OutOfStockNotification", notification);
+            await _hubContext.Clients.Group($"Dealer_{dealerId}_{StaticUserRole.DealerManager}").SendAsync("NotificationChanged");
         }
     }
 }
