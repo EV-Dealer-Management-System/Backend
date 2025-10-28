@@ -325,7 +325,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO?> GetEVCInventoryAsync(ClaimsPrincipal user)
+        public async Task<ResponseDTO> GetEVCInventoryAsync(ClaimsPrincipal user)
         {
             try
             {
