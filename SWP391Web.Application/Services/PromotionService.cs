@@ -217,12 +217,7 @@ namespace SWP391Web.Application.Services
                 }
                 await _unitOfWork.SaveAsync();
 
-                //Take only active promotions
-                var validPromotions = allPromotions
-                    .Where(p => p.IsActive && p.StartDate <= DateTime.UtcNow && p.EndDate >= DateTime.UtcNow)
-                    .ToList();
-
-                var getPromotions = _mapper.Map<List<GetPromotionDTO>>(validPromotions);
+                var getPromotions = _mapper.Map<List<GetPromotionDTO>>(allPromotions);
 
                 return new ResponseDTO
                 {
