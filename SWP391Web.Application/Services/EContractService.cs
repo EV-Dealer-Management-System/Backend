@@ -938,7 +938,7 @@ namespace SWP391Web.Application.Services
                 if (contract is null)
                     return new VnptResult<UpdateEContractResponse>($"Cannot find EContract with id '{updateEContractDTO.Id}'");
 
-                var dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(contract.OwnerBy, ct);
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(contract.OwnerBy, ct);
                 if (dealer is null)
                     return new VnptResult<UpdateEContractResponse>($"Cannot find dealer with manager id '{contract.OwnerBy}'");
 
