@@ -12,6 +12,7 @@ namespace SWP391Web.Domain.Entities
         public Guid Id { get; set; }
         public Guid? DealerId { get; set; }
         public Guid? EVCInventoryId { get; set; }
+        public int AlertNumber { get; set; } = 10;
         public string? WarehouseName { get; set; }
         public WarehouseType WarehouseType { get; set; }
 

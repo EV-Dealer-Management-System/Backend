@@ -21,5 +21,6 @@ namespace SWP391Web.Domain.Entities
         public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
         public AppointmentSetting? AppointmentSetting { get; set; }
         public DepositSetting? DepositSetting { get; set; }
+        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     }
 }
