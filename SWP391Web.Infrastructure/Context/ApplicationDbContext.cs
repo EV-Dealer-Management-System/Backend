@@ -40,6 +40,8 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<DepositSetting> DepositSettings { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<CustomerFeedback> CustomerFeedbacks { get; set; }
+        public DbSet<DealerFeedback> DealerFeedbacks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -424,6 +426,30 @@ namespace SWP391Web.Infrastructure.Context
                 .HasOne(ds => ds.Manager)
                 .WithOne(m => m.DepositSetting)
                 .HasForeignKey<DepositSetting>(ds => ds.ManagerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure Notification entity
+
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.Dealer)
+                .WithMany(d => d.Notifications)
+                .HasForeignKey(n => n.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure CustomerFeedback entity
+
+            modelBuilder.Entity<CustomerFeedback>()
+                .HasOne(cf => cf.Customer)
+                .WithMany(c => c.CustomerFeedbacks)
+                .HasForeignKey(cf => cf.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CustomerFeedback>()
+                .HasOne(cf => cf.Dealer)
+                .WithMany(d => d.CustomerFeedbacks)
+                .HasForeignKey(cf => cf.DealerId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

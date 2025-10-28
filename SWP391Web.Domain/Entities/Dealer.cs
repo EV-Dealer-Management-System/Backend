@@ -22,5 +22,7 @@ namespace SWP391Web.Domain.Entities
         public AppointmentSetting? AppointmentSetting { get; set; }
         public DepositSetting? DepositSetting { get; set; }
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+        public ICollection<DealerFeedback> DealerFeedbacks { get; set; } = new List<DealerFeedback>();
+        public ICollection<CustomerFeedback> CustomerFeedbacks { get; set; } = new List<CustomerFeedback>();
     }
 }
