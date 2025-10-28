@@ -17,7 +17,7 @@ namespace SWP391Web.Domain.Entities
         public TimeSpan CloseTime { get; set; }
         public int MinIntervalBetweenAppointments { get; set; }
         public int BreakTimeBetweenAppointments { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public ApplicationUser Manager { get; set; } = null!;
         public Dealer? Dealer { get; set; }
