@@ -48,20 +48,21 @@ jobs:
 
       - name: Upload & deploy to EC2
         run: |
+          set -euo pipefail
+
+          test -f ./publish.zip || { echo "publish.zip not found in $(pwd)"; ls -lah; exit 1; }
+
           HOST="${{ secrets.EC2_HOST_PUBLIC }}"; USER="${{ secrets.EC2_USER }}"
           [ -n "$HOST" ] && [ -n "$USER" ] || { echo "Missing EC2_HOST_PUBLIC/EC2_USER"; exit 1; }
 
-          scp publish.zip "$USER@$HOST:/home/$USER/"
+          scp ./publish.zip "$USER@$HOST:/home/$USER/"
+
           ssh -o StrictHostKeyChecking=no "$USER@$HOST" "set -euo pipefail
-          PROJECT='EV_Dealer_Management_System'
-          DEPLOY_DIR='/var/www/'\"\$PROJECT\"
-          SERVICE='kestrel-'\"\$PROJECT\"'.service'
+            PROJECT='EV_Dealer_Management_System'
+            DEPLOY_DIR='/var/www/'\"\$PROJECT\"
+            SERVICE='kestrel-'\"\$PROJECT\"'.service'
 
-          if ! sudo systemctl cat \"\$SERVICE\" >/dev/null 2>&1; then
-            exit 5
-          fi
-
-          sudo mkdir -p \"\$DEPLOY_DIR\"
+          sudo systemctl cat \"\$SERVICE\" >/dev/null 2>&1 || exit 5
 
           (sudo dnf -y install p7zip p7zip-plugins >/dev/null 2>&1 \
             || sudo yum -y install p7zip p7zip-plugins >/dev/null 2>&1 \
@@ -73,6 +74,7 @@ jobs:
             UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE unzip -o ~/publish.zip -d ~/deploy_temp >/dev/null
           fi
 
+          sudo mkdir -p \"\$DEPLOY_DIR\"
           sudo systemctl stop \"\$SERVICE\" || true
           sudo rm -rf \"\${DEPLOY_DIR:?}\"/*
           sudo cp -r ~/deploy_temp/* \"\$DEPLOY_DIR\"/
@@ -82,4 +84,5 @@ jobs:
 
           rm -rf ~/deploy_temp ~/publish.zip
           "
+
 
