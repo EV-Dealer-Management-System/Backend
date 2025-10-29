@@ -35,6 +35,7 @@ namespace SWP391Web.Infrastructure.Repository
         public IDepositSettingRepository DepositSettingRepository { get; private set; }
         public INotificationRepository NotificationRepository { get; private set; }
         public IDealerFeedbackRepository DealerFeedbackRepository { get; private set; }
+        public IDealerFBAttachmentRepository DealerFBAttachmentRepository { get; private set; }
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -66,6 +67,7 @@ namespace SWP391Web.Infrastructure.Repository
             DepositSettingRepository = new DepositSettingRepository(_context);
             NotificationRepository = new NotificationRepository(_context);
             DealerFeedbackRepository = new DealerFeedbackRepository(_context);
+            DealerFBAttachmentRepository = new DealerFBAttachmentRepository(_context);
 
         }
         public async Task<int> SaveAsync()

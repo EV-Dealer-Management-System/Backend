@@ -68,5 +68,11 @@ namespace SWP391Web.Application.Services
             var objectKey = $"{StaticBucketName.ElectricVehicleBucket}/{Guid.NewGuid()}_{preSignedUploadDTO.FileName}";
             return GenerateUploadUrl(objectKey, preSignedUploadDTO.ContentType);
         }
+
+        public ResponseDTO GenerateUploadDealerFBAttachment(PreSignedUploadDTO preSignedUploadDTO)
+        {
+            var objectKey = $"{StaticBucketName.DealerFeedbackBucket}/{Guid.NewGuid()}_{preSignedUploadDTO.FileName}";
+            return GenerateUploadUrl(objectKey, preSignedUploadDTO.ContentType);
+        }
     }
 }
