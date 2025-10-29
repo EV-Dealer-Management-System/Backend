@@ -433,16 +433,6 @@ namespace SWP391Web.Application.Services
 
                 if (newStatus == BookingStatus.Approved)
                 {
-                    var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(bookingEV.DealerId);
-                    if (warehouse == null)
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "Dealer's warehouse not found.",
-                            StatusCode = 404
-                        };
-                    }
 
                     foreach (var dt in bookingEV.BookingEVDetails)
                     {
@@ -477,7 +467,6 @@ namespace SWP391Web.Application.Services
                         foreach (var ev in selectedVehicles)
                         {
                             ev.Status = ElectricVehicleStatus.Booked;
-                            ev.WarehouseId = warehouse.Id;
                             _unitOfWork.ElectricVehicleRepository.Update(ev);
                         }
                     }
@@ -596,6 +585,7 @@ namespace SWP391Web.Application.Services
                     BookingStatus.Approved => "Booking approved successfully.",
                     BookingStatus.Rejected => "Booking rejected successfully.",
                     BookingStatus.Cancelled => "Booking cancelled successfully.",
+                    BookingStatus.Completed => "Booking completed successfully.",
                     _ => "Booking status updated successfully."
                 };
 

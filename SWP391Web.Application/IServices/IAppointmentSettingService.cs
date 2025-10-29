@@ -15,7 +15,7 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> DeleteAppointmentAsync(Guid appointmentId);
         Task<ResponseDTO> GetAppointmentByIdAsync(Guid appointmentId);
         Task<ResponseDTO> UpdateAppointmentAsync(ClaimsPrincipal user,Guid appointmentId ,UpdateAppointSettingDTO updateAppointmentDTO);
-        Task<ResponseDTO> GenerateTimeSlotAsync(ClaimsPrincipal user);
+        Task<ResponseDTO> GenerateTimeSlotAsync(ClaimsPrincipal user , DateTime? targetDate = null);
 
     }
 }
