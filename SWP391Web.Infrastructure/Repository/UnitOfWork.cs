@@ -34,6 +34,7 @@ namespace SWP391Web.Infrastructure.Repository
         public ITransactionRepository TransactionRepository { get; private set; }
         public IDepositSettingRepository DepositSettingRepository { get; private set; }
         public INotificationRepository NotificationRepository { get; private set; }
+        public IOrderDetailRepository OrderDetailRepository { get; private set; }
         public IDealerFeedbackRepository DealerFeedbackRepository { get; private set; }
         public IDealerFBAttachmentRepository DealerFBAttachmentRepository { get; private set; }
         public ICustomerFeedbackRepository CustomerFeedbackRepository { get; private set; }
@@ -68,6 +69,7 @@ namespace SWP391Web.Infrastructure.Repository
             TransactionRepository = new TransactionRepository(_context);
             DepositSettingRepository = new DepositSettingRepository(_context);
             NotificationRepository = new NotificationRepository(_context);
+            OrderDetailRepository = new OrderDetailRepository(_context);
             DealerFeedbackRepository = new DealerFeedbackRepository(_context);
             DealerFBAttachmentRepository = new DealerFBAttachmentRepository(_context);
             CustomerFeedbackRepository = new CustomerFeedbackRepository(_context);

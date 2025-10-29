@@ -35,6 +35,7 @@ namespace SWP391Web.Infrastructure.IRepository
         public ITransactionRepository TransactionRepository { get; }
         public IDepositSettingRepository DepositSettingRepository { get; }
         public INotificationRepository NotificationRepository { get; }
+        public IOrderDetailRepository OrderDetailRepository { get; }
         public IDealerFBAttachmentRepository DealerFBAttachmentRepository { get; }
         public ICustomerFeedbackRepository CustomerFeedbackRepository { get; }
         public ICustomerFBAttachRepository CustomerFBAttachRepository { get; }
