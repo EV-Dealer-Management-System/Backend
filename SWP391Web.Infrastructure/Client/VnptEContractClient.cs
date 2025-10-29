@@ -208,5 +208,8 @@ namespace SWP391Web.Infrastructure.Client
 
         public async Task<VnptResult<DeleteEContractDraftResponse>> DeleteEContractDraft(string token, Guid econtractId)
             => await DeleteAsync<DeleteEContractDraftResponse>(token, $"/api/documents/delete/{econtractId}?permanent=true");
+
+        public async Task<VnptResult<DeleteSmartCAResponse>> DeleteSmartCA(string token, DeleteSmartCARequest deleteSmartCARequest)
+            => await PostAsync<DeleteSmartCAResponse>(token, $"/api/users/smart-ca/delete", deleteSmartCARequest);
     }
 }
