@@ -696,9 +696,10 @@ namespace SWP391Web.Application.Services
                 if (signResult.Data.Status.Value == (int)EContractStatus.Completed)
                 {
                     await CreateDealerAccount(signResult.Data.Id.ToString(), ct);
-                    econtract.UpdateStatus(EContractStatus.Completed);
-                    _unitOfWork.EContractRepository.Update(econtract);
                 }
+
+                econtract.UpdateStatus((EContractStatus)signResult.Data.Status.Value);
+                _unitOfWork.EContractRepository.Update(econtract);
 
                 await _unitOfWork.SaveAsync();
 
@@ -720,7 +721,6 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
-
 
         private async Task CreateDealerAccount(string documentId, CancellationToken ct)
         {

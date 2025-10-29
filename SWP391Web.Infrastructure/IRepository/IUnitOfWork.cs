@@ -34,6 +34,7 @@ namespace SWP391Web.Infrastructure.IRepository
         public ITransactionRepository TransactionRepository { get; }
         public IDepositSettingRepository DepositSettingRepository { get; }
         public INotificationRepository NotificationRepository { get; }
+        public IOrderDetailRepository OrderDetailRepository { get; }
         Task<int> SaveAsync();
     }
 }
