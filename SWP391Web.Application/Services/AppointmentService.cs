@@ -71,7 +71,7 @@ namespace SWP391Web.Application.Services
                         StatusCode = 404 
                     };
 
-                if (createAppointmentDTO.StartTime <= DateTime.Now)
+                if (createAppointmentDTO.StartTime <= DateTime.UtcNow)
                     return new ResponseDTO 
                     { 
                         IsSuccess = false, 
@@ -125,7 +125,12 @@ namespace SWP391Web.Application.Services
 
                 // Validate overlapping appointments
                 if (!isValidSlot)
-                    return new ResponseDTO { IsSuccess = false, Message = "Appointment time must be within generated slots", StatusCode = 400 };
+                    return new ResponseDTO 
+                    { 
+                        IsSuccess = false, 
+                        Message = "Appointment time must be within generated slots", 
+                        StatusCode = 400 
+                    };
 
                 // Check for overlapping appointments
                 var overlappingCount = await _unitOfWork.AppointmentRepository.CountOverLappingAsync(
