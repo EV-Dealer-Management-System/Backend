@@ -48,29 +48,33 @@ jobs:
 
       - name: Upload & deploy to EC2
         run: |
+          set -euo pipefail
+
+          test -f ./publish.zip || { echo "publish.zip not found in $(pwd)"; ls -lah; exit 1; }
+
           HOST="${{ secrets.EC2_HOST_PUBLIC }}"; USER="${{ secrets.EC2_USER }}"
-          [ -n "$HOST" ] && [ -n "$USER" ] || { echo "Thiếu EC2_HOST_PUBLIC/EC2_USER (ở Environment SWP391)"; exit 1; }
+          [ -n "$HOST" ] && [ -n "$USER" ] || { echo "Missing EC2_HOST_PUBLIC/EC2_USER"; exit 1; }
 
-          scp publish.zip "$USER@$HOST:/home/$USER/"
-          ssh -o StrictHostKeyChecking=no "$USER@$HOST" "set -e
-          PROJECT='EV_Dealer_Management_System'
-          DEPLOY_DIR='/var/www/'\"\$PROJECT\"
-          SERVICE='kestrel-'\"\$PROJECT\"'.service'
+          scp ./publish.zip "$USER@$HOST:/home/$USER/"
 
-          # kiểm tra unit có tồn tại trên host này không
-          if ! sudo systemctl list-unit-files | grep -q \"\$SERVICE\"; then
-          echo 'Service '\$SERVICE' chưa tồn tại trên host này.'
-          echo '>> Kiểm tra lại: secrets EC2_HOST_PUBLIC có đúng IP của máy đã tạo service chưa?'
-          echo '>> Hoặc vào máy này tạo service 1 lần: /etc/systemd/system/'\$SERVICE
-          exit 5
-          fi
+          ssh -o StrictHostKeyChecking=no "$USER@$HOST" "set -euo pipefail
+            PROJECT='EV_Dealer_Management_System'
+            DEPLOY_DIR='/var/www/'\"\$PROJECT\"
+            SERVICE='kestrel-'\"\$PROJECT\"'.service'
 
-          sudo mkdir -p \"\$DEPLOY_DIR\"
+          sudo systemctl cat \"\$SERVICE\" >/dev/null 2>&1 || exit 5
+
+          (sudo dnf -y install p7zip p7zip-plugins >/dev/null 2>&1 \
+            || sudo yum -y install p7zip p7zip-plugins >/dev/null 2>&1 \
+            || (sudo apt-get update >/dev/null 2>&1 && sudo apt-get install -y p7zip-full >/dev/null 2>&1) || true)
           (sudo dnf -y install unzip >/dev/null 2>&1 || sudo yum -y install unzip >/dev/null 2>&1 || true)
 
           rm -rf ~/deploy_temp && mkdir -p ~/deploy_temp
-          unzip -o ~/publish.zip -d ~/deploy_temp >/dev/null
+          if ! 7z x -y ~/publish.zip -o~/deploy_temp >/dev/null 2>&1; then
+            UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE unzip -o ~/publish.zip -d ~/deploy_temp >/dev/null
+          fi
 
+          sudo mkdir -p \"\$DEPLOY_DIR\"
           sudo systemctl stop \"\$SERVICE\" || true
           sudo rm -rf \"\${DEPLOY_DIR:?}\"/*
           sudo cp -r ~/deploy_temp/* \"\$DEPLOY_DIR\"/
@@ -81,5 +85,3 @@ jobs:
           rm -rf ~/deploy_temp ~/publish.zip
           "
 
-            # Dọn dẹp
-            rm -rf ~/deploy_temp ~/publish.zip
