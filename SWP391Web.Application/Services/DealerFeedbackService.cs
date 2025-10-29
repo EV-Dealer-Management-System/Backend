@@ -57,7 +57,7 @@ namespace SWP391Web.Application.Services
                 {
                     DealerId = dealer.Id,
                     FeedbackContent = createDealerFeedBackDTO.FeedbackContent,
-                    Status = createDealerFeedBackDTO.Status,
+                    Status = FeedbackStatus.Pending,
                     CreatedAt = DateTime.UtcNow
                 };
                 if (dealerFeedback == null)
@@ -70,18 +70,18 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                //if(createDealerFeedBackDTO.Key != null && createDealerFeedBackDTO.Key.Any())
-                //{
-                //    foreach (var key in createDealerFeedBackDTO.Key)
-                //    {
-                //        var fileName = Path.GetFileName(key);
-                //        dealerFeedback.DealerFBAttachments.Add(new DealerFBAttachment
-                //        {
-                //            FileName = fileName,
-                //            Key = key
-                //        });
-                //    }
-                //}
+                if (createDealerFeedBackDTO.AttachmentKeys != null && createDealerFeedBackDTO.AttachmentKeys.Any())
+                {
+                    foreach (var key in createDealerFeedBackDTO.AttachmentKeys)
+                    {
+                        var fileName = Path.GetFileName(key);
+                        dealerFeedback.DealerFBAttachments.Add(new DealerFBAttachment
+                        {
+                            FileName = fileName,
+                            Key = key
+                        });
+                    }
+                }
 
                 await _unitOfWork.DealerFeedbackRepository.AddAsync(dealerFeedback, CancellationToken.None);
                 await _unitOfWork.SaveAsync();

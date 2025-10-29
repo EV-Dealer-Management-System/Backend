@@ -36,6 +36,9 @@ namespace SWP391Web.Infrastructure.IRepository
         public IDepositSettingRepository DepositSettingRepository { get; }
         public INotificationRepository NotificationRepository { get; }
         public IDealerFBAttachmentRepository DealerFBAttachmentRepository { get; }
+        public ICustomerFeedbackRepository CustomerFeedbackRepository { get; }
+        public ICustomerFBAttachRepository CustomerFBAttachRepository { get; }
+
 
         Task<int> SaveAsync();
     }
