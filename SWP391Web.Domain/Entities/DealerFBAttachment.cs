@@ -12,6 +12,7 @@ namespace SWP391Web.Domain.Entities
         public string Key { get; set; } = null!;
         public string FileName { get; set; } = null!;
         public Guid DealerFeedBackId { get; set; }
-        
+
+        public DealerFeedback DealerFeedback { get; set; } = null!;
     }
 }

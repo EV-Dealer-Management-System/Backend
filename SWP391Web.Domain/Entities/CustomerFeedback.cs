@@ -19,5 +19,6 @@ namespace SWP391Web.Domain.Entities
 
         public Customer Customer { get; set; } = null!;
         public Dealer Dealer { get; set; } = null!;
+        public ICollection<CustomerFBAttachment> CustomerFBAttachments { get; set; } = new List<CustomerFBAttachment>();
     }
 }
