@@ -42,6 +42,8 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<CustomerFeedback> CustomerFeedbacks { get; set; }
         public DbSet<DealerFeedback> DealerFeedbacks { get; set; }
+        public DbSet<DealerFBAttachment> DealerFBAttachments { get; set; }
+        public DbSet<CustomerFBAttachment> CustomerFBAttachments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -444,6 +446,33 @@ namespace SWP391Web.Infrastructure.Context
                 .HasOne(cf => cf.Dealer)
                 .WithMany(d => d.CustomerFeedbacks)
                 .HasForeignKey(cf => cf.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure DealerFeedback entity
+
+            modelBuilder.Entity<DealerFeedback>()
+                .HasOne(df => df.Dealer)
+                .WithMany(d => d.DealerFeedbacks)
+                .HasForeignKey(df => df.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure DealerFBAttachment entity
+
+            modelBuilder.Entity<DealerFBAttachment>()
+                .HasOne(dfba => dfba.DealerFeedback)
+                .WithMany(df => df.DealerFBAttachments)
+                .HasForeignKey(dfba => dfba.DealerFeedBackId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure CustomerFBAttachment entity
+
+            modelBuilder.Entity<CustomerFBAttachment>()
+                .HasOne(cfba => cfba.CustomerFeedback)
+                .WithMany(cf => cf.CustomerFBAttachments)
+                .HasForeignKey(cfba => cfba.CustomerFeedBackId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

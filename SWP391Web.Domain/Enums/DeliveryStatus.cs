@@ -8,11 +8,11 @@ namespace SWP391Web.Domain.Enums
 {
     public enum DeliveryStatus
     {
-        Preparing = 0,     
-        Packing = 1,       
-        InTransit = 2,     
-        Arrived = 3,       
-        Confirmed = 4,     
-        Accident = 5
+        Preparing = 1,     
+        Packing = 2,       
+        InTransit = 3,     
+        Arrived = 4,       
+        Confirmed = 5,    
+        Accident = 6
     }
 }

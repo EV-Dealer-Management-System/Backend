@@ -17,5 +17,6 @@ namespace SWP391Web.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public Dealer Dealer { get; set; } = null!;
+        public ICollection<DealerFBAttachment> DealerFBAttachments { get; set; } = new List<DealerFBAttachment>();
     }
 }
