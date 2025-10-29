@@ -47,41 +47,39 @@ jobs:
           ssh-keyscan -H "${{ env.EC2_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Upload & deploy to EC2
-        shell: bash
         run: |
-          set -euo pipefail
-          HOST="${{ secrets.EC2_HOST_PUBLIC }}"
-          USER="${{ secrets.EC2_USER }}"
-          [ -n "$HOST" ] && [ -n "$USER" ] || { echo "Thiếu EC2_HOST_PUBLIC/EC2_USER"; exit 1; }
+          HOST="${{ secrets.EC2_HOST_PUBLIC }}"; USER="${{ secrets.EC2_USER }}"
+          [ -n "$HOST" ] && [ -n "$USER" ] || { echo "Missing EC2_HOST_PUBLIC/EC2_USER"; exit 1; }
 
-          scp publish.tgz publish.tgz.sha256 "$USER@$HOST:/home/$USER/"
-
+          scp publish.zip "$USER@$HOST:/home/$USER/"
           ssh -o StrictHostKeyChecking=no "$USER@$HOST" "set -euo pipefail
-
-          PROJECT='${{ env.PROJECT_NAME }}'
+          PROJECT='EV_Dealer_Management_System'
           DEPLOY_DIR='/var/www/'\"\$PROJECT\"
           SERVICE='kestrel-'\"\$PROJECT\"'.service'
 
-          if ! sudo systemctl list-unit-files | grep -q \"\$SERVICE\"; then
-            echo 'Service '\$SERVICE' chưa tồn tại trên host này.'
-            echo '>> Kiểm tra đúng máy EC2 đã tạo service chưa (/etc/systemd/system/'\$SERVICE')'
+          if ! sudo systemctl cat \"\$SERVICE\" >/dev/null 2>&1; then
             exit 5
           fi
-          command -v tar >/dev/null 2>&1 || sudo dnf -y install tar || sudo yum -y install tar || true
 
-          cd /home/$USER
-          sha256sum -c publish.tgz.sha256
-          rm -rf deploy_temp && mkdir -p deploy_temp
-          tar -xzf publish.tgz -C deploy_temp
+          sudo mkdir -p \"\$DEPLOY_DIR\"
+
+          (sudo dnf -y install p7zip p7zip-plugins >/dev/null 2>&1 \
+            || sudo yum -y install p7zip p7zip-plugins >/dev/null 2>&1 \
+            || (sudo apt-get update >/dev/null 2>&1 && sudo apt-get install -y p7zip-full >/dev/null 2>&1) || true)
+          (sudo dnf -y install unzip >/dev/null 2>&1 || sudo yum -y install unzip >/dev/null 2>&1 || true)
+
+          rm -rf ~/deploy_temp && mkdir -p ~/deploy_temp
+          if ! 7z x -y ~/publish.zip -o~/deploy_temp >/dev/null 2>&1; then
+            UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE unzip -o ~/publish.zip -d ~/deploy_temp >/dev/null
+          fi
 
           sudo systemctl stop \"\$SERVICE\" || true
-          sudo mkdir -p \"\$DEPLOY_DIR\"
           sudo rm -rf \"\${DEPLOY_DIR:?}\"/*
-          sudo cp -r deploy_temp/* \"\$DEPLOY_DIR\"/
-          sudo chown -R $USER:$USER \"\$DEPLOY_DIR\"
+          sudo cp -r ~/deploy_temp/* \"\$DEPLOY_DIR\"/
+          sudo chown -R ec2-user:ec2-user \"\$DEPLOY_DIR\"
           sudo systemctl daemon-reload
           sudo systemctl start \"\$SERVICE\"
 
-          # Cleanup
-          rm -rf deploy_temp publish.tgz publish.tgz.sha256
+          rm -rf ~/deploy_temp ~/publish.zip
           "
+
