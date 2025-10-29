@@ -13,11 +13,11 @@ namespace SWP391Web.Domain.Entities
         public Guid CustomerId { get; set; }
         public Guid DealerId { get; set; }
         public string? FeedbackContent { get; set; }
-        public string? Key { get; set; }
         public FeedbackStatus Status { get; set; } = FeedbackStatus.Pending;
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public Customer Customer { get; set; } = null!;
         public Dealer Dealer { get; set; } = null!;
+        public ICollection<CustomerFBAttachment> CustomerFBAttachments { get; set; } = new List<CustomerFBAttachment>();
     }
 }

@@ -51,5 +51,12 @@ namespace SWP391Web.API.Controllers
         //    var result = await _appointmentSettingService.DeleteAppointmentAsync(appointmentId);
         //    return StatusCode(result.StatusCode, result);
         //}
+
+        [HttpGet("get-available-slot-appointments")]
+        public async Task<ActionResult<ResponseDTO>> GetAvailableSlotAppointmentsAsync([FromQuery]DateTime? targetDate = null)
+        {
+            var response = await _appointmentSettingService.GenerateTimeSlotAsync(User,targetDate);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

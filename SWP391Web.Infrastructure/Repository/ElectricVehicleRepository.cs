@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SWP391Web.Infrastructure.Repository
@@ -209,6 +210,20 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _context.ElectricVehicles
                 .AnyAsync(v => v.VIN == vin);
+        }
+
+        public async Task<List<ElectricVehicle>> GetBookedVehicleByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId)
+        {
+            return await _context.ElectricVehicles
+                .Include(ev => ev.Warehouse) 
+                .Include(ev => ev.ElectricVehicleTemplate)
+                .Where(ev => ev.ElectricVehicleTemplate.Version.ModelId == modelId
+                             && ev.ElectricVehicleTemplate.VersionId == versionId
+                             && ev.ElectricVehicleTemplate.ColorId == colorId
+                             && ev.Status == ElectricVehicleStatus.Booked
+                             && ev.WarehouseId != null
+                             && ev.Warehouse.WarehouseType == WarehouseType.Dealer)
+                .ToListAsync();
         }
     }
 }

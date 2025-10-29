@@ -4,6 +4,7 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Application.Services
 {
-        public class AppointmentSettingService : IAppointmentSettingService
+        public class AppointmentSettingService :    IAppointmentSettingService
         {
             public readonly IUnitOfWork _unitOfWork;
             public readonly IMapper _mapper;
@@ -91,6 +92,7 @@ namespace SWP391Web.Application.Services
                         OpenTime = createAppointmentDTO.OpenTime,
                         CloseTime = createAppointmentDTO.CloseTime,
                         MinIntervalBetweenAppointments = createAppointmentDTO.MinIntervalBetweenAppointments,
+                        BreakTimeBetweenAppointments = createAppointmentDTO.BreakTimeBetweenAppointments,
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -138,6 +140,7 @@ namespace SWP391Web.Application.Services
                     OpenTime = createAppointmentDTO.OpenTime,
                     CloseTime = createAppointmentDTO.CloseTime,
                     MinIntervalBetweenAppointments = createAppointmentDTO.MinIntervalBetweenAppointments,
+                    BreakTimeBetweenAppointments = createAppointmentDTO.BreakTimeBetweenAppointments,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -168,6 +171,123 @@ namespace SWP391Web.Application.Services
         public Task<ResponseDTO> DeleteAppointmentAsync(Guid appointmentId)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<ResponseDTO> GenerateTimeSlotAsync(ClaimsPrincipal user, DateTime? targetDate = null)
+        {
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
+                if(dealer == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetByDealerIdAsync(dealer.Id);
+                if(appointmentSetting == null)
+                {
+                    appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetDefaultAsync();
+                    if (appointmentSetting == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Default appointment setting not found",
+                            StatusCode = 404
+                        };
+                    }
+                    if(appointmentSetting == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Appointment setting not found",
+                            StatusCode = 404
+                        };
+                    }
+                }
+
+                // Take today dealer's appointment
+                var date = targetDate?.Date ?? DateTime.UtcNow.Date;
+                var appointments = await _unitOfWork.AppointmentRepository
+                    .GetByDealerIdAndDateAsync(dealer.Id,date);
+
+                var slots = new List<GetAppointmentSlotDTO>();
+                var currentTime = appointmentSetting.OpenTime;
+                var interval = TimeSpan.FromMinutes(appointmentSetting.MinIntervalBetweenAppointments);
+                var breakTime = TimeSpan.FromMinutes(appointmentSetting.BreakTimeBetweenAppointments);
+                var  end = appointmentSetting.CloseTime;
+                bool skipBreak = false; // Flag to skip adding break time after the last slot
+
+                while(currentTime + interval <= end)
+                {
+                    var slotStartTime = currentTime;
+                    var slotEndTime = currentTime + interval;
+                    var overlappingAppointments = appointments
+                        .Where(a => 
+                            (a.StartTime.TimeOfDay < slotEndTime) && 
+                            (a.EndTime.TimeOfDay > currentTime) &&
+                            a.Status == AppointmentStatus.Active)
+                        .ToList();
+                    bool isAvailable;
+                    if(appointmentSetting.AllowOverlappingAppointments)
+                    {
+                        isAvailable = overlappingAppointments.Count < appointmentSetting.MaxConcurrentAppointments;
+                    }
+                    else
+                    {
+                        isAvailable = overlappingAppointments.Count == 0;
+                    }
+                    slots.Add(new GetAppointmentSlotDTO
+                    {
+                        OpenTime = currentTime,
+                        CloseTime = slotEndTime,
+                        IsAvailable = isAvailable
+                    });
+                    currentTime += interval;
+                    // Add break time if there are more slots to process
+                    if (!skipBreak && currentTime + interval <= end)
+                    {
+                        currentTime += breakTime;
+                    }
+                }
+
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Appointment slots generated successfully",
+                    StatusCode = 200,
+                    Result = slots
+                };
+
+            }
+            catch(Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+
         }
 
         public async Task<ResponseDTO> GetAppointmentByIdAsync(Guid appointmentId)

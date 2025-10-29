@@ -13,5 +13,6 @@ namespace SWP391Web.Application.DTO.AppointmentSetting
         public TimeSpan? OpenTime { get; set; }
         public TimeSpan? CloseTime { get; set; }
         public int? MinIntervalBetweenAppointments { get; set; }
+        public int? BreakTimeBetweenAppointments { get; set; }
     }
 }

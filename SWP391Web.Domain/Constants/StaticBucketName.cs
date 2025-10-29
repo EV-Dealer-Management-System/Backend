@@ -10,5 +10,7 @@ namespace SWP391Web.Domain.Constants
     {
         public const string ElectricVehicleBucket = "electric-vehicle";
         public const string EContractBucket = "e-contract";
+        public const string DealerFeedbackBucket = "dealer-feedback";
+        public const string CustomerFeedbackBucket = "customer-feedback";
     }
 }

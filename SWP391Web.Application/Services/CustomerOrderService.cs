@@ -102,7 +102,7 @@ namespace SWP391Web.Application.Services
 
                 await _unitOfWork.CustomerOrderRepository.AddAsync(customerOrder, ct);
 
-                await HandleOrderDetail(quote);
+                await HandleOrderDetail(quote, ct);
 
                 await _unitOfWork.SaveAsync();
 
@@ -130,7 +130,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        private async Task HandleOrderDetail(Quote quote)
+        private async Task HandleOrderDetail(Quote quote, CancellationToken ct)
         {
             foreach (var quoteDetail in quote.QuoteDetails)
             {
@@ -148,6 +148,7 @@ namespace SWP391Web.Application.Services
                         CustomerOrderId = quote.CustomerOrders.First().Id,
                         ElectricVehicleId = vehicle.Id
                     };
+                    await _unitOfWork.OrderDetailRepository.AddAsync(orderDetail, ct);
                     vehicle.Status = ElectricVehicleStatus.DealerPending;
                     _unitOfWork.ElectricVehicleRepository.Update(vehicle);
                 }

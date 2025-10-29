@@ -237,6 +237,7 @@ namespace SWP391Web.Application.Services
 
                     DateTime dateTimeLocal = DateTime.ParseExact(ipnDTO.vnp_PayDate, "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
                     DateTime dateTimeUtc = DateTime.SpecifyKind(dateTimeLocal, DateTimeKind.Unspecified).ToUniversalTime();
+
                     var Transaction = new Transaction
                     {
                         CustomerOrderId = order.Id,
