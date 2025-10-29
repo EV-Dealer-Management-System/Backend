@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SWP391Web.Domain.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,7 +11,7 @@ namespace SWP391Web.Domain.Entities
     {
         public Guid Id { get; set; }
         public Guid BookingEVId { get; set; }
-
+        public string? Description { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DeliveryStatus Status { get; set; } // enum: Preparing, Packing, InTransit, Arrived, Confirmed, Accident
         public DateTime? UpdateAt { get; set; } = DateTime.UtcNow;
