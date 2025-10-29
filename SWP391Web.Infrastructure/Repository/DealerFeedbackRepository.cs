@@ -18,10 +18,20 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context;
         }
 
-        
+        public async Task<List<DealerFeedback>> GetAllDealerFeedbacksWithDetailAsync(CancellationToken ct)
+        {
+            return await _context.DealerFeedbacks
+                .Include(dfb => dfb.Dealer)
+                .Include(dfb => dfb.DealerFBAttachments)
+                .OrderByDescending(dfb => dfb.CreatedAt)
+                .ToListAsync(ct);
+        }
+
         public async Task<DealerFeedback?> GetFeedbackByIdAsync(Guid id)
         {
             return await _context.DealerFeedbacks
+                .Include(dfb => dfb.Dealer)
+                .Include(dfb => dfb.DealerFBAttachments)
                 .FirstOrDefaultAsync(dfb => dfb.Id == id);
         }
 

@@ -13,7 +13,7 @@ namespace SWP391Web.Application.DTO.DealerFeedBackDTO
         public Guid DealerId { get; set; }
         public string? DealerName { get; set; }
         public string? FeedbackContent { get; set; }
-        public List<string?> Key { get; set; }
+        public List<string> ImgUrls { get; set; } = new();
         public FeedbackStatus Status { get; set; } = FeedbackStatus.Pending;
         public DateTime CreatedAt { get; set; }
     }

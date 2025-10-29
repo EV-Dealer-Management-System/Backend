@@ -11,6 +11,7 @@ namespace SWP391Web.Infrastructure.IRepository
     {
         Task<DealerFeedback?> GetFeedbackByIdAsync(Guid id);
         Task<List<DealerFeedback>> GetFeedbacksByDealerIdAsync(Guid dealerId);
+        Task<List<DealerFeedback>> GetAllDealerFeedbacksWithDetailAsync(CancellationToken ct);
 
     }
 }

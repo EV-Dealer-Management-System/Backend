@@ -13,8 +13,8 @@ namespace SWP391Web.Application.IServices
     public interface IDealerFeedbackService
     {
         Task<ResponseDTO> CreateDealerFeedbackAsync(ClaimsPrincipal user ,CreateDealerFeedBackDTO createDealerFeedBackDTO);
-        Task<ResponseDTO> GetAllDealerFeedbacksAsync(ClaimsPrincipal user);
-        Task<ResponseDTO> GetDealerFeedbackByIdAsync(ClaimsPrincipal user, Guid feedbackId);
+        Task<ResponseDTO> GetAllDealerFeedbacksAsync(ClaimsPrincipal user , CancellationToken ct);
+        Task<ResponseDTO> GetDealerFeedbackByIdAsync(Guid feedbackId);
         Task<ResponseDTO> UpdateDealerFeedbackStatusAsync(ClaimsPrincipal user, Guid feedbackId, FeedbackStatus newStatus);
 
     }

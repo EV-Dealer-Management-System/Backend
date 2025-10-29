@@ -10,7 +10,7 @@ namespace SWP391Web.Application.DTO.DealerFeedBackDTO
     public class CreateDealerFeedBackDTO
     {
         public string? FeedbackContent { get; set; }
-        public List<string> Key { get; set; }
+        public List<string> AttachmentKeys { get; set; } = new();
         public FeedbackStatus Status { get; set; } = FeedbackStatus.Pending;
     }
 }

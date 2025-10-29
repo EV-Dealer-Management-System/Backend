@@ -2,6 +2,7 @@
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.DealerFeedBackDTO;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
@@ -40,8 +41,8 @@ namespace SWP391Web.Application.Services
                         StatusCode = 404
                     };
                 }
-                
-                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId,CancellationToken.None);
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, CancellationToken.None);
                 if (dealer == null)
                 {
                     return new ResponseDTO
@@ -59,7 +60,7 @@ namespace SWP391Web.Application.Services
                     Status = createDealerFeedBackDTO.Status,
                     CreatedAt = DateTime.UtcNow
                 };
-                if(dealerFeedback == null)
+                if (dealerFeedback == null)
                 {
                     return new ResponseDTO
                     {
@@ -103,19 +104,246 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public Task<ResponseDTO> GetAllDealerFeedbacksAsync(ClaimsPrincipal user)
+        public async Task<ResponseDTO> GetAllDealerFeedbacksAsync(ClaimsPrincipal user, CancellationToken ct)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                if (dealer == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found ",
+                        StatusCode = 404
+                    };
+                }
+
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
+                var dealerFeedbacks = new List<DealerFeedback>();
+                if (role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
+                {
+                    dealerFeedbacks = (await _unitOfWork.DealerFeedbackRepository.GetAllDealerFeedbacksWithDetailAsync(ct)).ToList();
+                }
+                else
+                {
+                    dealerFeedbacks = (await _unitOfWork.DealerFeedbackRepository.GetAllDealerFeedbacksWithDetailAsync(ct))
+                                        .Where(df => df.DealerId == dealer.Id)
+                                        .ToList();
+                }
+                var getDealerFeedbacks = _mapper.Map<List<GetDealerFeedBackDTO>>(dealerFeedbacks);
+
+                foreach (var fb in getDealerFeedbacks)
+                {
+                    var attachments = _unitOfWork.DealerFBAttachmentRepository
+                        .GetAttachmentsByDealerFbId(fb.Id);
+
+                    var urlLists = new List<string>();
+                    foreach (var att in attachments)
+                    {
+                        var url = _s3Service.GenerateDownloadUrl(att.Key);
+                        urlLists.Add(url);
+                    }
+
+                    fb.ImgUrls = urlLists;
+                }
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Get all dealer feedbacks successfully",
+                    StatusCode = 200,
+                    Result = getDealerFeedbacks
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+        public async Task<ResponseDTO> GetDealerFeedbackByIdAsync(Guid feedbackId)
+        {
+            try
+            {
+                var dealerFeedback = await _unitOfWork.DealerFeedbackRepository.GetFeedbackByIdAsync(feedbackId);
+                if (dealerFeedback == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer feedback not found",
+                        StatusCode = 404
+                    };
+                }
+
+
+                var getDealerFeedback = _mapper.Map<GetDealerFeedBackDTO>(dealerFeedback);
+
+                var attachments = _unitOfWork.DealerFBAttachmentRepository
+                    .GetAttachmentsByDealerFbId(getDealerFeedback.Id);
+
+                var urlLists = new List<string>();
+                foreach (var att in attachments)
+                {
+                    var url = _s3Service.GenerateDownloadUrl(att.Key);
+                    urlLists.Add(url);
+                }
+                getDealerFeedback.ImgUrls = urlLists;
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Get dealer feedback by id successfully",
+                    StatusCode = 200,
+                    Result = getDealerFeedback
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
         }
 
-        public Task<ResponseDTO> GetDealerFeedbackByIdAsync(ClaimsPrincipal user, Guid feedbackId)
+        public async Task<ResponseDTO> UpdateDealerFeedbackStatusAsync(ClaimsPrincipal user, Guid feedbackId, FeedbackStatus newStatus)
         {
-            throw new NotImplementedException();
-        }
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
 
-        public Task<ResponseDTO> UpdateDealerFeedbackStatusAsync(ClaimsPrincipal user, Guid feedbackId, FeedbackStatus newStatus)
-        {
-            throw new NotImplementedException();
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, CancellationToken.None);
+                if (dealer == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found ",
+                        StatusCode = 404
+                    };
+                }
+
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
+
+                var dealerFeedback = await _unitOfWork.DealerFeedbackRepository.GetFeedbackByIdAsync(feedbackId);
+                if (dealerFeedback == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer feedback not found",
+                        StatusCode = 404
+                    };
+                }
+
+                if (role == StaticUserRole.DealerManager)
+                {
+
+                    if (dealerFeedback.DealerId != dealer?.Id)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "You cannot modify feedback from another dealer.",
+                            StatusCode = 403
+                        };
+                    }
+
+                    if (dealerFeedback.Status != FeedbackStatus.Pending)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "You can only cancel feedbacks that are still pending.",
+                            StatusCode = 400
+                        };
+                    }
+
+                    if (newStatus != FeedbackStatus.Cancelled)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "As a Dealer Manager, you can only change the status to Cancelled.",
+                            StatusCode = 403
+                        };
+                    }
+                }
+                else if (role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
+                {
+                    if (dealerFeedback.Status switch
+                    {
+                        FeedbackStatus.Pending => !(newStatus is FeedbackStatus.Accepted or FeedbackStatus.Rejected),
+                        FeedbackStatus.Accepted => newStatus != FeedbackStatus.Replied,
+                        FeedbackStatus.Rejected => newStatus != FeedbackStatus.Replied,
+                        _ => true
+                    })
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = $"Invalid transition from {dealerFeedback.Status} to {newStatus}.",
+                            StatusCode = 400
+                        };
+                    }
+                }
+
+                dealerFeedback.Status = newStatus;
+                _unitOfWork.DealerFeedbackRepository.Update(dealerFeedback);
+                await _unitOfWork.SaveAsync();
+
+                string successMessage = newStatus switch
+                {
+                    FeedbackStatus.Accepted => "Dealer feedback accepted successfully.",
+                    FeedbackStatus.Rejected => "Dealer feedback rejected successfully.",
+                    FeedbackStatus.Replied => "Dealer feedback replied successfully.",
+                    FeedbackStatus.Cancelled => "Dealer feedback cancelled successfully.",
+                    _ => "Dealer feedback status updated successfully."
+                };
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = successMessage,
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
         }
     }
 }

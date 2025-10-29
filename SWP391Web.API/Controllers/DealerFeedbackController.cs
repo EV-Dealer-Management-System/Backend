@@ -4,6 +4,7 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.DealerFeedBackDTO;
 using SWP391Web.Application.DTO.S3;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Enums;
 
 namespace SWP391Web.API.Controllers
 {
@@ -24,6 +25,24 @@ namespace SWP391Web.API.Controllers
             var response = await _dealerFeedbackService.CreateDealerFeedbackAsync(User, createDealerFeedBackDTO);
             return StatusCode(response.StatusCode, response);
             
+        }
+        [HttpGet("GetAllDealerFeedbacks")]
+        public async Task<ActionResult<ResponseDTO>> GetAllDealerFeedbacks(CancellationToken ct)
+        {
+            var response = await _dealerFeedbackService.GetAllDealerFeedbacksAsync(User,ct);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet("GetDealerFeedbackById/{feedbackId}")]
+        public async Task<ActionResult<ResponseDTO>> GetDealerFeedbackByIdAsync([FromRoute]Guid feedbackId)
+        {
+            var response = await _dealerFeedbackService.GetDealerFeedbackByIdAsync(feedbackId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut("Update-dealer-feedback-status/{feedbackId}")]
+        public async Task<ActionResult<ResponseDTO>> UpdateDealerFeedbackStatusAsync([FromRoute] Guid feedbackId, FeedbackStatus newStatus)
+        {
+            var response = await _dealerFeedbackService.UpdateDealerFeedbackStatusAsync(User,feedbackId, newStatus);
+            return StatusCode(response.StatusCode, response);
         }
         [HttpPost("upload-file-url-dealer-feedback")]
         public ActionResult<ResponseDTO> UploadFileUrlDealerFeedbackAsync([FromBody] PreSignedUploadDTO preSignedUploadDTO)
