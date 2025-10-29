@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Application.Services
 {
-        public class AppointmentSettingService : IAppointmentSettingService
+        public class AppointmentSettingService :    IAppointmentSettingService
         {
             public readonly IUnitOfWork _unitOfWork;
             public readonly IMapper _mapper;
@@ -173,7 +173,7 @@ namespace SWP391Web.Application.Services
             throw new NotImplementedException();
         }
 
-        public async Task<ResponseDTO> GenerateTimeSlotAsync(ClaimsPrincipal user)
+        public async Task<ResponseDTO> GenerateTimeSlotAsync(ClaimsPrincipal user, DateTime? targetDate = null)
         {
             try
             {
@@ -224,9 +224,9 @@ namespace SWP391Web.Application.Services
                 }
 
                 // Take today dealer's appointment
-                var today = DateTime.UtcNow.Date;
+                var date = targetDate?.Date ?? DateTime.UtcNow.Date;
                 var appointments = await _unitOfWork.AppointmentRepository
-                    .GetByDealerIdAndDateAsync(dealer.Id,today);
+                    .GetByDealerIdAndDateAsync(dealer.Id,date);
 
                 var slots = new List<GetAppointmentSlotDTO>();
                 var currentTime = appointmentSetting.OpenTime;

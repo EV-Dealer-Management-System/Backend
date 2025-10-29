@@ -5,17 +5,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWP391Web.Domain.Entities
+namespace SWP391Web.Application.DTO.CustomerFeedback
 {
-    public class DealerFeedback
+    public class GetCustomerFeedbackDTO
     {
         public Guid Id { get; set; }
+        public Guid CustomerId { get; set; }
+        public string? CustomerName { get; set; }
+        public string? CustomerEmail { get; set; }
+        public string? CustomerPhone { get; set; }
         public Guid DealerId { get; set; }
         public string? FeedbackContent { get; set; }
         public FeedbackStatus Status { get; set; } = FeedbackStatus.Pending;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        public Dealer Dealer { get; set; } = null!;
-        public ICollection<DealerFBAttachment> DealerFBAttachments { get; set; } = new List<DealerFBAttachment>();
+        public List<string> ImgUrls { get; set; } = new();
     }
 }
