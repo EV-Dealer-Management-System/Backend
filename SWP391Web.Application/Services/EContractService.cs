@@ -1151,13 +1151,13 @@ namespace SWP391Web.Application.Services
                 if (deleteResult.Data!.Status!.Value == (int)EContractStatus.Draft)
                 {
                     var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(econtract.OwnerBy, ct);
-                    _unitOfWork.EContractRepository.Remove(econtract);
-                    _unitOfWork.DealerRepository.Remove(dealer);
                     var manager = await _unitOfWork.UserManagerRepository.GetByIdAsync(dealer.ManagerId);
                     if (manager.LockoutEnabled is true)
                     {
                         _unitOfWork.UserManagerRepository.Remove(manager);
                     }
+                    _unitOfWork.EContractRepository.Remove(econtract);
+                    _unitOfWork.DealerRepository.Remove(dealer);
                     await _unitOfWork.SaveAsync();
 
                     return new ResponseDTO
