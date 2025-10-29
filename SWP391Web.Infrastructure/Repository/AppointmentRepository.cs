@@ -38,16 +38,33 @@ namespace SWP391Web.Infrastructure.Repository
             return await _context.Appointments
                 .Include(a => a.Customer)
                 .Include(a => a.EVTemplate)
+                    .ThenInclude(t => t.Version)
+                        .ThenInclude(v => v.Model)
+                .Include(a => a.EVTemplate.Color)
                 .Include(a => a.Dealer)
                 .Where(a => a.DealerId == dealerId)
                 .OrderBy(a => a.StartTime)
                 .ToListAsync();
         }
 
+
         public async Task<List<Appointment>> GetByCustomerIdAsync(Guid customerId)
         {
             return await _context.Appointments
                 .Where(a => a.CustomerId == customerId)
+                .ToListAsync();
+        }
+
+        public async Task<List<Appointment>> GetByDealerIdAndDateAsync(Guid dealerId, DateTime date)
+        {
+            var startOfDay = date.Date;
+            var endOfDay = startOfDay.AddDays(1);
+
+            return await _context.Appointments
+                .Where(a => a.DealerId == dealerId
+                            && a.StartTime >= startOfDay
+                            && a.StartTime < endOfDay
+                            && a.Status == AppointmentStatus.Active)
                 .ToListAsync();
         }
 

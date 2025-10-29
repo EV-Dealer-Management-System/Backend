@@ -11,8 +11,8 @@ namespace SWP391Web.Application.DTO.Appointment
     {
         public Guid CustomerId { get; set; }
         public Guid EVTemplateId { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
+        public DateTime StartTime { get; set; } = DateTime.UtcNow;
+        public DateTime EndTime { get; set; } = DateTime.UtcNow;
         public AppointmentStatus Status { get; set; }
         public string? Note { get; set; }
        

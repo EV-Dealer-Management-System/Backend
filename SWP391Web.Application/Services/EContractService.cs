@@ -1151,13 +1151,13 @@ namespace SWP391Web.Application.Services
                 if (deleteResult.Data!.Status!.Value == (int)EContractStatus.Draft)
                 {
                     var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(econtract.OwnerBy, ct);
-                    _unitOfWork.EContractRepository.Remove(econtract);
-                    _unitOfWork.DealerRepository.Remove(dealer);
                     var manager = await _unitOfWork.UserManagerRepository.GetByIdAsync(dealer.ManagerId);
                     if (manager.LockoutEnabled is true)
                     {
                         _unitOfWork.UserManagerRepository.Remove(manager);
                     }
+                    _unitOfWork.EContractRepository.Remove(econtract);
+                    _unitOfWork.DealerRepository.Remove(dealer);
                     await _unitOfWork.SaveAsync();
 
                     return new ResponseDTO
@@ -1183,6 +1183,25 @@ namespace SWP391Web.Application.Services
                     StatusCode = 500,
                     Message = $"Error to delete EContract draft: {ex.Message}"
                 };
+            }
+        }
+
+        public async Task<VnptResult<DeleteSmartCAResponse>> DeleteSmartCA(DeleteSmartCARequest deleteSmartCARequest)
+        {
+            try
+            {
+                var token = await GetAccessTokenAsync();
+                var response = await _vnpt.DeleteSmartCA(token.Data!.AccessToken, deleteSmartCARequest);
+                if (!response.Success)
+                {
+                    var errors = string.Join(", ", response.Messages);
+                    throw new Exception($"Error to delete SmartCA: {errors}");
+                }
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return new VnptResult<DeleteSmartCAResponse>($"Exception when deleting SmartCA: {ex.Message}");
             }
         }
     }
