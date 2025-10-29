@@ -1185,6 +1185,25 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
+
+        public async Task<VnptResult<DeleteSmartCAResponse>> DeleteSmartCA(DeleteSmartCARequest deleteSmartCARequest)
+        {
+            try
+            {
+                var token = await GetAccessTokenAsync();
+                var response = await _vnpt.DeleteSmartCA(token.Data!.AccessToken, deleteSmartCARequest);
+                if (!response.Success)
+                {
+                    var errors = string.Join(", ", response.Messages);
+                    throw new Exception($"Error to delete SmartCA: {errors}");
+                }
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return new VnptResult<DeleteSmartCAResponse>($"Exception when deleting SmartCA: {ex.Message}");
+            }
+        }
     }
 }
 
