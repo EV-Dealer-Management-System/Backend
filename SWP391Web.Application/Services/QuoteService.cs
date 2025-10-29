@@ -249,13 +249,34 @@ namespace SWP391Web.Application.Services
                     quotes = (await _unitOfWork.QuoteRepository.GetAllQuotesWithDetailAsync()).ToList();
                 }
 
-                var getQuotes = _mapper.Map<List<GetQuoteDTO>>(quotes);
+                var filteredQuotes = new List<GetQuoteDTO>();
+                foreach (var q in quotes)
+                {
+                    bool isShow = true;
+
+                    foreach (var dt in q.QuoteDetails)
+                    {
+                        var availableVehicles = await _unitOfWork.ElectricVehicleRepository
+                            .GetAvailableVehicleByDealerAsync(q.DealerId, dt.VersionId, dt.ColorId);
+
+                        if (availableVehicles.Count() < dt.Quantity)
+                        {
+                            isShow = false;
+                            break;
+                        }
+                    }
+                    if (isShow)
+                    {
+                        filteredQuotes.Add(_mapper.Map<GetQuoteDTO>(q));
+                    }
+                }
+
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     Message = "Get all quotes successfully",
                     StatusCode = 200,
-                    Result = getQuotes
+                    Result = filteredQuotes
                 };
             }
             catch (Exception ex)
@@ -308,8 +329,23 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var getQuote = _mapper.Map<GetQuoteDTO>(quote);
+                foreach (var dt in quote.QuoteDetails)
+                {
+                    var availableVehicles = await _unitOfWork.ElectricVehicleRepository
+                        .GetAvailableVehicleByDealerAsync(quote.DealerId, dt.VersionId, dt.ColorId);
 
+                    if (availableVehicles.Count() < dt.Quantity)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Not enough vehicles in warehouse for this quote",
+                            StatusCode = 404
+                        };
+                    }
+                }
+
+                var getQuote = _mapper.Map<GetQuoteDTO>(quote);
                 return new ResponseDTO
                 {
                     IsSuccess = true,

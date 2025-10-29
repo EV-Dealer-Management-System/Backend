@@ -235,7 +235,6 @@ namespace SWP391Web.Application.Services
             try
             {
                 var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
                 var role = user.FindFirst(ClaimTypes.Role)?.Value;
 
                 if (userId == null)
@@ -257,6 +256,7 @@ namespace SWP391Web.Application.Services
                 else
                 {
                     var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
+
                     if (dealer == null)
                     {
                         return new ResponseDTO
@@ -269,26 +269,27 @@ namespace SWP391Web.Application.Services
 
                     vehicles = await _unitOfWork.ElectricVehicleRepository.GetDealerInventoryAsync(dealer.Id);
                 }
-                if (vehicles == null)
+
+                if (vehicles == null || !vehicles.Any())
                 {
                     return new ResponseDTO
                     {
-                         IsSuccess = false,
-                         Message = "No vehicle in inventory",
-                         StatusCode = 404
+                        IsSuccess = false,
+                        Message = "No vehicle in inventory",
+                        StatusCode = 404
                     };
                 }
-                
 
-                var getDealerInventory = vehicles.GroupBy(ev => new
-                {
-                    ModelId = ev.ElectricVehicleTemplate.Version.Model.Id,
-                    ModelName = ev.ElectricVehicleTemplate.Version.Model.ModelName,
-                    VersionId = ev.ElectricVehicleTemplate.Version.Id,
-                    VersionName = ev.ElectricVehicleTemplate.Version.VersionName,
-                    ColorId = ev.ElectricVehicleTemplate.Color.Id,
-                    ColorName =ev.ElectricVehicleTemplate.Color.ColorName
-                })
+                var getDealerInventory = vehicles
+                    .GroupBy(ev => new
+                    {
+                        ModelId = ev.ElectricVehicleTemplate.Version.Model.Id,
+                        ModelName = ev.ElectricVehicleTemplate.Version.Model.ModelName,
+                        VersionId = ev.ElectricVehicleTemplate.Version.Id,
+                        VersionName = ev.ElectricVehicleTemplate.Version.VersionName,
+                        ColorId = ev.ElectricVehicleTemplate.Color.Id,
+                        ColorName = ev.ElectricVehicleTemplate.Color.ColorName
+                    })
                     .Select(g => new
                     {
                         ModelId = g.Key.ModelId,
@@ -297,7 +298,8 @@ namespace SWP391Web.Application.Services
                         VersionName = g.Key.VersionName,
                         ColorId = g.Key.ColorId,
                         ColorName = g.Key.ColorName,
-                        Quantity = g.Count()
+                        Quantity = g.Count(),
+                        VINs = g.Select(v => v.VIN).ToList()
                     })
                     .OrderBy(x => x.ModelName)
                     .ThenBy(x => x.VersionName)
@@ -306,109 +308,116 @@ namespace SWP391Web.Application.Services
 
                 return new ResponseDTO
                 {
-
                     IsSuccess = true,
                     StatusCode = 200,
                     Message = "Get Dealer Inventory successfully",
                     Result = getDealerInventory
                 };
-
-                    
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return new ResponseDTO
                 {
                     IsSuccess = false,
-                    Message = ex.Message,
-                    StatusCode = 500
+                    StatusCode = 500,
+                    Message = ex.Message
                 };
             }
         }
 
-        public async Task<ResponseDTO> GetSampleVehiclesAsync(ClaimsPrincipal user)
+        public async Task<ResponseDTO> GetEVCInventoryAsync(ClaimsPrincipal user)
         {
-            //try
-            //{
-            //    var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            //    if(userId == null)
-            //    {
-            //        return new ResponseDTO
-            //        {
-            //            IsSuccess = false,
-            //            Message = "User not found",
-            //            StatusCode = 400
-            //        };
-            //    }
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
 
-            //    var role = user.FindFirst(ClaimTypes.Role)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "User not found"
+                    };
+                }
 
-            //    List<ElectricVehicle> vehicles;
-            //    if(role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
-            //    {
-            //        vehicles = (await _unitOfWork.ElectricVehicleRepository.GetAllAsync()).ToList();
-            //    }
-            //    else
-            //    {
-            //        var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
-            //        if(dealer == null)
-            //        {
-            //            return new ResponseDTO
-            //            {
-            //                IsSuccess = false,
-            //                Message = " Dealer not found",
-            //                StatusCode = 404
-            //            };
-            //        }
+                if (role != StaticUserRole.Admin && role != StaticUserRole.EVMStaff)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 403,
+                        Message = "Access denied. Only Admin and EVM Staff can view company inventory."
+                    };
+                }
 
-            //        vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllVehicleWithDetailAsync();
-            //    }
+                var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllEVCVehiclesWithDetailAsync();
 
-            //    //Group into 1
-            //    var groupVehicles = vehicles
-            //        .GroupBy(v => new {v.ElectricVehicleTemplate.VersionId, v.ElectricVehicleTemplate.ColorId })
-            //        .Select(g => g.FirstOrDefault(v => _unitOfWork.EVAttachmentRepository.GetAttachmentsByElectricVehicleId(v.Id).Any())
-            //        ??g.First())
-            //        .ToList();
+                var companyVehicles = vehicles
+                    .Where(v => v.Warehouse != null && v.Warehouse.WarehouseType == WarehouseType.EVInventory)
+                    .ToList();
 
-            //    var getVehicles = _mapper.Map<List<GetElecticVehicleDTO>>(groupVehicles);
+                if (!companyVehicles.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "No vehicles found in company inventory."
+                    };
+                }
 
-            //    foreach (var vehicle in getVehicles)
-            //    {
-            //        var attachments = _unitOfWork.EVAttachmentRepository
-            //            .GetAttachmentsByElectricVehicleId(vehicle.Id);
+                var groupedInventory = companyVehicles
+                    .GroupBy(v => new
+                    {
+                        ModelId = v.ElectricVehicleTemplate.Version.Model.Id,
+                        ModelName = v.ElectricVehicleTemplate.Version.Model.ModelName,
+                        VersionId = v.ElectricVehicleTemplate.Version.Id,
+                        VersionName = v.ElectricVehicleTemplate.Version.VersionName,
+                        ColorId = v.ElectricVehicleTemplate.Color.Id,
+                        ColorName = v.ElectricVehicleTemplate.Color.ColorName
+                    })
+                    .Select(g => new
+                    {
+                        g.Key.ModelId,
+                        g.Key.ModelName,
+                        g.Key.VersionId,
+                        g.Key.VersionName,
+                        g.Key.ColorId,
+                        g.Key.ColorName,
+                        Quantity = g.Count(),
+                        Vehicles = g.Select(v => new
+                        {
+                            v.VIN,
+                            v.WarehouseId,
+                            WarehouseName = v.Warehouse.WarehouseName
+                        }).ToList()
+                    })
+                    .OrderBy(x => x.ModelName)
+                    .ThenBy(x => x.VersionName)
+                    .ThenBy(x => x.ColorName)
+                    .ToList();
 
-            //        var urlList = new List<string>();
-            //        foreach (var att in attachments)
-            //        {
-            //            var url = _s3Service.GenerateDownloadUrl(att.Key);
-            //            urlList.Add(url);
-            //        }
-
-            //        vehicle.ImgUrl = urlList;
-            //    }
-
-            //    return new ResponseDTO
-            //    {
-            //        IsSuccess = true,
-            //        Message = "Get sample vehicles successfully.",
-            //        StatusCode = 200,
-            //        Result = getVehicles
-            //    };
-
-            //}
-            //catch (Exception ex)
-            //{
-            //    return new ResponseDTO
-            //    {
-            //        IsSuccess = false,
-            //        Message = ex.Message,
-            //        StatusCode = 500
-            //    };
-            //}
-            throw new NotImplementedException();
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Get company inventory successfully",
+                    Result = groupedInventory
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = ex.Message
+                };
+            }
         }
-
+        
         public async Task<ResponseDTO> GetVehicleByIdAsync(Guid vehicleId)
         {
             try

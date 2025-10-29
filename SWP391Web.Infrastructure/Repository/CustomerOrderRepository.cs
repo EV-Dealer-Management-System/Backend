@@ -33,6 +33,7 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _context.CustomerOrders
                 .Include(co => co.OrderDetails)
+                .Include(co => co.Quote)
                 .FirstOrDefaultAsync(c => c.OrderNo == customerOrderNo);
         }
     }

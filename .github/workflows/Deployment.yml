@@ -2,8 +2,7 @@ name: Backend CI/CD (No Artifact)
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 env:
   PROJECT_NAME: EV_Dealer_Management_System
@@ -14,7 +13,6 @@ env:
 
 jobs:
   build-and-deploy:
-    name: Build and Deploy ASP.NET Core
     runs-on: ubuntu-latest
     environment: SWP391
 
@@ -36,8 +34,10 @@ jobs:
       - name: Publish project (framework-dependent)
         run: dotnet publish -c Release -o ./publish
 
-      - name: Zip publish folder
-        run: zip -r publish.zip ./publish
+      - name: Pack publish folder (tar.gz) + checksum
+        run: |
+          tar -C ./publish -czf publish.tgz .
+          sha256sum publish.tgz > publish.tgz.sha256
 
       - name: Setup SSH
         run: |
