@@ -12,5 +12,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<AppointmentSetting?> GetById(Guid id);
         Task<AppointmentSetting?> GetByDealerIdAsync(Guid dealerId);
         Task<AppointmentSetting?> GetDefaultAsync();
+        
     }
 }

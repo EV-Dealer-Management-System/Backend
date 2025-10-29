@@ -29,125 +29,124 @@ namespace SWP391Web.Application.Services
             {
                 var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (userId == null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "User not found",
-                        StatusCode = 404
+                    return new ResponseDTO 
+                    { 
+                        IsSuccess = false, 
+                        Message = "User not found", 
+                        StatusCode = 404 
                     };
-                }
 
                 var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
                 if (dealer == null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Dealer not found",
-                        StatusCode = 404
+                    return new ResponseDTO 
+                    { 
+                        IsSuccess = false, 
+                        Message = "Dealer not found", 
+                        StatusCode = 404 
                     };
-                }
+
+                var customer = await _unitOfWork.CustomerRepository.GetByIdAsync(createAppointmentDTO.CustomerId);
+                if (customer == null)
+                    return new ResponseDTO 
+                    { 
+                        IsSuccess = false, 
+                        Message = "Customer not found", 
+                        StatusCode = 404 
+                    };
+
+                var evTemplate = await _unitOfWork.EVTemplateRepository.GetByIdAsync(createAppointmentDTO.EVTemplateId);
+                if (evTemplate == null)
+                    return new ResponseDTO 
+                    { IsSuccess = false, 
+                        Message = "EV template not found", 
+                        StatusCode = 404 
+                    };
 
                 var appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetByDealerIdAsync(dealer.Id);
                 if (appointmentSetting == null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Appointment setting not found",
-                        StatusCode = 404
+                    return new ResponseDTO 
+                    { 
+                        IsSuccess = false, 
+                        Message = "Appointment setting not found", 
+                        StatusCode = 404 
                     };
-                }
 
-                // Convert UTC -> Dealer local time
-                var dealerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); // UTC+7
-                var startLocal = TimeZoneInfo.ConvertTimeFromUtc(createAppointmentDTO.StartTime, dealerTimeZone);
-                var endLocal = TimeZoneInfo.ConvertTimeFromUtc(createAppointmentDTO.EndTime, dealerTimeZone);
-                // Check time is true
-                if (startLocal.TimeOfDay < appointmentSetting.OpenTime || endLocal.TimeOfDay > appointmentSetting.CloseTime)
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Appointment time is outside of allowed hours",
-                        StatusCode = 400
+                if (createAppointmentDTO.StartTime <= DateTime.Now)
+                    return new ResponseDTO 
+                    { 
+                        IsSuccess = false, 
+                        Message = "StartTime cannot be in the past", 
+                        StatusCode = 400 
                     };
 
                 if (createAppointmentDTO.StartTime >= createAppointmentDTO.EndTime)
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Invalid appointment time range",
-                        StatusCode = 400
+                    return new ResponseDTO 
+                    { 
+                        IsSuccess = false, 
+                        Message = "Invalid appointment time range", 
+                        StatusCode = 400 
                     };
 
-                var minInterval = TimeSpan.FromMinutes(appointmentSetting.MinIntervalBetweenAppointments); // each slot own how many mins
-                var slots = new List<(DateTime Start, DateTime End)>(); // List to check overlapping
-                //Check time in UTC to check
-                var currentUtc = createAppointmentDTO.StartTime;
-                var endUtc = createAppointmentDTO.EndTime;
+                if (createAppointmentDTO.StartTime.TimeOfDay < appointmentSetting.OpenTime ||
+                    createAppointmentDTO.EndTime.TimeOfDay > appointmentSetting.CloseTime)
+                    return new ResponseDTO 
+                    { 
+                        IsSuccess = false, 
+                        Message = "Appointment time is outside dealer working hours", 
+                        StatusCode = 400 
+                    };
 
-                // divine into many slot base on minInterval
-                while (currentUtc < endUtc)
+                // Get existing appointments for the dealer on the same day
+                var today = createAppointmentDTO.StartTime.Date;
+                var appointmentsToday = await _unitOfWork.AppointmentRepository.GetByDealerIdAndDateAsync(dealer.Id, today);
+
+                // Generate available slots based on appointment settings
+                var slots = new List<(TimeSpan Start, TimeSpan End)>();
+                var currentTime = appointmentSetting.OpenTime;
+                var interval = TimeSpan.FromMinutes(appointmentSetting.MinIntervalBetweenAppointments);
+                var breakTime = TimeSpan.FromMinutes(appointmentSetting.BreakTimeBetweenAppointments);
+                var workEnd = appointmentSetting.CloseTime;
+
+                // Create time slots
+                while (currentTime + interval <= workEnd)
                 {
-                    //Convert UTC -> Local
-                    var currentLocal = TimeZoneInfo.ConvertTimeFromUtc(currentUtc, dealerTimeZone);
-                    var openLocal = currentLocal.Date + appointmentSetting.OpenTime;
-                    var closeLocal = currentLocal.Date + appointmentSetting.CloseTime;
-
-                    //Findout which slot start and end
-                    var slotStartLocal = currentLocal < openLocal ? openLocal : currentLocal;
-                    var slotEndLocal = slotStartLocal + minInterval;
-                    // if over CloseTime -> = CloseTime
-                    if (slotEndLocal > closeLocal) slotEndLocal = closeLocal;
-                    // if over Endtime -> = Endtime
-                    if (slotEndLocal > TimeZoneInfo.ConvertTimeFromUtc(endUtc, dealerTimeZone))
-                        slotEndLocal = TimeZoneInfo.ConvertTimeFromUtc(endUtc, dealerTimeZone);
-
-                    if (slotStartLocal < slotEndLocal)
-                    {
-                        // Convert Local -> UTC
-                        var slotStartUtc = TimeZoneInfo.ConvertTimeToUtc(slotStartLocal, dealerTimeZone);
-                        var slotEndUtc = TimeZoneInfo.ConvertTimeToUtc(slotEndLocal, dealerTimeZone);
-                        slots.Add((slotStartUtc, slotEndUtc));
-                    }
-
-                    currentUtc = TimeZoneInfo.ConvertTimeToUtc(slotEndLocal, dealerTimeZone);
+                    var slotStart = currentTime;
+                    var slotEnd = currentTime + interval;
+                    if (slotEnd > workEnd) slotEnd = workEnd;
+                    slots.Add((slotStart, slotEnd));
+                    currentTime = slotEnd + breakTime;
                 }
 
 
-                // Check overlapping
-                foreach (var s in slots)
-                {
-                    var count = await _unitOfWork.AppointmentRepository.CountOverLappingAsync(dealer.Id, s.Start, s.End);
-                    if (!appointmentSetting.AllowOverlappingAppointments && count >= 1) // Only 1
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "No overlapping so only 1 appointment can be created",
-                            StatusCode = 400
-                        };
-                    }
+                // Check if the requested appointment time fits into any of the available slots
+                bool isValidSlot = slots.Any(s =>
+                    createAppointmentDTO.StartTime.TimeOfDay >= s.Start &&
+                    createAppointmentDTO.EndTime.TimeOfDay <= s.End);
 
-                    if (appointmentSetting.AllowOverlappingAppointments && count >= appointmentSetting.MaxConcurrentAppointments)
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "Over maxconcurrentsetting",
-                            StatusCode = 400
-                        };
-                    }
+                // Validate overlapping appointments
+                if (!isValidSlot)
+                    return new ResponseDTO { IsSuccess = false, Message = "Appointment time must be within generated slots", StatusCode = 400 };
 
-                }
+                // Check for overlapping appointments
+                var overlappingCount = await _unitOfWork.AppointmentRepository.CountOverLappingAsync(
+                    dealer.Id,
+                    createAppointmentDTO.StartTime,
+                    createAppointmentDTO.EndTime);
 
-                //Create
+                // Validate against appointment settings
+                if (!appointmentSetting.AllowOverlappingAppointments && overlappingCount >= 1)
+                    return new ResponseDTO { IsSuccess = false, Message = "No overlapping allowed, only 1 appointment can be created", StatusCode = 400 };
+
+                if (appointmentSetting.AllowOverlappingAppointments && overlappingCount >= appointmentSetting.MaxConcurrentAppointments)
+                    return new ResponseDTO { IsSuccess = false, Message = "Over max concurrent appointments", StatusCode = 400 };
+
+
+                // Create and save the appointment
                 var appointment = new Appointment
                 {
                     DealerId = dealer.Id,
-                    CustomerId = createAppointmentDTO.CustomerId,
-                    EVTemplateId = createAppointmentDTO.EVTemplateId,
+                    CustomerId = customer.Id,
+                    EVTemplateId = evTemplate.Id,
                     StartTime = createAppointmentDTO.StartTime,
                     EndTime = createAppointmentDTO.EndTime,
                     Status = AppointmentStatus.Active,
@@ -158,7 +157,7 @@ namespace SWP391Web.Application.Services
                 await _unitOfWork.AppointmentRepository.AddAsync(appointment, CancellationToken.None);
                 await _unitOfWork.SaveAsync();
 
-                var getAppointmentDTO = _mapper.Map<GetAppointmentDTO>(appointment);
+                var getAppointmentDTO = _mapper.Map<GetCreateAppointmentDTO>(appointment);
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -166,7 +165,6 @@ namespace SWP391Web.Application.Services
                     StatusCode = 201,
                     Result = getAppointmentDTO
                 };
-
             }
             catch (Exception ex)
             {
@@ -178,6 +176,8 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
+
+
 
         public async Task<ResponseDTO> GetAllAppointmentsAsync(ClaimsPrincipal user)
         {

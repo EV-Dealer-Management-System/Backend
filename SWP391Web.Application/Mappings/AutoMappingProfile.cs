@@ -127,7 +127,29 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager.FullName))
                 .ForMember(dest => dest.ManagerEmail, opt => opt.MapFrom(src => src.Manager.Email)).ReverseMap();
             CreateMap<AppointmentSetting, GetAppointSettingDTO>().ReverseMap();
-            CreateMap<Appointment, GetAppointmentDTO>().ReverseMap();
+            CreateMap<Appointment, GetCreateAppointmentDTO>().ReverseMap();
+            CreateMap<Appointment, GetAppointmentDTO>()
+                .ForMember(dest => dest.EVTemplate, opt => opt.MapFrom(src => new ViewTemplate
+                {
+                    EVTemplateId = src.EVTemplate.Id,
+                    VersionId = src.EVTemplate.VersionId,
+                    VersionName = src.EVTemplate.Version.VersionName,
+                    ModelId = src.EVTemplate.Version.ModelId,
+                    ModelName = src.EVTemplate.Version.Model.ModelName,
+                    ColorId = src.EVTemplate.ColorId,
+                    ColorName = src.EVTemplate.Color.ColorName
+                }))
+                .ForMember(dest => dest.Dealer, opt => opt.MapFrom(src => new ViewDealerName
+                {
+                    DealerId = src.Dealer.Id,
+                    DealerName = src.Dealer.Name
+                }))
+                .ForMember(dest => dest.Customer,opt => opt.MapFrom(src => new ViewCustomerName
+                {
+                    CustomerId = src.Customer.Id,
+                    CustomerName = src.Customer.FullName
+                }))
+                .ReverseMap();
             CreateMap<DepositSetting, GetDepositSettingDTO>()
                 .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager.FullName))
                 .ForMember(dest => dest.DealerName, opt => opt.MapFrom(src => src.Dealer.Name)).ReverseMap();
