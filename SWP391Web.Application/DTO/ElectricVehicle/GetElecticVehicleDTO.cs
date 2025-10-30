@@ -32,6 +32,8 @@ namespace SWP391Web.Application.DTO.ElectricVehicle
         public string VersionName { get; set; }
         public Guid ModelId { get; set; }
         public string ModelName { get; set; }
+        public Guid ColorId { get; set; }
+        public string ColorName { get; set; }
     }
 
     public class ViewWarehouse

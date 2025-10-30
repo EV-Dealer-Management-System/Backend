@@ -360,13 +360,12 @@ namespace SWP391Web.Application.Services
                 }
 
                 if (bookingEV.Status == BookingStatus.Cancelled ||
-                    bookingEV.Status == BookingStatus.Approved ||
                     bookingEV.Status == BookingStatus.Rejected)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Cannot update status of a cancelled, approved, or rejected booking.",
+                        Message = "Cannot update status of a cancelled,rejected booking.",
                         StatusCode = 400
                     };
                 }
@@ -434,16 +433,6 @@ namespace SWP391Web.Application.Services
 
                 if (newStatus == BookingStatus.Approved)
                 {
-                    var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(bookingEV.DealerId);
-                    if (warehouse == null)
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "Dealer's warehouse not found.",
-                            StatusCode = 404
-                        };
-                    }
 
                     foreach (var dt in bookingEV.BookingEVDetails)
                     {
@@ -478,7 +467,6 @@ namespace SWP391Web.Application.Services
                         foreach (var ev in selectedVehicles)
                         {
                             ev.Status = ElectricVehicleStatus.Booked;
-                            ev.WarehouseId = warehouse.Id;
                             _unitOfWork.ElectricVehicleRepository.Update(ev);
                         }
                     }
@@ -514,6 +502,56 @@ namespace SWP391Web.Application.Services
                     }
                 }
 
+                if(newStatus == BookingStatus.Completed)
+                {
+                    if(bookingEV.Status != BookingStatus.Approved)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Can only complete an approved booking.",
+                            StatusCode = 400
+                        };
+                    }
+
+                    var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(bookingEV.DealerId);
+                    if (warehouse == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer's warehouse not found.",
+                            StatusCode = 404
+                        };
+                    }
+
+                    foreach (var dt in bookingEV.BookingEVDetails)
+                    {
+                        var bookedVehicles = await _unitOfWork.ElectricVehicleRepository
+                            .GetBookedVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+                        if (bookedVehicles == null || !bookedVehicles.Any())
+                        {
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                Message = "No vehicles in booked status.",
+                                StatusCode = 404
+                            };
+                        }
+                        var selectedVehicles = bookedVehicles
+                            .OrderBy(ev => ev.ImportDate)
+                            .Take(dt.Quantity)
+                            .ToList();
+                        foreach (var ev in selectedVehicles)
+                        {
+                            ev.Status = ElectricVehicleStatus.AtDealer;
+                            ev.WarehouseId = warehouse.Id;
+                            _unitOfWork.ElectricVehicleRepository.Update(ev);
+                        }
+                    }
+
+                }
+
                 if (bookingEV.Status == BookingStatus.Draft && newStatus == BookingStatus.Pending)
                 {
                     foreach (var dt in bookingEV.BookingEVDetails)
@@ -547,6 +585,7 @@ namespace SWP391Web.Application.Services
                     BookingStatus.Approved => "Booking approved successfully.",
                     BookingStatus.Rejected => "Booking rejected successfully.",
                     BookingStatus.Cancelled => "Booking cancelled successfully.",
+                    BookingStatus.Completed => "Booking completed successfully.",
                     _ => "Booking status updated successfully."
                 };
 

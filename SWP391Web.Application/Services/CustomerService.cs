@@ -6,7 +6,8 @@
     using SWP391Web.Application.IServices;
     using SWP391Web.Domain.Entities;
     using SWP391Web.Infrastructure.IRepository;
-    using System.Security.Claims;
+using System.Linq.Expressions;
+using System.Security.Claims;
 
     namespace SWP391Web.Application.Services
     {
@@ -94,7 +95,7 @@
             }
 
 
-            public async Task<ResponseDTO> GetAllCustomerAsync(ClaimsPrincipal user)
+            public async Task<ResponseDTO> GetAllCustomerAsync(ClaimsPrincipal user, string? search)
             {
                 try
                 {
@@ -118,8 +119,24 @@
                             Message = "Dealer not found."
                         };
                     }
-                    var allCustomers = await _unitOfWork.CustomerRepository.GetAllCustomerAsync();
-                    var customers = allCustomers.Where(c => c.Dealers.Any(d => d.Id == dealer.Id)).ToList();
+
+                    Expression<Func<Customer, bool>> filter = c => c.Dealers.Any(d => d.Id == dealer.Id);
+                    if (!string.IsNullOrWhiteSpace(search))
+                    {
+                        var loweredSearch = search.Trim().ToLower();
+                        filter = c => c.Dealers.Any(d => d.Id == dealer.Id) &&
+                                     (
+                                         (c.FullName != null && c.FullName.Trim().ToLower().Contains(loweredSearch)) ||
+                                         (c.Email != null && c.Email.Trim().ToLower().Contains(loweredSearch)) ||
+                                         (c.PhoneNumber != null && c.PhoneNumber.Trim().ToLower().Contains(loweredSearch))
+                                     );
+                    }
+
+                    // FIFO
+                    var customers = await _unitOfWork.CustomerRepository.GetAllAsync(
+                        filter: filter,
+                        orderBy: q => q.OrderBy(c => c.CreatedAt));
+
                     if(customers == null || !customers.Any())
                     {
                         return new ResponseDTO
