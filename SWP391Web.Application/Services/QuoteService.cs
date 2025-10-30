@@ -252,10 +252,19 @@ namespace SWP391Web.Application.Services
                 var filteredQuotes = new List<GetQuoteDTO>();
                 foreach (var q in quotes)
                 {
+                    if(q.Status != QuoteStatus.Accepted)
+                        continue;
+
                     bool isShow = true;
 
                     foreach (var dt in q.QuoteDetails)
                     {
+                        if(dt.Promotion != null && dt.Promotion.EndDate.HasValue 
+                            && dt.Promotion.EndDate < DateTime.UtcNow)
+                        {
+                            isShow = false;
+                            break;
+                        }
                         var availableVehicles = await _unitOfWork.ElectricVehicleRepository
                             .GetAvailableVehicleByDealerAsync(q.DealerId, dt.VersionId, dt.ColorId);
 
