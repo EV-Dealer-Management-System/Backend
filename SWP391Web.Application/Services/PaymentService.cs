@@ -191,6 +191,7 @@ namespace SWP391Web.Application.Services
         {
             try
             {
+                Console.WriteLine($"[IPN] 1");
                 var data = new SortedDictionary<string, string>(StringComparer.Ordinal);
                 foreach (var prop in typeof(VNPayIPNDTO).GetProperties())
                 {
@@ -201,6 +202,7 @@ namespace SWP391Web.Application.Services
                         data[key] = value;
                     }
                 }
+                Console.WriteLine($"[IPN] 2");
 
                 string FormEncode(string enUrl) => WebUtility.UrlEncode(enUrl).Replace("%20", "+");
                 var signData = string.Join("&", data.Select(kvp => $"{kvp.Key}={FormEncode(kvp.Value)}"));
@@ -218,6 +220,7 @@ namespace SWP391Web.Application.Services
 
                 if (ipnDTO.vnp_ResponseCode == "00" && ipnDTO.vnp_TransactionStatus == "00")
                 {
+                    Console.WriteLine($"[IPN] 3");
                     var order = await _unitOfWork.CustomerOrderRepository.GetByOrderNoAsync(int.Parse(ipnDTO.vnp_TxnRef));
                     if (order is null)
                     {
@@ -233,6 +236,8 @@ namespace SWP391Web.Application.Services
                             }
                         };
                     }
+
+                    Console.WriteLine($"[IPN] 4");
                     var paidAmount = decimal.Parse(ipnDTO.vnp_Amount) / 100;
                     await HandleVNPayCustomerOrder(order, paidAmount, ct);
 
@@ -249,10 +254,10 @@ namespace SWP391Web.Application.Services
                         Status = TransactionStatus.Success,
                         CreatedAt = DateTime.UtcNow
                     };
+                    Console.WriteLine($"[IPN] 13");
 
                     await _unitOfWork.TransactionRepository.AddAsync(Transaction, ct);
-
-                    await _unitOfWork.SaveAsync();
+                    Console.WriteLine($"[IPN] 14");
 
                     return new ResponseDTO()
                     {
@@ -265,6 +270,9 @@ namespace SWP391Web.Application.Services
                         }
                     };
                 }
+                Console.WriteLine($"[IPN] 15");
+                await _unitOfWork.SaveAsync();
+                Console.WriteLine($"[IPN] 16");
                 return new ResponseDTO()
                 {
                     StatusCode = 200,
@@ -294,9 +302,11 @@ namespace SWP391Web.Application.Services
 
         private async Task HandleVNPayCustomerOrder(CustomerOrder customerOrder, decimal amount, CancellationToken ct)
         {
+            Console.WriteLine($"[IPN] 6");
             if (amount == customerOrder.TotalAmount || (customerOrder.DepositAmount != null && amount == (customerOrder.TotalAmount - customerOrder.DepositAmount)))
             {
                 await HandleVehicleInOrder(customerOrder, ct);
+                Console.WriteLine($"[IPN] 11");
                 customerOrder.Status = OrderStatus.Completed;
             }
             else
@@ -304,10 +314,12 @@ namespace SWP391Web.Application.Services
                 customerOrder.Status = OrderStatus.Depositing;
             }
             _unitOfWork.CustomerOrderRepository.Update(customerOrder);
+            Console.WriteLine($"[IPN] 12");
         }
 
         private async Task HandleVehicleInOrder(CustomerOrder customerOrder, CancellationToken ct)
         {
+            Console.WriteLine($"[IPN] 7");
             var outOfStock = new List<(string modelName, string versionName, string colorName, int quantity)>();
             var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(customerOrder.Quote.DealerId);
             if (warehouse is null)
@@ -316,6 +328,7 @@ namespace SWP391Web.Application.Services
             }
             foreach (var detail in customerOrder.OrderDetails)
             {
+                Console.WriteLine($"[IPN] 8");
                 var ev = await _unitOfWork.ElectricVehicleRepository.GetByIdsAsync(detail.ElectricVehicleId);
                 if (ev is null)
                 {
@@ -323,6 +336,7 @@ namespace SWP391Web.Application.Services
                 }
                 ev.Status = ElectricVehicleStatus.Booked;
                 _unitOfWork.ElectricVehicleRepository.Update(ev);
+                await _unitOfWork.SaveAsync();
                 var quantityCurrent = await _unitOfWork.ElectricVehicleRepository.CountDealerAvailableByVersionColorAsync(customerOrder.Quote.DealerId, ev.ElectricVehicleTemplate.VersionId,
                     ev.ElectricVehicleTemplate.ColorId, ct);
 
@@ -331,9 +345,12 @@ namespace SWP391Web.Application.Services
                 var model = version.Model;
                 var color = template.Color;
 
+                Console.WriteLine($"[IPN] 9");
+
                 if (quantityCurrent <= warehouse.AlertNumber && !outOfStock.Any(o => o.modelName == model.ModelName && o.versionName == version.VersionName &&
                     o.colorName == color.ColorName))
                 {
+                    Console.WriteLine($"[IPN] 10");
                     outOfStock.Add((modelName: model.ModelName ?? string.Empty,
                         versionName: version.VersionName ?? string.Empty,
                         colorName: color.ColorName ?? string.Empty,
@@ -341,7 +358,6 @@ namespace SWP391Web.Application.Services
                 }
             }
 
-            await _unitOfWork.SaveAsync();
             if (outOfStock.Count > 0)
             {
                 await CreateAggregationOutOfStockAsync(customerOrder.Quote.DealerId, outOfStock, ct);
