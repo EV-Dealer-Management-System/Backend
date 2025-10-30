@@ -14,5 +14,6 @@ namespace SWP391Web.Application.IServices
     {
         Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct);
         Task<ResponseDTO> GetAllCustomerOrders(ClaimsPrincipal userClaim, int pageNumber, int pageSize, OrderStatus? orderStatus, CancellationToken ct);
+        Task<ResponseDTO> CancelCustomerOrderAsync(Guid customerOrderId, CancellationToken ct);
     }
 }
