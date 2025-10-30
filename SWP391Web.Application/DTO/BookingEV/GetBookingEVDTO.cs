@@ -1,4 +1,5 @@
 ﻿using SWP391Web.Application.DTO.BookingEVDetail;
+using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Domain.Enums;
 using System;
 using System.Collections.Generic;
@@ -18,5 +19,6 @@ namespace SWP391Web.Application.DTO.BookingEV
         public string? Note { get; set; }
         public string? CreatedBy { get; set; }
         public List<GetBookingEVDetailDTO> BookingEVDetails { get; set; } 
+        public GetEContractDTO? EContract { get; set; }
     }
 }

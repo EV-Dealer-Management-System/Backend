@@ -19,6 +19,7 @@ namespace SWP391Web.Domain.Entities
         public string OwnerBy { get; private set; } = null!;
 
         public ApplicationUser Owner { get; private set; } = null!;
+        public BookingEV? BookingEV { get; private set; } = null!;
 
         private EContract() { }
         public EContract(Guid id, string htmlTemaple, string? name, string createdBy, string ownerBy, EContractStatus status, EcontractType type)
