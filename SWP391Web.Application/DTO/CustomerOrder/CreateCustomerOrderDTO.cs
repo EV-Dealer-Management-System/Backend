@@ -13,5 +13,6 @@ namespace SWP391Web.Application.DTO.CustomerOrder
         public Guid CustomerId { get; set; }
         public Guid QuoteId { get; set; }
         public bool IsPayFull { get; set; }
+        public bool IsCash { get; set; }
     }
 }

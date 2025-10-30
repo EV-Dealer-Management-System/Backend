@@ -9,5 +9,6 @@ namespace SWP391Web.Infrastructure.IRepository
 {
     public interface IOrderDetailRepository : IRepository<OrderDetail>
     {
+        Task<List<OrderDetail>?> GetAllByCustomerOrderId(Guid customerOrderId, CancellationToken ct);
     }
 }

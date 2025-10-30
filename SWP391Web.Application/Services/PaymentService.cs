@@ -308,8 +308,7 @@ namespace SWP391Web.Application.Services
             {
                 customerOrder.Status = OrderStatus.Depositing;
             }
-
-            await _unitOfWork.SaveAsync();
+            _unitOfWork.CustomerOrderRepository.Update(customerOrder);
         }
 
         private async Task HandleVehicleInOrder(CustomerOrder customerOrder, CancellationToken ct)
@@ -328,8 +327,9 @@ namespace SWP391Web.Application.Services
                     throw new Exception($"Cannot find the electric vehicle in orderNo {customerOrder.OrderNo}");
                 }
                 ev.Status = ElectricVehicleStatus.Booked;
+                _unitOfWork.ElectricVehicleRepository.Update(ev);
                 var quantityCurrent = await _unitOfWork.ElectricVehicleRepository.CountDealerAvailableByVersionColorAsync(customerOrder.Quote.DealerId, ev.ElectricVehicleTemplate.VersionId,
-                    ev.ElectricVehicleTemplate.ColorId, CancellationToken.None);
+                    ev.ElectricVehicleTemplate.ColorId, ct);
 
                 var template = ev.ElectricVehicleTemplate;
                 var version = template.Version;
