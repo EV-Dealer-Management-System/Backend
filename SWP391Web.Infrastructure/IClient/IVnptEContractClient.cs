@@ -22,5 +22,6 @@ namespace SWP391Web.Infrastructure.IClient
         Task<VnptResult<VnptDocumentDto>> GetEContractByIdAsync(string token, string eContractId);
         Task<byte[]> DownloadAsync(string url);
         Task<VnptResult<DeleteEContractDraftResponse>> DeleteEContractDraft(string token, Guid econtractId);
+        Task<VnptResult<DeleteSmartCAResponse>> DeleteSmartCA(string token, DeleteSmartCARequest deleteSmartCARequest);
     }
 }

@@ -8,7 +8,7 @@ namespace SWP391Web.Domain.Enums
 {
     public enum AppointmentStatus
     {
-        Pending = 1,
+        Active = 1,
         Completed = 2,
         Canceled = 3
     }

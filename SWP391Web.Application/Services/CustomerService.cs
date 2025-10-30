@@ -6,7 +6,8 @@
     using SWP391Web.Application.IServices;
     using SWP391Web.Domain.Entities;
     using SWP391Web.Infrastructure.IRepository;
-    using System.Security.Claims;
+using System.Linq.Expressions;
+using System.Security.Claims;
 
     namespace SWP391Web.Application.Services
     {
@@ -94,7 +95,7 @@
             }
 
 
-            public async Task<ResponseDTO> GetAllCustomerAsync(ClaimsPrincipal user)
+            public async Task<ResponseDTO> GetAllCustomerAsync(ClaimsPrincipal user, string? search)
             {
                 try
                 {
@@ -118,14 +119,40 @@
                             Message = "Dealer not found."
                         };
                     }
-                    var customers = await _unitOfWork.CustomerRepository.GetAllAsync();
-                    var customerDTOs = _mapper.Map<List<GetCustomerDTO>>(customers);
+
+                    Expression<Func<Customer, bool>> filter = c => c.Dealers.Any(d => d.Id == dealer.Id);
+                    if (!string.IsNullOrWhiteSpace(search))
+                    {
+                        var loweredSearch = search.Trim().ToLower();
+                        filter = c => c.Dealers.Any(d => d.Id == dealer.Id) &&
+                                     (
+                                         (c.FullName != null && c.FullName.Trim().ToLower().Contains(loweredSearch)) ||
+                                         (c.Email != null && c.Email.Trim().ToLower().Contains(loweredSearch)) ||
+                                         (c.PhoneNumber != null && c.PhoneNumber.Trim().ToLower().Contains(loweredSearch))
+                                     );
+                    }
+
+                    // FIFO
+                    var customers = await _unitOfWork.CustomerRepository.GetAllAsync(
+                        filter: filter,
+                        orderBy: q => q.OrderBy(c => c.CreatedAt));
+
+                    if(customers == null || !customers.Any())
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "customer list not found",
+                            StatusCode = 404
+                        };
+                    }
+                    var getCustomers = _mapper.Map<List<GetCustomerDTO>>(customers);
                     return new ResponseDTO
                     {
                         IsSuccess = true,
                         StatusCode = 200,
                         Message = "Customers retrieved successfully",
-                        Result = customerDTOs
+                        Result = getCustomers
                     };
 
                 }
@@ -177,13 +204,13 @@
                             Message = "Customer not found"
                         };
                     }
-                    var customerDTO = _mapper.Map<GetCustomerDTO>(customer);
+                    var getCustomer = _mapper.Map<GetCustomerDTO>(customer);
                     return new ResponseDTO
                     {
                         IsSuccess = true,
                         StatusCode = 200,
                         Message = "Customer retrieved successfully",
-                        Result = customerDTO
+                        Result = getCustomer
                     };
                 }
                 catch (Exception ex)

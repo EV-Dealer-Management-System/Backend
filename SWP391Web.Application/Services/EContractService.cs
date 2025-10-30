@@ -303,7 +303,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var uProcess = await UpdateProcessAsync(access.Data!.AccessToken, eContractId.ToString(), companyApproverUserCode, dealerManagerId, draftEContract.Data!.PositionA!, draftEContract.Data!.PositionA!, draftEContract.Data.PageSign);
+                var uProcess = await UpdateProcessAsync(access.Data!.AccessToken, eContractId.ToString(), companyApproverUserCode, dealerManagerId, draftEContract.Data!.PositionA!, draftEContract.Data!.PositionB!, draftEContract.Data.PageSign);
 
                 var sent = await SendProcessAsync(access.Data!.AccessToken, eContractId.ToString());
 
@@ -490,7 +490,7 @@ namespace SWP391Web.Application.Services
 
             var status = (EContractStatus)createResult.Data.Status.Value;
 
-            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.ContentHtml, fileName, "System", dealer.ManagerId!, status, EcontractType.BookingContract);
+            var EContract = new EContract(Guid.Parse(createResult.Data.Id), html, fileName, "System", dealer.ManagerId!, status, EcontractType.BookingContract);
 
             await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
             await _unitOfWork.SaveAsync();
@@ -589,7 +589,7 @@ namespace SWP391Web.Application.Services
 
             var status = (EContractStatus)createResult.Data.Status.Value;
 
-            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.ContentHtml, fileName, userId, user.Id, status, EcontractType.DealerContract);
+            var EContract = new EContract(Guid.Parse(createResult.Data.Id), html, fileName, userId, user.Id, status, EcontractType.DealerContract);
 
             await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
 
@@ -696,9 +696,10 @@ namespace SWP391Web.Application.Services
                 if (signResult.Data.Status.Value == (int)EContractStatus.Completed)
                 {
                     await CreateDealerAccount(signResult.Data.Id.ToString(), ct);
-                    econtract.UpdateStatus(EContractStatus.Completed);
-                    _unitOfWork.EContractRepository.Update(econtract);
                 }
+
+                econtract.UpdateStatus((EContractStatus)signResult.Data.Status.Value);
+                _unitOfWork.EContractRepository.Update(econtract);
 
                 await _unitOfWork.SaveAsync();
 
@@ -720,7 +721,6 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
-
 
         private async Task CreateDealerAccount(string documentId, CancellationToken ct)
         {
@@ -755,6 +755,8 @@ namespace SWP391Web.Application.Services
 
             var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(dealerManager.Id, ct);
             if (dealer is null) throw new Exception($"Cannot find dealer with manager id '{dealerManager.Id}'");
+            dealer.DealerStatus = DealerStatus.Active;
+            _unitOfWork.DealerRepository.Update(dealer);
 
             var warehouse = new CreateWarehouseDTO
             {
@@ -936,7 +938,7 @@ namespace SWP391Web.Application.Services
                 if (contract is null)
                     return new VnptResult<UpdateEContractResponse>($"Cannot find EContract with id '{updateEContractDTO.Id}'");
 
-                var dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(contract.OwnerBy, ct);
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(contract.OwnerBy, ct);
                 if (dealer is null)
                     return new VnptResult<UpdateEContractResponse>($"Cannot find dealer with manager id '{contract.OwnerBy}'");
 
@@ -1149,13 +1151,13 @@ namespace SWP391Web.Application.Services
                 if (deleteResult.Data!.Status!.Value == (int)EContractStatus.Draft)
                 {
                     var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(econtract.OwnerBy, ct);
-                    _unitOfWork.EContractRepository.Remove(econtract);
-                    _unitOfWork.DealerRepository.Remove(dealer);
                     var manager = await _unitOfWork.UserManagerRepository.GetByIdAsync(dealer.ManagerId);
                     if (manager.LockoutEnabled is true)
                     {
                         _unitOfWork.UserManagerRepository.Remove(manager);
                     }
+                    _unitOfWork.EContractRepository.Remove(econtract);
+                    _unitOfWork.DealerRepository.Remove(dealer);
                     await _unitOfWork.SaveAsync();
 
                     return new ResponseDTO
@@ -1181,6 +1183,25 @@ namespace SWP391Web.Application.Services
                     StatusCode = 500,
                     Message = $"Error to delete EContract draft: {ex.Message}"
                 };
+            }
+        }
+
+        public async Task<VnptResult<DeleteSmartCAResponse>> DeleteSmartCA(DeleteSmartCARequest deleteSmartCARequest)
+        {
+            try
+            {
+                var token = await GetAccessTokenAsync();
+                var response = await _vnpt.DeleteSmartCA(token.Data!.AccessToken, deleteSmartCARequest);
+                if (!response.Success)
+                {
+                    var errors = string.Join(", ", response.Messages);
+                    throw new Exception($"Error to delete SmartCA: {errors}");
+                }
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return new VnptResult<DeleteSmartCAResponse>($"Exception when deleting SmartCA: {ex.Message}");
             }
         }
     }

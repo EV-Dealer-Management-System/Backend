@@ -9,6 +9,7 @@ namespace SWP391Web.Infrastructure.IRepository
 {
     public interface ICustomerRepository : IRepository<Customer>
     {
+        Task<List<Customer?>> GetAllCustomerAsync();
         Task<Customer?> GetByIdAsync(Guid customerId);
         Task<bool> IsExistByIdAsync(Guid customerId);
         Task<Customer?> GetByEmailAync(string email);
