@@ -53,7 +53,8 @@ namespace SWP391Web.Application.Mappings
                     Name = src.Warehouse.WarehouseName,
                 }));
             CreateMap<BookingEV, GetBookingEVDTO>()
-                .ForMember(dest => dest.BookingEVDetails, opt => opt.MapFrom(src => src.BookingEVDetails)).ReverseMap();
+                .ForMember(dest => dest.BookingEVDetails, opt => opt.MapFrom(src => src.BookingEVDetails))
+                .ForMember(dest => dest.EContract, opt => opt.MapFrom(src => src.EContract)).ReverseMap();
             CreateMap<BookingEVDetail, GetBookingEVDetailDTO>()
                 .ForMember(dest => dest.Version, opt => opt.MapFrom(src => new VersionDTO
                 {

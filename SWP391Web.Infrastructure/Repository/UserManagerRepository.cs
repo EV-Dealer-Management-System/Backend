@@ -64,7 +64,7 @@ namespace SWP391Web.Infrastructure.Repository
 
         public async Task<ApplicationUser?> GetByIdAsync(string id)
         {
-            return await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+            return await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
         }
 
         public async Task<IList<string>> GetRoleAsync(ApplicationUser user)
