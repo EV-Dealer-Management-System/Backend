@@ -18,7 +18,7 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public async Task<Promotion?> GetPromotionByIdAsync(Guid id)
+        public async Task<Promotion?> GetPromotionByIdAsync(Guid? id)
         {
             return await _context.Promotions.FirstOrDefaultAsync(p => p.Id == id);
         }
