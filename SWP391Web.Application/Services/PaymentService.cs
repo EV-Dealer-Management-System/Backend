@@ -233,31 +233,26 @@ namespace SWP391Web.Application.Services
                             }
                         };
                     }
-                    await HandleVNPayCustomerOrder(order, decimal.Parse(ipnDTO.vnp_Amount) / 100, ct);
+                    var paidAmount = decimal.Parse(ipnDTO.vnp_Amount) / 100;
+                    await HandleVNPayCustomerOrder(order, paidAmount, ct);
 
-                    DateTime dateTimeLocal = DateTime.ParseExact(ipnDTO.vnp_PayDate, "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
-                    DateTime dateTimeUtc = DateTime.SpecifyKind(dateTimeLocal, DateTimeKind.Unspecified).ToUniversalTime();
+                    //DateTime dateTimeLocal = DateTime.ParseExact(ipnDTO.vnp_PayDate, "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
+                    //DateTime dateTimeUtc = DateTime.SpecifyKind(dateTimeLocal, DateTimeKind.Unspecified).ToUniversalTime();
 
                     var Transaction = new Transaction
                     {
                         CustomerOrderId = order.Id,
-                        Amount = decimal.Parse(ipnDTO.vnp_Amount) / 100,
+                        Amount = paidAmount,
                         Provider = "VNPay",
                         OrderRef = ipnDTO.vnp_TxnRef,
                         Currency = "VND",
                         Status = TransactionStatus.Success,
-                        CreatedAt = dateTimeUtc
+                        CreatedAt = DateTime.UtcNow
                     };
 
                     await _unitOfWork.TransactionRepository.AddAsync(Transaction, ct);
-                    try
-                    {
-                        await _unitOfWork.SaveAsync();
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("Transaction save failed: " + e.Message);
-                    }
+
+                    await _unitOfWork.SaveAsync();
 
                     return new ResponseDTO()
                     {
@@ -299,7 +294,7 @@ namespace SWP391Web.Application.Services
 
         private async Task HandleVNPayCustomerOrder(CustomerOrder customerOrder, decimal amount, CancellationToken ct)
         {
-            if (amount == customerOrder.TotalAmount || amount == (customerOrder.TotalAmount - customerOrder.DepositAmount))
+            if (amount == customerOrder.TotalAmount || (customerOrder.DepositAmount != null && amount == (customerOrder.TotalAmount - customerOrder.DepositAmount)))
             {
                 await HandleVehicleInOrder(customerOrder, ct);
                 customerOrder.Status = OrderStatus.Completed;
