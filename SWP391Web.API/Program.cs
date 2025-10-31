@@ -69,7 +69,8 @@ var allowedOrigins = new[] {
     "https://metrohcmc.xyz",
     "https://electricvehiclesystem.click",
     "https://api.electricvehiclesystem.click",
-    "https://localhost:5173"
+    "https://localhost:5173",
+    "https://www.electricvehiclesystem.click"
 };
 
 builder.Services.AddCors(opt =>
