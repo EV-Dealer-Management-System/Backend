@@ -13,6 +13,7 @@ namespace SWP391Web.Domain.Enums
         Approved = 2,
         Rejected = 3,
         Cancelled = 4,
-        Completed = 5
+        Completed = 5,
+        SignedByAdmin = 6,
     }
 }
