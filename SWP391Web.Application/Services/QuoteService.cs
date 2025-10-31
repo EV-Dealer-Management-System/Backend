@@ -266,6 +266,9 @@ namespace SWP391Web.Application.Services
                 var filteredQuotes = new List<GetQuoteDTO>();
                 foreach (var q in quotes)
                 {
+                    if(q.Status != QuoteStatus.Accepted)
+                        continue;
+
                     bool isShow = true;
 
                     foreach (var dt in q.QuoteDetails)

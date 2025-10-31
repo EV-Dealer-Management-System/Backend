@@ -233,31 +233,26 @@ namespace SWP391Web.Application.Services
                             }
                         };
                     }
-                    await HandleVNPayCustomerOrder(order, decimal.Parse(ipnDTO.vnp_Amount) / 100, ct);
+                    var paidAmount = decimal.Parse(ipnDTO.vnp_Amount) / 100;
+                    await HandleVNPayCustomerOrder(order, paidAmount, ct);
 
-                    DateTime dateTimeLocal = DateTime.ParseExact(ipnDTO.vnp_PayDate, "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
-                    DateTime dateTimeUtc = DateTime.SpecifyKind(dateTimeLocal, DateTimeKind.Unspecified).ToUniversalTime();
+                    //DateTime dateTimeLocal = DateTime.ParseExact(ipnDTO.vnp_PayDate, "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
+                    //DateTime dateTimeUtc = DateTime.SpecifyKind(dateTimeLocal, DateTimeKind.Unspecified).ToUniversalTime();
+
                     var Transaction = new Transaction
                     {
                         CustomerOrderId = order.Id,
-                        Amount = decimal.Parse(ipnDTO.vnp_Amount) / 100,
+                        Amount = paidAmount,
                         Provider = "VNPay",
                         OrderRef = ipnDTO.vnp_TxnRef,
                         Currency = "VND",
                         Status = TransactionStatus.Success,
-                        CreatedAt = dateTimeUtc
+                        CreatedAt = DateTime.UtcNow
                     };
 
                     await _unitOfWork.TransactionRepository.AddAsync(Transaction, ct);
-                    try
-                    {
-                        await _unitOfWork.SaveAsync();
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("Transaction save failed: " + e.Message);
-                    }
 
+                    await _unitOfWork.SaveAsync();
                     return new ResponseDTO()
                     {
                         StatusCode = 200,
@@ -269,6 +264,7 @@ namespace SWP391Web.Application.Services
                         }
                     };
                 }
+
                 return new ResponseDTO()
                 {
                     StatusCode = 200,
@@ -298,7 +294,7 @@ namespace SWP391Web.Application.Services
 
         private async Task HandleVNPayCustomerOrder(CustomerOrder customerOrder, decimal amount, CancellationToken ct)
         {
-            if (amount == customerOrder.TotalAmount || amount == (customerOrder.TotalAmount - customerOrder.DepositAmount))
+            if (amount == customerOrder.TotalAmount || (customerOrder.DepositAmount != null && amount == (customerOrder.TotalAmount - customerOrder.DepositAmount)))
             {
                 await HandleVehicleInOrder(customerOrder, ct);
                 customerOrder.Status = OrderStatus.Completed;
@@ -307,8 +303,7 @@ namespace SWP391Web.Application.Services
             {
                 customerOrder.Status = OrderStatus.Depositing;
             }
-
-            await _unitOfWork.SaveAsync();
+            _unitOfWork.CustomerOrderRepository.Update(customerOrder);
         }
 
         private async Task HandleVehicleInOrder(CustomerOrder customerOrder, CancellationToken ct)
@@ -326,9 +321,11 @@ namespace SWP391Web.Application.Services
                 {
                     throw new Exception($"Cannot find the electric vehicle in orderNo {customerOrder.OrderNo}");
                 }
-                ev.Status = ElectricVehicleStatus.Booked;
+                ev.Status = ElectricVehicleStatus.Sold;
+                _unitOfWork.ElectricVehicleRepository.Update(ev);
+                await _unitOfWork.SaveAsync();
                 var quantityCurrent = await _unitOfWork.ElectricVehicleRepository.CountDealerAvailableByVersionColorAsync(customerOrder.Quote.DealerId, ev.ElectricVehicleTemplate.VersionId,
-                    ev.ElectricVehicleTemplate.ColorId, CancellationToken.None);
+                    ev.ElectricVehicleTemplate.ColorId, ct);
 
                 var template = ev.ElectricVehicleTemplate;
                 var version = template.Version;
@@ -345,7 +342,6 @@ namespace SWP391Web.Application.Services
                 }
             }
 
-            await _unitOfWork.SaveAsync();
             if (outOfStock.Count > 0)
             {
                 await CreateAggregationOutOfStockAsync(customerOrder.Quote.DealerId, outOfStock, ct);

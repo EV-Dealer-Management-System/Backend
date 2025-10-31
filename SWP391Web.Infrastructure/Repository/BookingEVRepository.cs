@@ -42,6 +42,9 @@ namespace SWP391Web.Infrastructure.Repository
                 .Include(b => b.BookingEVDetails)
                     .ThenInclude(bd => bd.Color)
                 .Include(b => b.Dealer)
+                .Include(b => b.EContract)  
+                    .ThenInclude(ec => ec.Owner)
+                    .AsNoTracking()
                 .FirstOrDefaultAsync(b => b.Id == bookingId);
         }
         public async Task<List<ElectricVehicle?>> GetVehiclesByBookingIdAsync(Guid bookingId)

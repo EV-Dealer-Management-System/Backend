@@ -151,6 +151,15 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPost]
+        [Route("delete-smartca")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ResponseDTO>> DeleteSmartCA([FromBody] DeleteSmartCARequest dto)
+        {
+            var r = await _econtractService.DeleteSmartCA(dto);
+            return Ok(r);
+        }
+
+        [HttpPost]
         [Route("update-econtract")]
         [Consumes("application/json")]
         [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
