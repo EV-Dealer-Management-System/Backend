@@ -10,6 +10,8 @@ namespace SWP391Web.Domain.Entities
         public string Address { get; set; } = null!;
         public string TaxNo { get; set; } = null!;
         public Guid? DealerTierId { get; set; }
+        public string? BankAccount { get; set; }
+        public string? BankName { get; set; }
         public DealerStatus DealerStatus { get; set; } = DealerStatus.Inactive;
 
         public DealerTier DealerTier { get; set; } = null!;
