@@ -21,6 +21,9 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<List<BookingEVDetail>> GetBookingDetailsByBookingIdAsync(Guid bookingId, CancellationToken ct)
         {
             return await _context.BookingEVDetails
+                .Include(bd => bd.Version)
+                    .ThenInclude(v => v.Model)
+                .Include(bd => bd.Color)
                 .Where(bd => bd.BookingId == bookingId)
                 .ToListAsync(ct);
         }

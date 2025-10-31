@@ -9,8 +9,6 @@ namespace SWP391Web.Application.DTO.DealerTier
 {
     public class UpdateDealerTierDTO
     {
-        [Required]
-        public Guid Id { get; set; }
         public string? Name { get; set; }
         public int? Level { get; set; }
         public decimal? BaseCommissionPercent { get; set; }

@@ -10,5 +10,6 @@ namespace SWP391Web.Infrastructure.IRepository
     public interface IDealerTierRepository : IRepository<DealerTier>
     {
         Task<DealerTier?> GetByIdAsync(Guid id, CancellationToken ct);
+        Task<DealerTier?> GetByLevelAsync(int level, CancellationToken ct);
     }
 }

@@ -15,7 +15,9 @@ namespace SWP391Web.Infrastructure.Repository
 
         public async Task<EContract?> GetByIdAsync(Guid id, CancellationToken ct)
         {
-            return await _context.EContracts.Where(x => x.Id == id).FirstOrDefaultAsync(ct);
+            return await _context.EContracts
+                .Include(ec => ec.BookingEV)
+                .Where(x => x.Id == id).FirstOrDefaultAsync(ct);
         }
     }
 }

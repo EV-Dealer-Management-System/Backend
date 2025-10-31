@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Domain.Constants
 {
-    public class StaticLinkUrl
+    public static class StaticLinkUrl
     {
         public const string WebUrl = "https://electricvehiclesystem.click";
         public const string ViewDaftEContractURL = WebUrl + "/Econtract/View?downloadUrl=";

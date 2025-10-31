@@ -1,4 +1,5 @@
-﻿using SWP391Web.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore;
+using SWP391Web.Domain.Entities;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.IRepository;
 
@@ -14,6 +15,12 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<DealerTier?> GetByIdAsync(Guid id, CancellationToken ct)
         {
             return await _context.DealerTiers.FindAsync(id , ct);
+        }
+
+        public async Task<DealerTier?> GetByLevelAsync(int level, CancellationToken ct)
+        {
+            return await _context.DealerTiers
+                .FirstOrDefaultAsync(dt => dt.Level == level, ct);
         }
     }
 }
