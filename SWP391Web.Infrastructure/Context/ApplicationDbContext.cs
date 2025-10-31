@@ -50,6 +50,7 @@ namespace SWP391Web.Infrastructure.Context
             base.OnModelCreating(modelBuilder);
 
             //Seed initial data
+            DealerTierSeeder.DealerTierConfigure(modelBuilder);
             EmailSeeder.SeedEmailTemplate(modelBuilder);
             EContractSeeder.EContractTemplateSeeder.SeedDealerEContract(modelBuilder);
             EContractTermSeeder.SeedTerm(modelBuilder);
