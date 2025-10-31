@@ -1145,8 +1145,8 @@ namespace SWP391Web.Application.Services
                 if (deleteResult.Data!.Status!.Value == (int)EContractStatus.Draft)
                 {
                     var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(econtract.OwnerBy, ct);
-                    var manager = await _unitOfWork.UserManagerRepository.GetByIdAsync(dealer.ManagerId);
-                    if (manager.LockoutEnabled is true)
+                    var manager = dealer!.Manager;
+                    if (manager!.LockoutEnabled is true)
                     {
                         _unitOfWork.UserManagerRepository.Remove(manager);
                     }

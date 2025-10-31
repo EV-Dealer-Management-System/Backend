@@ -38,6 +38,8 @@ jobs:
         run: |
           tar -C ./publish -czf publish.tgz .
           sha256sum publish.tgz > publish.tgz.sha256
+          ls -lah
+          ls -lah publish.tgz*
 
       - name: Setup SSH
         run: |
@@ -49,39 +51,30 @@ jobs:
       - name: Upload & deploy to EC2
         run: |
           set -euo pipefail
+          test -f ./publish.tgz && test -f ./publish.tgz.sha256
 
-          test -f ./publish.zip || { echo "publish.zip not found in $(pwd)"; ls -lah; exit 1; }
+          HOST="${{ secrets.EC2_HOST_PUBLIC }}"
+          USER="${{ secrets.EC2_USER }}"
 
-          HOST="${{ secrets.EC2_HOST_PUBLIC }}"; USER="${{ secrets.EC2_USER }}"
-          [ -n "$HOST" ] && [ -n "$USER" ] || { echo "Missing EC2_HOST_PUBLIC/EC2_USER"; exit 1; }
-
-          scp ./publish.zip "$USER@$HOST:/home/$USER/"
+          scp ./publish.tgz ./publish.tgz.sha256 "$USER@$HOST:/home/$USER/"
 
           ssh -o StrictHostKeyChecking=no "$USER@$HOST" "set -euo pipefail
-            PROJECT='EV_Dealer_Management_System'
+            PROJECT='${{ env.PROJECT_NAME }}'
             DEPLOY_DIR='/var/www/'\"\$PROJECT\"
             SERVICE='kestrel-'\"\$PROJECT\"'.service'
 
-          sudo systemctl cat \"\$SERVICE\" >/dev/null 2>&1 || exit 5
+            sudo systemctl cat \"\$SERVICE\" >/dev/null 2>&1
 
-          (sudo dnf -y install p7zip p7zip-plugins >/dev/null 2>&1 \
-            || sudo yum -y install p7zip p7zip-plugins >/dev/null 2>&1 \
-            || (sudo apt-get update >/dev/null 2>&1 && sudo apt-get install -y p7zip-full >/dev/null 2>&1) || true)
-          (sudo dnf -y install unzip >/dev/null 2>&1 || sudo yum -y install unzip >/dev/null 2>&1 || true)
+            cd /home/$USER
+            sha256sum -c publish.tgz.sha256
 
-          rm -rf ~/deploy_temp && mkdir -p ~/deploy_temp
-          if ! 7z x -y ~/publish.zip -o~/deploy_temp >/dev/null 2>&1; then
-            UNZIP_DISABLE_ZIPBOMB_DETECTION=TRUE unzip -o ~/publish.zip -d ~/deploy_temp >/dev/null
-          fi
+            sudo mkdir -p \"\$DEPLOY_DIR/publish\"
+            sudo systemctl stop \"\$SERVICE\" || true
+            sudo rm -rf \"\$DEPLOY_DIR/publish\"/*
+            tar -xzf publish.tgz -C \"\$DEPLOY_DIR/publish\"
+            sudo chown -R ec2-user:ec2-user \"\$DEPLOY_DIR\"
+            sudo systemctl daemon-reload
+            sudo systemctl start \"\$SERVICE\"
 
-          sudo mkdir -p \"\$DEPLOY_DIR\"
-          sudo systemctl stop \"\$SERVICE\" || true
-          sudo rm -rf \"\${DEPLOY_DIR:?}\"/*
-          sudo cp -r ~/deploy_temp/* \"\$DEPLOY_DIR\"/
-          sudo chown -R ec2-user:ec2-user \"\$DEPLOY_DIR\"
-          sudo systemctl daemon-reload
-          sudo systemctl start \"\$SERVICE\"
-
-          rm -rf ~/deploy_temp ~/publish.zip
+            rm -f publish.tgz publish.tgz.sha256
           "
-

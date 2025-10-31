@@ -17,10 +17,10 @@ namespace SWP391Web.API.Controllers
 
         [HttpGet]
         [Route("get-all-notification")]
-        public async Task<ActionResult<ResponseDTO>> GetAllNotification(CancellationToken ct)
+        public async Task<ActionResult<ResponseDTO>> GetAllNotification([FromQuery] int pageNumber, [FromQuery] int pageSize, CancellationToken ct)
         {
-            var r = await _notificationService.GetAllNotification(User, ct);
-            return StatusCode(r.StatusCode, r);
+            var result = await _notificationService.GetAllNotification(User, pageNumber, pageSize, ct);
+            return StatusCode(result.StatusCode, result);
         }
     }
 }

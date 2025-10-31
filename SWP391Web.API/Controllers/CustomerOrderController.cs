@@ -24,7 +24,7 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult<ResponseDTO>> CreateCustomerOrderAsync([FromBody] CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
         {
             var response = await _customerOrderService.CreateCustomerOrderAsync(User, createCustomerOrderDTO, ct);
-            return StatusCode(response.StatusCode,response);
+            return StatusCode(response.StatusCode, response);
         }
 
         [HttpGet]
@@ -32,6 +32,14 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult<ResponseDTO>> GetAllCustomerOrdersAsync([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, OrderStatus? orderStatus = default, CancellationToken ct = default)
         {
             var response = await _customerOrderService.GetAllCustomerOrders(User, pageNumber, pageSize, orderStatus, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPut]
+        [Route("cancel-customer-order/{customerOrderId}")]
+        public async Task<ActionResult<ResponseDTO>> CancelCustomerOrderAsync([FromRoute] Guid customerOrderId, CancellationToken ct)
+        {
+            var response = await _customerOrderService.CancelCustomerOrderAsync(customerOrderId, ct);
             return StatusCode(response.StatusCode, response);
         }
     }

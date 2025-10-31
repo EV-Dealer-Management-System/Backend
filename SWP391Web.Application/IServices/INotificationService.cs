@@ -10,6 +10,6 @@ namespace SWP391Web.Application.IServices
 {
     public interface INotificationService
     {
-        Task<ResponseDTO> GetAllNotification(ClaimsPrincipal userClaim, CancellationToken ct);
+        Task<ResponseDTO> GetAllNotification(ClaimsPrincipal userClaim, int pageNumber, int pageSize, CancellationToken ct);
     }
 }

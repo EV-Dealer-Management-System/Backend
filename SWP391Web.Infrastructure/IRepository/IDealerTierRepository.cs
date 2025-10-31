@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Infrastructure.IRepository
 {
-    public interface IOrderDetailRepository : IRepository<OrderDetail>
+    public interface IDealerTierRepository : IRepository<DealerTier>
     {
-        Task<List<OrderDetail>?> GetAllByCustomerOrderId(Guid customerOrderId, CancellationToken ct);
+        Task<DealerTier?> GetByIdAsync(Guid id, CancellationToken ct);
     }
 }
