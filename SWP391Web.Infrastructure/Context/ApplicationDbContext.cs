@@ -47,6 +47,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<DealerPolicyOverride> DealerPolicyOverrides { get; set; }
         public DbSet<DealerDebt> DealerDebts { get; set; }
         public DbSet<DealerTier> DealerTiers { get; set; }
+        public DbSet<VehicleDelivery> VehicleDeliveries { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
