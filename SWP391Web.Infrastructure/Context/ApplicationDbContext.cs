@@ -77,29 +77,32 @@ namespace SWP391Web.Infrastructure.Context
             modelBuilder.Entity<IdentityUserToken<string>>(b =>
                 b.ToTable("UserTokens"));
 
+            /******************************************************************************/
+            // Configure Dealer entity
 
-            //modelBuilder.Entity<Dealer>()
-            //    .HasMany(dl => dl.ApplicationUsers)
-            //    .WithMany(au => au.Dealers)
-            //    .UsingEntity<Dictionary<string, string>>(
-            //        "DealerMembers",
-            //        j => j
-            //            .HasOne<ApplicationUser>()
-            //            .WithMany()
-            //            .HasForeignKey("ApplicationUserId")
-            //            .HasConstraintName("FK_DealerMember_ApplicationUsers_ApplicationUserId")
-            //            .OnDelete(DeleteBehavior.Restrict),
-            //        j => j
-            //            .HasOne<Dealer>()
-            //            .WithMany()
-            //            .HasForeignKey("DealerId")
-            //            .HasConstraintName("FK_DealerMember_Dealers_DealerId")
-            //            .OnDelete(DeleteBehavior.Restrict),
-            //        j =>
-            //        {
-            //            j.HasKey("DealerId", "ApplicationUserId");
-            //            j.ToTable("DealerMembers");
-            //        });
+            modelBuilder.Entity<Dealer>()
+                .HasOne(d => d.DealerTier)
+                .WithMany(dd => dd.Dealers)
+                .HasForeignKey(dd => dd.DealerTierId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure DealerDebt entity
+
+            modelBuilder.Entity<DealerDebt>()
+                .HasOne(dd => dd.Dealer)
+                .WithMany(d => d.dealerDebts)
+                .HasForeignKey(dd => dd.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure DealerPolicyOverride entity
+
+            modelBuilder.Entity<DealerPolicyOverride>()
+                .HasOne(dpo => dpo.Dealer)
+                .WithMany(d => d.PolicyOverrides)
+                .HasForeignKey(dpo => dpo.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             /******************************************************************************/
             // Configure Customer entity
@@ -282,7 +285,7 @@ namespace SWP391Web.Infrastructure.Context
                 .WithMany(p => p.QuoteDetails)
                 .HasForeignKey(qd => qd.PromotionId)
                 .OnDelete(DeleteBehavior.Restrict);
-            
+
 
             /******************************************************************************/
             // Configure Promotion entity
@@ -347,6 +350,12 @@ namespace SWP391Web.Infrastructure.Context
                 .HasForeignKey(co => co.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<CustomerOrder>()
+                .HasOne(co => co.CreatedByUser)
+                .WithMany(u => u.CustomerOrders)
+                .HasForeignKey(co => co.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
             /******************************************************************************/
             // Configure OrderDetail entity
 
@@ -364,7 +373,7 @@ namespace SWP391Web.Infrastructure.Context
 
             /******************************************************************************/
             // Configure Transaction entity
-            
+
             modelBuilder.Entity<Transaction>()
                 .HasOne(tr => tr.CustomerOrder)
                 .WithMany(co => co.Transactions)

@@ -15,5 +15,6 @@ namespace SWP391Web.Domain.Entities
         public ICollection<DealerMember> DealerMembers { get; set; } = new List<DealerMember>();
         public AppointmentSetting? AppointmentSetting { get; set; }
         public DepositSetting? DepositSetting { get; set; }
+        public ICollection<CustomerOrder> CustomerOrders { get; set; } = new List<CustomerOrder>();
     }
 }

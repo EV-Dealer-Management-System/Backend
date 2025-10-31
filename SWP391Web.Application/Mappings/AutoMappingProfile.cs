@@ -19,6 +19,7 @@ using SWP391Web.Application.DTO.ElectricVehicleModel;
 using SWP391Web.Application.DTO.ElectricVehicleVersion;
 using SWP391Web.Application.DTO.EVCInventory;
 using SWP391Web.Application.DTO.EVTemplate;
+using SWP391Web.Application.DTO.Notification;
 using SWP391Web.Application.DTO.OrderDetail;
 using SWP391Web.Application.DTO.Promotion;
 using SWP391Web.Application.DTO.Quote;
@@ -192,6 +193,8 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.CustomerEmail, opt => opt.MapFrom(src => src.Customer.Email))
                 .ForMember(dest => dest.CustomerPhone, opt => opt.MapFrom(src => src.Customer.PhoneNumber))
                 .ReverseMap();
+
+            CreateMap<Notification, GetNotificationDTO>().ReverseMap();
         }
     }
 }

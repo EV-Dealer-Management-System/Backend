@@ -192,7 +192,6 @@ namespace SWP391Web.Application.Services
                 var dealer = new Dealer
                 {
                     Id = Guid.NewGuid(),
-                    DealerLevel = createDealerDTO.DealerLevel,
                     ManagerId = user.Id,
                     Name = createDealerDTO.DealerName,
                     Address = createDealerDTO.DealerAddress,
@@ -513,9 +512,6 @@ namespace SWP391Web.Application.Services
             var template = await _unitOfWork.EContractTemplateRepository.GetbyCodeAsync(templateCode, ct);
             if (template is null) throw new Exception($"Template with code '{templateCode}' is not exist");
 
-            var term = await _unitOfWork.EContractTermRepository.GetByLevelAsync(dealer.DealerLevel, ct);
-            if (term is null) throw new Exception($"Term for dealer level '{dealer.DealerLevel}' is not exist");
-
             var companyName = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist");
 
             var data = new Dictionary<string, object?>
@@ -530,22 +526,22 @@ namespace SWP391Web.Application.Services
                 ["contract.date"] = DateTime.UtcNow.ToString("dd/MM/yyyy"),
                 ["contract.effectiveDate"] = DateTime.UtcNow.ToString("dd/MM/yyyy"),
                 ["contract.expiryDate"] = DateTime.UtcNow.AddDays(365).ToString("dd/MM/yyyy"),
-                ["term.scope"] = term.Scope,
-                ["terms.pricing"] = term.Pricing,
-                ["terms.payment"] = term.Payment,
-                ["terms.commitments"] = term.Commitment,
-                ["terms.region"] = regionDealer == null ? "Toàn quốc" : regionDealer,
-                ["terms.noticeDays"] = term.NoticeDay,
-                ["terms.orderConfirmDays"] = term.OrderConfirmDays,
-                ["terms.deliveryLocation"] = term.DeliveryLocation,
-                ["terms.paymentMethod"] = term.PaymentMethod,
-                ["terms.paymentDueDays"] = term.PaymentDueDays,
-                ["terms.penaltyRate"] = term.PenaltyRate,
-                ["terms.claimDays"] = term.ClaimDays,
-                ["terms.terminationNoticeDays"] = term.TerminationNoticeDays,
-                ["terms.disputeLocation"] = term.DisputeLocation,
-                ["roles.A.representative"] = term.RoleRepresentative,
-                ["roles.A.title"] = term.RoleTitle,
+                //["term.scope"] = term.Scope,
+                //["terms.pricing"] = term.Pricing,
+                //["terms.payment"] = term.Payment,
+                //["terms.commitments"] = term.Commitment,
+                //["terms.region"] = regionDealer == null ? "Toàn quốc" : regionDealer,
+                //["terms.noticeDays"] = term.NoticeDay,
+                //["terms.orderConfirmDays"] = term.OrderConfirmDays,
+                //["terms.deliveryLocation"] = term.DeliveryLocation,
+                //["terms.paymentMethod"] = term.PaymentMethod,
+                //["terms.paymentDueDays"] = term.PaymentDueDays,
+                //["terms.penaltyRate"] = term.PenaltyRate,
+                //["terms.claimDays"] = term.ClaimDays,
+                //["terms.terminationNoticeDays"] = term.TerminationNoticeDays,
+                //["terms.disputeLocation"] = term.DisputeLocation,
+                //["roles.A.representative"] = term.RoleRepresentative,
+                //["roles.A.title"] = term.RoleTitle,
                 ["roles.B.representative"] = user.FullName,
                 ["roles.B.title"] = "Khách hàng",
                 ["additional"] = additional == null ? "Không có điều khoản bổ sung" : additional
@@ -945,8 +941,6 @@ namespace SWP391Web.Application.Services
                 var dealerManager = await _unitOfWork.UserManagerRepository.GetByIdAsync(contract.OwnerBy);
                 if (dealerManager is null)
                     return new VnptResult<UpdateEContractResponse>($"Cannot find dealer manager with id '{contract.OwnerBy}'");
-
-                var term = await _unitOfWork.EContractTermRepository.GetByLevelAsync(dealer.DealerLevel, ct);
 
                 var html = updateEContractDTO.HtmlFile;
 
