@@ -118,19 +118,25 @@ namespace SWP391Web.Application.Services
                         StatusCode = 404
                     };
                 }
-                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
-                if (dealer == null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Dealer not found ",
-                        StatusCode = 404
-                    };
-                }
 
                 var role = user.FindFirst(ClaimTypes.Role)?.Value;
                 var dealerFeedbacks = new List<DealerFeedback>();
+
+                Dealer? dealer = null;
+                if (role != StaticUserRole.Admin && role != StaticUserRole.EVMStaff)
+                {
+                    dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                    if (dealer == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer not found",
+                            StatusCode = 404
+                        };
+                    }
+                }
+
                 if (role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
                 {
                     dealerFeedbacks = (await _unitOfWork.DealerFeedbackRepository.GetAllDealerFeedbacksWithDetailAsync(ct)).ToList();

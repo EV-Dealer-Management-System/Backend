@@ -124,6 +124,21 @@ namespace SWP391Web.Application.Services
 
                 var getCustomerFeedbackDTOs = _mapper.Map<List<GetCustomerFeedbackDTO>>(customerFeedbacks);
 
+                foreach (var fb in getCustomerFeedbackDTOs)
+                {
+                    var attachments = _unitOfWork.CustomerFBAttachRepository
+                        .GetAttachmentsByCustomerFbId(fb.Id);
+
+                    var urlLists = new List<string>();
+                    foreach (var att in attachments)
+                    {
+                        var url = _s3Service.GenerateDownloadUrl(att.Key);
+                        urlLists.Add(url);
+                    }
+
+                    fb.ImgUrls = urlLists;
+                }
+
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -183,14 +198,25 @@ namespace SWP391Web.Application.Services
                         Message = "You don't have permission to access this feedback."
                     };
 
-                var feedbackDTO = _mapper.Map<GetCustomerFeedbackDTO>(feedback);
+                var getCustomerFeedback = _mapper.Map<GetCustomerFeedbackDTO>(feedback);
+                var attachments = _unitOfWork.CustomerFBAttachRepository
+                .GetAttachmentsByCustomerFbId(getCustomerFeedback.Id);
+
+                var imgUrls = new List<string>();
+                foreach (var att in attachments)
+                {
+                    var url = _s3Service.GenerateDownloadUrl(att.Key);
+                    imgUrls.Add(url);
+                }
+
+                getCustomerFeedback.ImgUrls = imgUrls;
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     StatusCode = 200,
                     Message = "Customer feedback retrieved successfully.",
-                    Result = feedbackDTO
+                    Result = getCustomerFeedback
                 };
             }
             catch (Exception ex)
