@@ -3,10 +3,12 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Notification;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Constants;
+using SWP391Web.Domain.Entities;
 using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -22,7 +24,7 @@ namespace SWP391Web.Application.Services
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
-        public async Task<ResponseDTO> GetAllNotification(ClaimsPrincipal userClaim, CancellationToken ct)
+        public async Task<ResponseDTO> GetAllNotification(ClaimsPrincipal userClaim, int pageNumber, int pageSize, CancellationToken ct)
         {
             try
             {
@@ -37,7 +39,7 @@ namespace SWP391Web.Application.Services
                         StatusCode = 404
                     };
                 }
-
+                Expression<Func<Notification, bool>>? filter = null;
                 var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
                 if (dealer is null)
                 {
@@ -51,17 +53,40 @@ namespace SWP391Web.Application.Services
                             StatusCode = 404
                         };
                     }
+
+                    filter = n => n.DealerId == dealer.Id && n.TargetRole == StaticUserRole.DealerStaff;
+                }
+                else
+                {
+                    filter = n => n.DealerId == dealer.Id && n.TargetRole == StaticUserRole.DealerManager;
                 }
 
-                var notifications = (await _unitOfWork.NotificationRepository.GetAllAsync()).Where(n => n.DealerId == dealer.Id && n.TargetRole == role)
-                    .OrderBy(n => n.CreatedAt).Take(10);
+                (IReadOnlyList<Notification> items, int total) result;
+                result = await _unitOfWork.NotificationRepository.GetPagedAsync(
+                            filter: filter,
+                            includes: null,
+                            orderBy: dm => dm.CreatedAt,
+                            ascending: false,
+                            pageNumber: pageNumber,
+                            pageSize: pageSize,
+                            ct: ct);
 
-                var getNotication = _mapper.Map<List<GetNotificationDTO>>(notifications);
+                var getNotication = _mapper.Map<List<GetNotificationDTO>>(result.items);
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     Message = "Get notifications successfully",
-                    Result = getNotication,
+                    Result = new
+                    {
+                        data = getNotication,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = pageSize,
+                            TotalItems = result.total,
+                            TotalPages = (int)Math.Ceiling((double)result.total / pageSize)
+                        }
+                    },
                     StatusCode = 200
                 };
             }
