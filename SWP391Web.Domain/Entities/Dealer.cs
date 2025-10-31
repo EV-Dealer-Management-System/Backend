@@ -10,6 +10,8 @@ namespace SWP391Web.Domain.Entities
         public string Address { get; set; } = null!;
         public string TaxNo { get; set; } = null!;
         public Guid? DealerTierId { get; set; }
+        public string? BankAccount { get; set; }
+        public string? BankName { get; set; }
         public DealerStatus DealerStatus { get; set; } = DealerStatus.Inactive;
 
         public DealerTier DealerTier { get; set; } = null!;
@@ -26,6 +28,6 @@ namespace SWP391Web.Domain.Entities
         public ICollection<DealerFeedback> DealerFeedbacks { get; set; } = new List<DealerFeedback>();
         public ICollection<CustomerFeedback> CustomerFeedbacks { get; set; } = new List<CustomerFeedback>();
         public ICollection<DealerPolicyOverride> PolicyOverrides { get; set; } = new List<DealerPolicyOverride>();
-        public ICollection<DealerDebt> dealerDebts { get; set; } = new List<DealerDebt>();
+        public ICollection<DealerDebt> DealerDebts { get; set; } = new List<DealerDebt>();
     }
 }

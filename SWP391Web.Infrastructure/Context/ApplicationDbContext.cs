@@ -44,12 +44,17 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<DealerFeedback> DealerFeedbacks { get; set; }
         public DbSet<DealerFBAttachment> DealerFBAttachments { get; set; }
         public DbSet<CustomerFBAttachment> CustomerFBAttachments { get; set; }
+        public DbSet<DealerPolicyOverride> DealerPolicyOverrides { get; set; }
+        public DbSet<DealerDebt> DealerDebts { get; set; }
+        public DbSet<DealerTier> DealerTiers { get; set; }
+        public DbSet<VehicleDelivery> VehicleDeliveries { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
             //Seed initial data
+            DealerTierSeeder.DealerTierConfigure(modelBuilder);
             EmailSeeder.SeedEmailTemplate(modelBuilder);
             EContractSeeder.EContractTemplateSeeder.SeedDealerEContract(modelBuilder);
             EContractTermSeeder.SeedTerm(modelBuilder);
@@ -91,7 +96,7 @@ namespace SWP391Web.Infrastructure.Context
 
             modelBuilder.Entity<DealerDebt>()
                 .HasOne(dd => dd.Dealer)
-                .WithMany(d => d.dealerDebts)
+                .WithMany(d => d.DealerDebts)
                 .HasForeignKey(dd => dd.DealerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
