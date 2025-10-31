@@ -9,9 +9,10 @@ namespace SWP391Web.Domain.Entities
         public string Name { get; set; } = null!;
         public string Address { get; set; } = null!;
         public string TaxNo { get; set; } = null!;
-        public int DealerLevel { get; set; }
+        public Guid? DealerTierId { get; set; }
         public DealerStatus DealerStatus { get; set; } = DealerStatus.Inactive;
 
+        public DealerTier DealerTier { get; set; } = null!;
         public ApplicationUser? Manager { get; set; }
         public Warehouse Warehouse { get; set; } = null!;
         public ICollection<BookingEV> BookingEVs { get; set; } = new List<BookingEV>();
@@ -24,5 +25,7 @@ namespace SWP391Web.Domain.Entities
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
         public ICollection<DealerFeedback> DealerFeedbacks { get; set; } = new List<DealerFeedback>();
         public ICollection<CustomerFeedback> CustomerFeedbacks { get; set; } = new List<CustomerFeedback>();
+        public ICollection<DealerPolicyOverride> PolicyOverrides { get; set; } = new List<DealerPolicyOverride>();
+        public ICollection<DealerDebt> dealerDebts { get; set; } = new List<DealerDebt>();
     }
 }
