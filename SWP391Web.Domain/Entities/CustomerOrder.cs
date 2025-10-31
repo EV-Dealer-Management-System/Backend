@@ -10,6 +10,7 @@ namespace SWP391Web.Domain.Entities
         public Guid QuoteId { get; set; }
         public int OrderNo { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string? CreatedBy { get; set; }
         public decimal TotalAmount { get; set; }
         public decimal? DepositAmount { get; set; }
         public OrderStatus Status { get; set; }
@@ -18,5 +19,6 @@ namespace SWP391Web.Domain.Entities
         public Quote Quote { get; set; } = null!;
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
         public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+        public ApplicationUser? CreatedByUser { get; set; }
     }
 }
