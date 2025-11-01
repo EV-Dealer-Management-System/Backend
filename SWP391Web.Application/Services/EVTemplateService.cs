@@ -190,7 +190,7 @@ namespace SWP391Web.Application.Services
                 
 
                 var templates = await _unitOfWork.EVTemplateRepository.GetTemplatesByVersionAndColorAsync(versionId, colorId);
-                if ( templates == null || !templates.Any())
+                if ( templates == null)
                 {
                     return new ResponseDTO
                     {

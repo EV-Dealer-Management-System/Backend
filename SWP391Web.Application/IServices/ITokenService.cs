@@ -9,7 +9,7 @@ namespace SWP391Web.Application.IService
 {
     public interface ITokenService
     {
-        Task<string> GenerateJwtAccessTokenAysnc(ApplicationUser user);
+        Task<string> GenerateJwtAccessTokenAysnc(ApplicationUser user, CancellationToken ct);
         Task<string> GenerateJwtRefreshTokenAsync(ApplicationUser user, bool rememberMe);
     }
 }

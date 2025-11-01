@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWP391Web.Application.DTO.DealerTier
+namespace SWP391Web.Application.DTO.Dealer
 {
     public class UpdateDealerTierDTO
     {

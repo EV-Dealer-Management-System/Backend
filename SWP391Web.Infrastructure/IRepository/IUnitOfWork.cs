@@ -40,6 +40,8 @@ namespace SWP391Web.Infrastructure.IRepository
         public ICustomerFeedbackRepository CustomerFeedbackRepository { get; }
         public ICustomerFBAttachRepository CustomerFBAttachRepository { get; }
         public IDealerTierRepository DealerTierRepository { get; }
+        public IDealerPolicyOverrideRepository DealerPolicyOverrideRepository { get; }
+        public IDealerDebtRepository DealerDebtRepository { get; }
         public IVehicleDeliveryRepository VehicleDeliveryRepository { get; }
 
         Task<int> SaveAsync();

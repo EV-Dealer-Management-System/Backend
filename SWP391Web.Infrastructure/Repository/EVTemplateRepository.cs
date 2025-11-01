@@ -34,14 +34,13 @@ namespace SWP391Web.Infrastructure.Repository
                                     && ev.Warehouse.WarehouseType == WarehouseType.Dealer));
         }
 
-        public async Task<List<ElectricVehicleTemplate>> GetTemplatesByVersionAndColorAsync(Guid versionId, Guid colorId)
+        public async Task<ElectricVehicleTemplate?> GetTemplatesByVersionAndColorAsync(Guid versionId, Guid colorId)
         {
             return await _context.ElectricVehicleTemplates
                 .Include(evt => evt.Version)
                     .ThenInclude(v => v.Model)
                 .Include(evt => evt.Color)
-                .Where(evt => evt.VersionId == versionId && evt.ColorId == colorId)
-                .ToListAsync();
+                .Where(evt => evt.VersionId == versionId && evt.ColorId == colorId).FirstOrDefaultAsync();
         }
 
         public async Task<bool>? IsEVTemplateExistsById(Guid EVTemplateId)

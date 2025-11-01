@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SWP391Web.Application.DTO.Dealer;
-using SWP391Web.Application.DTO.DealerTier;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Constants;
 
@@ -67,6 +66,24 @@ namespace SWP391Web.API.Controllers
         {
             var response = await _dealerTierService.GetAllDealerTiers(ct);
             return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost]
+        [Route("create-dealer-policy-override/{dealerId}")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> CreateDealerPolicyOverride([FromRoute] Guid dealerId, [FromBody] CreateDealerPolicyOverrideDTO createDealerPolicy, CancellationToken ct)
+        {
+            var response = await _dealerTierService.CreateDealerPolicyOverrideAsync(dealerId, createDealerPolicy, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpGet]
+        [Route("get-effective-policy")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> GetEffectivePolicy([FromQuery] Guid dealerId, CancellationToken ct)
+        {
+            var response = await _dealerTierService.GetEffectivePolicyAsync(dealerId, ct);
+            return StatusCode(200, response);
         }
     }
 }

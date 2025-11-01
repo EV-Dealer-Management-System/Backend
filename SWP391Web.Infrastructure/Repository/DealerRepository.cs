@@ -23,6 +23,8 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _context.Dealers
                 .Include(dl => dl.Warehouse)
+                .Include(dl => dl.DealerTier)
+                .Include(dl => dl.PolicyOverrides)
                 .Where(dl => dl.Id == dealerId).FirstOrDefaultAsync(ct);
         }
 

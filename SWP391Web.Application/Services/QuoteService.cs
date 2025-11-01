@@ -114,7 +114,7 @@ namespace SWP391Web.Application.Services
                         };
                     }
 
-                    var templates = (await _unitOfWork.EVTemplateRepository.GetTemplatesByVersionAndColorAsync(version.Id,color.Id)).FirstOrDefault();
+                    var templates = (await _unitOfWork.EVTemplateRepository.GetTemplatesByVersionAndColorAsync(version.Id,color.Id));
                     if (templates == null)
                     {
                         return new ResponseDTO
