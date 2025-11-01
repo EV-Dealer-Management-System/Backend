@@ -30,6 +30,12 @@ namespace SWP391Web.API.Controllers
             var response = await _appointmentSettingService.GetAppointmentByIdAsync(appointmentId);
             return StatusCode(response.StatusCode, response);
         }
+        [HttpGet("get-current-setting")]
+        public async Task<ActionResult<ResponseDTO>> GetCurrentSettingAsync()
+        {
+            var response = await _appointmentSettingService.GetCurrentUserSettingAsync(User);
+            return StatusCode(response.StatusCode, response);
+        }
 
         //[HttpGet("get-all-appointment-setting")]
         //public async Task<IActionResult> GetAll()

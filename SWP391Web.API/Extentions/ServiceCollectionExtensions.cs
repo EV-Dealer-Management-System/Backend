@@ -53,6 +53,7 @@ namespace SWP391Web.API.Extentions
             services.AddScoped<IDealerFeedbackService, DealerFeedbackService>();
             services.AddScoped<ICustomerFeedbackService, CustomerFeedbackService>();
             services.AddScoped<IDealerTierService, DealerTierService>();
+            services.AddScoped<IVehicleDeliveryService, VehicleDeliveryService>();
 
             // Register Infrastructure Repositories
             services.AddScoped<IUnitOfWork, UnitOfWork>();

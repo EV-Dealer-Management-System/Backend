@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Application.Services
 {
-        public class AppointmentSettingService :    IAppointmentSettingService
+    public class AppointmentSettingService : IAppointmentSettingService
         {
             public readonly IUnitOfWork _unitOfWork;
             public readonly IMapper _mapper;
@@ -314,6 +314,55 @@ namespace SWP391Web.Application.Services
                 };
             }
             catch(Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetCurrentUserSettingAsync(ClaimsPrincipal user)
+        {
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 400
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
+                if (dealer == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found"
+                    };
+                }
+
+
+                var appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetByDealerIdAsync(dealer.Id);
+
+                var getAppointmentSetting = _mapper.Map<AppointmentSetting>(appointmentSetting);
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Get settings successfully",
+                    StatusCode = 200,
+                    Result = getAppointmentSetting
+                };
+            }
+            catch (Exception ex)
             {
                 return new ResponseDTO
                 {
