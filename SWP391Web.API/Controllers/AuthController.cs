@@ -31,9 +31,9 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPost("login-user")]
-        public async Task<ActionResult<ResponseDTO>> LoginUser([FromBody] LoginUserDTO loginUserDTO)
+        public async Task<ActionResult<ResponseDTO>> LoginUser([FromBody] LoginUserDTO loginUserDTO, CancellationToken ct)
         {
-            var response = await _authService.LoginUser(loginUserDTO);
+            var response = await _authService.LoginUser(loginUserDTO, ct);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -62,7 +62,7 @@ namespace SWP391Web.API.Controllers
         [AllowAnonymous]
         [HttpGet]
         [Route("google-callback")]
-        public async Task<ActionResult<ResponseDTO>> GoogleCallBack([FromQuery] string? returnUrl)
+        public async Task<ActionResult<ResponseDTO>> GoogleCallBack([FromQuery] string? returnUrl, CancellationToken ct)
         {
             var cookie = await HttpContext.AuthenticateAsync("External");
             if (!cookie.Succeeded || cookie.Principal is null)
@@ -71,7 +71,7 @@ namespace SWP391Web.API.Controllers
                 return Redirect($"{SafeReturn(returnUrl)}?error={err}");
             }
 
-            var res = await _authService.HandleGoogleCallbackAsync(cookie.Principal);
+            var res = await _authService.HandleGoogleCallbackAsync(cookie.Principal, ct);
             await HttpContext.SignOutAsync("External");
 
             if (!res.IsSuccess)

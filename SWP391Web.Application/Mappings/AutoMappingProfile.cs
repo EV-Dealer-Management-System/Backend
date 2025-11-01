@@ -10,7 +10,6 @@ using SWP391Web.Application.DTO.CustomerFeedback;
 using SWP391Web.Application.DTO.CustomerOrder;
 using SWP391Web.Application.DTO.Dealer;
 using SWP391Web.Application.DTO.DealerFeedBackDTO;
-using SWP391Web.Application.DTO.DealerTier;
 using SWP391Web.Application.DTO.DepositSetting;
 using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.DTO.EContractTemplate;

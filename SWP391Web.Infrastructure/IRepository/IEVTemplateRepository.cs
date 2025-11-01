@@ -11,7 +11,7 @@ namespace SWP391Web.Infrastructure.IRepository
     {
         Task<ElectricVehicleTemplate?> GetByIdAsync(Guid EVTemplateId);
         Task<bool> IsEVTemplateExistsById(Guid EVTemplateId);
-        Task<List<ElectricVehicleTemplate>> GetTemplatesByVersionAndColorAsync(Guid versionId, Guid colorId);
+        Task<ElectricVehicleTemplate?> GetTemplatesByVersionAndColorAsync(Guid versionId, Guid colorId);
         Task<ElectricVehicleTemplate?> GetByVersionColorAndWarehouseAsync(Guid versionId, Guid colorId, Guid warehouseId);
     }
 }
