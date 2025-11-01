@@ -24,13 +24,15 @@ namespace SWP391Web.Application.Services
         public readonly IMapper _mapper;
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IDealerDebtService _dealerDebt;
+        private readonly IEContractService _eContractService;
 
-        public BookingEVService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IDealerDebtService dealerDebt)
+        public BookingEVService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IDealerDebtService dealerDebt, IEContractService eContractService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
             _dealerDebt = dealerDebt ?? throw new ArgumentNullException(nameof(dealerDebt));
+            _eContractService = eContractService ?? throw new ArgumentNullException(nameof(eContractService));
 
         }
 
@@ -172,7 +174,7 @@ namespace SWP391Web.Application.Services
             return amount;
         }
 
-        public async Task<ResponseDTO> CreateBookingEVAsync(ClaimsPrincipal user, CreateBookingEVDTO createBookingEVDTO)
+        public async Task<ResponseDTO> CreateBookingEVAsync(ClaimsPrincipal user, CreateBookingEVDTO createBookingEVDTO, CancellationToken ct)
         {
             try
             {
@@ -265,7 +267,10 @@ namespace SWP391Web.Application.Services
                 }
 
                 await _unitOfWork.BookingEVRepository.AddAsync(bookingEV, CancellationToken.None);
+
                 await _unitOfWork.SaveAsync();
+
+                await _eContractService.CreateBookingEContractAsync(user, bookingEV.Id, ct);
 
                 var bookingWithDetails = await _unitOfWork.BookingEVRepository.GetBookingWithIdAsync(bookingEV.Id);
 
