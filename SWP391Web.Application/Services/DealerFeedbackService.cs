@@ -240,23 +240,29 @@ namespace SWP391Web.Application.Services
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "User not found",
-                        StatusCode = 404
-                    };
-                }
-
-                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, CancellationToken.None);
-                if (dealer == null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Dealer not found ",
+                        Message = "User not found.",
                         StatusCode = 404
                     };
                 }
 
                 var role = user.FindFirst(ClaimTypes.Role)?.Value;
+
+                Dealer? dealer = null;
+                if (role == StaticUserRole.DealerManager)
+                {
+                    dealer = await _unitOfWork.DealerRepository
+                        .GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
+
+                    if (dealer == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer not found.",
+                            StatusCode = 404
+                        };
+                    }
+                }
 
                 var dealerFeedback = await _unitOfWork.DealerFeedbackRepository.GetFeedbackByIdAsync(feedbackId);
                 if (dealerFeedback == null)
@@ -264,15 +270,14 @@ namespace SWP391Web.Application.Services
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Dealer feedback not found",
+                        Message = "Dealer feedback not found.",
                         StatusCode = 404
                     };
                 }
 
                 if (role == StaticUserRole.DealerManager)
                 {
-
-                    if (dealerFeedback.DealerId != dealer?.Id)
+                    if (dealerFeedback.DealerId != dealer!.Id)
                     {
                         return new ResponseDTO
                         {
@@ -297,20 +302,22 @@ namespace SWP391Web.Application.Services
                         return new ResponseDTO
                         {
                             IsSuccess = false,
-                            Message = "As a Dealer Manager, you can only change the status to Cancelled.",
+                            Message = "Dealer Manager can only cancel feedbacks.",
                             StatusCode = 403
                         };
                     }
                 }
                 else if (role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
                 {
-                    if (dealerFeedback.Status switch
+                    bool isInvalidTransition = dealerFeedback.Status switch
                     {
                         FeedbackStatus.Pending => !(newStatus is FeedbackStatus.Accepted or FeedbackStatus.Rejected),
                         FeedbackStatus.Accepted => newStatus != FeedbackStatus.Replied,
                         FeedbackStatus.Rejected => newStatus != FeedbackStatus.Replied,
                         _ => true
-                    })
+                    };
+
+                    if (isInvalidTransition)
                     {
                         return new ResponseDTO
                         {
@@ -319,6 +326,15 @@ namespace SWP391Web.Application.Services
                             StatusCode = 400
                         };
                     }
+                }
+                else
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "You do not have permission to update dealer feedback.",
+                        StatusCode = 403
+                    };
                 }
 
                 dealerFeedback.Status = newStatus;
@@ -351,5 +367,6 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
+
     }
 }
