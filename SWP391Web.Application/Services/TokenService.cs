@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Infrastructure.IRepository;
 using System.IdentityModel.Tokens.Jwt;
@@ -102,7 +103,7 @@ namespace SWP391Web.Application.Service
 
         private async Task<bool> StoreRefreshToken(string userId, string refreshToken, TimeSpan expiration)
         {
-            string redisKey = $"refresh_token-UserId:{userId}";
+            string redisKey = $"{StaticRedisKey.RefreshToken}:{userId}";
             var result = await _redisService.StoreKeyAsync(redisKey, refreshToken, expiration);
 
             return result;
