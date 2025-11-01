@@ -234,7 +234,7 @@ namespace SWP391Web.Infrastructure.Repository
                              && ev.ElectricVehicleTemplate.ColorId == colorId
                              && ev.Status == ElectricVehicleStatus.Booked
                              && ev.WarehouseId != null
-                             && ev.Warehouse.WarehouseType == WarehouseType.Dealer)
+                             && ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
                 .ToListAsync();
         }
     }

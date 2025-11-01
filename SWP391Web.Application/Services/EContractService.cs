@@ -478,7 +478,7 @@ namespace SWP391Web.Application.Services
                 var vnptEContractId = Guid.Parse(createResult.Data.Id);
                 var eContract = new EContract(vnptEContractId, html, fileName, "System", dealer.ManagerId!, status, EcontractType.BookingContract);
                 booking.EContractId = vnptEContractId;
-                booking.Status = BookingStatus.WaittingDealerSign;
+                booking.Status = BookingStatus.WaitingDealerSign;
 
                 await _unitOfWork.EContractRepository.AddAsync(eContract, ct);
                 _unitOfWork.BookingEVRepository.Update(booking);

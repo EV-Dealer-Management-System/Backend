@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.BookingEV;
+using SWP391Web.Application.DTO.BookingEVDetail;
+using SWP391Web.Application.DTO.VehicleDelivery;
 using SWP391Web.Application.DTO.Dealer;
 using SWP391Web.Application.DTO.DealerDebt;
 using SWP391Web.Application.IServices;
@@ -202,7 +204,7 @@ namespace SWP391Web.Application.Services
                     DealerId = dealer.Id,
                     Note = createBookingEVDTO.Note,
                     BookingDate = DateTime.UtcNow,
-                    Status = BookingStatus.Draft,
+                    Status = BookingStatus.WaitingDealerSign,
                     CreatedBy = dealer.Name,
                     TotalQuantity = createBookingEVDTO.BookingDetails.Sum(d => d.Quantity),
                 };
@@ -537,12 +539,12 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if (newStatus == BookingStatus.Pending && bookingEV.Status != BookingStatus.Draft)
+                if (newStatus == BookingStatus.Pending && bookingEV.Status != BookingStatus.WaitingDealerSign)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Can only change to pending from draft",
+                        Message = "Can only change to pending from waititingDealerSign",
                         StatusCode = 400
                     };
                 }
@@ -572,12 +574,12 @@ namespace SWP391Web.Application.Services
                         };
                     }
 
-                    if (bookingEV.Status != BookingStatus.Draft && bookingEV.Status != BookingStatus.Pending)
+                    if (bookingEV.Status != BookingStatus.WaitingDealerSign && bookingEV.Status != BookingStatus.Pending)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
-                            Message = "Can only cancel a pending or draft booking.",
+                            Message = "Can only cancel a pending or waitting booking.",
                             StatusCode = 400
                         };
                     }
@@ -669,6 +671,29 @@ namespace SWP391Web.Application.Services
                     }
                 }
 
+                if(newStatus == BookingStatus.SignedByAdmin)
+                {
+                    if (role != StaticUserRole.Admin)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Only Admin can sign the booking.",
+                            StatusCode = 403
+                        };
+                    }
+
+                    if (bookingEV.Status != BookingStatus.Approved)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Booking must be approved by EVM Staff before Admin can sign.",
+                            StatusCode = 400
+                        };
+                    }
+                }
+
                 if (newStatus == BookingStatus.Completed)
                 {
 
@@ -681,7 +706,7 @@ namespace SWP391Web.Application.Services
 
                 }
 
-                if (bookingEV.Status == BookingStatus.Draft && newStatus == BookingStatus.Pending)
+                if (bookingEV.Status == BookingStatus.WaitingDealerSign && newStatus == BookingStatus.Pending)
                 {
                     foreach (var dt in bookingEV.BookingEVDetails)
                     {
@@ -735,6 +760,8 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
+
+        
 
 
         private async Task<ResponseDTO> UpdateQuantityRealTime(Guid versionId, Guid colorId, int quantity)

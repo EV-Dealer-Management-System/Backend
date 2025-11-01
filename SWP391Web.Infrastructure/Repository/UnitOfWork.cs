@@ -42,6 +42,7 @@ namespace SWP391Web.Infrastructure.Repository
         public IDealerTierRepository DealerTierRepository { get; private set; }
         public IDealerPolicyOverrideRepository DealerPolicyOverrideRepository { get; private set; }
         public IDealerDebtRepository DealerDebtRepository { get; private set; }
+        public IVehicleDeliveryRepository VehicleDeliveryRepository { get; private set; }
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -80,6 +81,7 @@ namespace SWP391Web.Infrastructure.Repository
             DealerTierRepository = new DealerTierRepository(_context);
             DealerPolicyOverrideRepository = new DealerPolicyOverrideRepository(_context);
             DealerDebtRepository = new DealerDebtRepository(_context);
+            VehicleDeliveryRepository = new VehicleDeliveryRepository(_context);
         }
         public async Task<int> SaveAsync()
         {
