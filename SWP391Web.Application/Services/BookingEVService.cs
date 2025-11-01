@@ -5,7 +5,6 @@ using Microsoft.Playwright;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.BookingEV;
 using SWP391Web.Application.DTO.BookingEVDetail;
-using SWP391Web.Application.DTO.VehicleDelivery;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
@@ -557,57 +556,20 @@ namespace SWP391Web.Application.Services
                             StatusCode = 400
                         };
                     }
+
+                    await CreateVehicleDeliveryAsync(bookingEV);
                 }
 
                 if (newStatus == BookingStatus.Completed)
                 {
-                    if (bookingEV.Status != BookingStatus.Approved)
+                    return new ResponseDTO
                     {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "Can only complete an approved booking.",
-                            StatusCode = 400
-                        };
-                    }
-
-                    var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(bookingEV.DealerId);
-                    if (warehouse == null)
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "Dealer's warehouse not found.",
-                            StatusCode = 404
-                        };
-                    }
-
-                    foreach (var dt in bookingEV.BookingEVDetails)
-                    {
-                        var bookedVehicles = await _unitOfWork.ElectricVehicleRepository
-                            .GetBookedVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
-                        if (bookedVehicles == null || !bookedVehicles.Any())
-                        {
-                            return new ResponseDTO
-                            {
-                                IsSuccess = false,
-                                Message = "No vehicles in booked status.",
-                                StatusCode = 404
-                            };
-                        }
-                        var selectedVehicles = bookedVehicles
-                            .OrderBy(ev => ev.ImportDate)
-                            .Take(dt.Quantity)
-                            .ToList();
-                        foreach (var ev in selectedVehicles)
-                        {
-                            ev.Status = ElectricVehicleStatus.AtDealer;
-                            ev.WarehouseId = warehouse.Id;
-                            _unitOfWork.ElectricVehicleRepository.Update(ev);
-                        }
-                    }
-
+                        IsSuccess = false,
+                        Message = "Booking can only be marked as completed when delivery is confirmed.",
+                        StatusCode = 400
+                    };
                 }
+
 
                 if (bookingEV.Status == BookingStatus.WaitingDealerSign && newStatus == BookingStatus.Pending)
                 {
@@ -664,7 +626,38 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        
+        private async Task<ResponseDTO> CreateVehicleDeliveryAsync(BookingEV bookingEV)
+        {
+            var vehicleDelivery = new VehicleDelivery
+            {
+                BookingEVId = bookingEV.Id,
+                Description = "Preparing vehicles to delivery",
+                CreatedDate = DateTime.UtcNow,
+                Status = DeliveryStatus.Preparing,
+                UpdateAt = DateTime.UtcNow,
+            };
+
+            await _unitOfWork.VehicleDeliveryRepository.AddAsync(vehicleDelivery,CancellationToken.None);
+
+            foreach(var dt in bookingEV.BookingEVDetails)
+            {
+                var bookedVehicles = await _unitOfWork.ElectricVehicleRepository
+                    .GetBookedVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+
+                foreach(var ev in bookedVehicles.Take(dt.Quantity))
+                {
+                    ev.Status = ElectricVehicleStatus.InTransit;
+                    _unitOfWork.ElectricVehicleRepository.Update(ev);
+                }
+            }
+            await _unitOfWork.SaveAsync();
+            return new ResponseDTO
+            {
+                IsSuccess = true,
+                Message = "Create Vehicle Delivery successfully",
+                StatusCode = 200
+            };
+        }
 
 
         private async Task<ResponseDTO> UpdateQuantityRealTime(Guid versionId, Guid colorId, int quantity)

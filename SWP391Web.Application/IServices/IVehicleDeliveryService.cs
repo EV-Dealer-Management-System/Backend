@@ -12,9 +12,8 @@ namespace SWP391Web.Application.IServices
 {
     public interface IVehicleDeliveryService
     {
-        Task<ResponseDTO> CreateVehicleDeliveryAsync(CreateVehicleDeliveryDTO createVehicleDeliveryDTO);
         Task<ResponseDTO> GetAllVehicleDelivery(DeliveryStatus? status = null);
-        Task<ResponseDTO> GetVehicleDeliveryById(Guid deliveryId);
-        Task<ResponseDTO> UpdateVehicleDeliveryStatus(ClaimsPrincipal user , Guid deliveryId , DeliveryStatus newStatus);
+        Task<ResponseDTO> GetVehicleDeliveryById(Guid deliveryId, CancellationToken ct);
+        Task<ResponseDTO> UpdateVehicleDeliveryStatus(ClaimsPrincipal user, Guid deliveryId, DeliveryStatus newStatus, CancellationToken ct, string? reason = null);
     }
 }
