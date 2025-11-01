@@ -33,7 +33,9 @@ namespace SWP391Web.Application.Services
         private readonly IMapper _mapper;
         private readonly IS3Service _s3Service;
         private readonly IWarehouseService _warehouseService;
-        public EContractService(IWarehouseService warehouseService, IConfiguration cfg, HttpClient http, IUnitOfWork unitOfWork, IVnptEContractClient vnpt, IEmailService emailService, IMapper mapper, IS3Service s3Service)
+        private readonly IRedisService _redisService;
+        public EContractService(IWarehouseService warehouseService, IConfiguration cfg, HttpClient http, IUnitOfWork unitOfWork, IVnptEContractClient vnpt,
+            IEmailService emailService, IMapper mapper, IS3Service s3Service, IRedisService redisService)
         {
             _cfg = cfg;
             _http = http;
@@ -43,66 +45,87 @@ namespace SWP391Web.Application.Services
             _mapper = mapper;
             _s3Service = s3Service;
             _warehouseService = warehouseService;
+            _redisService = redisService;
         }
 
         public async Task<ResponseDTO<GetAccessTokenDTO>> GetAccessTokenAsync()
         {
-            var username = _cfg["EContractClient:Username"] ?? throw new Exception("Cannot find username in EContractClient");
-            var password = _cfg["EContractClient:Password"] ?? throw new Exception("Cannot find password in EContractClient");
-            int? companyId = _cfg["EContractClient:CompanyId"] is not null ? int.Parse(_cfg["EContractClient:CompanyId"]!) : throw new Exception("Cannot find company ID in EContractClient");
-
-            var payload = new { username, password, companyId };
-            var jsonPayload = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+            try
             {
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-            });
+                var accessToken = await _redisService.RetrieveString(StaticRedisKey.AccessTokenEVC);
+                if (accessToken is null)
+                {
+                    var username = _cfg["EContractClient:Username"] ?? throw new Exception("Cannot find username in EContractClient");
+                    var password = _cfg["EContractClient:Password"] ?? throw new Exception("Cannot find password in EContractClient");
+                    int? companyId = _cfg["EContractClient:CompanyId"] is not null ? int.Parse(_cfg["EContractClient:CompanyId"]!) : throw new Exception("Cannot find company ID in EContractClient");
 
-            var urlGetToken = $"{_cfg["EContractClient:BaseUrl"]}/api/auth/password-login";
-            using var req = new HttpRequestMessage(HttpMethod.Post, urlGetToken);
-            req.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                    var payload = new { username, password, companyId };
+                    var jsonPayload = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+                    {
+                        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                    });
 
-            var res = await _http.SendAsync(req);
-            res.EnsureSuccessStatusCode();
-            var body = await res.Content.ReadAsStringAsync();
+                    var urlGetToken = $"{_cfg["EContractClient:BaseUrl"]}/api/auth/password-login";
+                    using var req = new HttpRequestMessage(HttpMethod.Post, urlGetToken);
+                    req.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-            if (!res.IsSuccessStatusCode)
+                    var res = await _http.SendAsync(req);
+                    res.EnsureSuccessStatusCode();
+                    var body = await res.Content.ReadAsStringAsync();
+
+                    if (!res.IsSuccessStatusCode)
+                        return new ResponseDTO<GetAccessTokenDTO>
+                        {
+                            IsSuccess = false,
+                            StatusCode = (int)res.StatusCode,
+                            Message = $"Cannot get access token from EContract: {body}"
+                        };
+
+                    using var doc = JsonDocument.Parse(body);
+                    var root = doc.RootElement;
+
+                    var dataEl = root.GetProperty("data");
+                    accessToken = dataEl.ValueKind == JsonValueKind.String ? dataEl.GetString() :
+                    (dataEl.ValueKind == JsonValueKind.Object && dataEl.TryGetProperty("access", out var t1)) ? t1.GetString() :
+                    (dataEl.ValueKind == JsonValueKind.Object && dataEl.TryGetProperty("accessToken", out var t2)) ? t2.GetString() :
+                    null;
+
+                    if (string.IsNullOrWhiteSpace(accessToken))
+                    {
+                        return new ResponseDTO<GetAccessTokenDTO>
+                        {
+                            IsSuccess = false,
+                            StatusCode = 500,
+                            Message = "Cannot find access token in EContract response"
+                        };
+                    }
+                    var expiration = TimeSpan.FromDays(1) - TimeSpan.FromHours(1);
+                    await _redisService.StoreKeyAsync(StaticRedisKey.AccessTokenEVC, accessToken, expiration);
+                }
+
+                var userId = int.Parse(_cfg["EContractClient:UserId"] ?? throw new Exception("Cannot find user ID in EContractClient"));
+
                 return new ResponseDTO<GetAccessTokenDTO>
                 {
-                    IsSuccess = false,
-                    StatusCode = (int)res.StatusCode,
-                    Message = $"Cannot get access token from EContract: {body}"
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Get access token successfully",
+                    Data = new GetAccessTokenDTO
+                    {
+                        AccessToken = accessToken,
+                        UserId = userId
+                    }
                 };
-
-            using var doc = JsonDocument.Parse(body);
-            var root = doc.RootElement;
-
-            var dataEl = root.GetProperty("data");
-            string? accessToken = dataEl.ValueKind == JsonValueKind.String ? dataEl.GetString() :
-            (dataEl.ValueKind == JsonValueKind.Object && dataEl.TryGetProperty("access", out var t1)) ? t1.GetString() :
-            (dataEl.ValueKind == JsonValueKind.Object && dataEl.TryGetProperty("accessToken", out var t2)) ? t2.GetString() :
-            null;
-
-            if (string.IsNullOrWhiteSpace(accessToken))
+            }
+            catch (Exception ex)
+            {
                 return new ResponseDTO<GetAccessTokenDTO>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
-                    Message = "Cannot find access token in EContract response"
+                    Message = $"Error to get access token: {ex.Message}"
                 };
-
-            var userId = int.Parse(_cfg["EContractClient:UserId"] ?? throw new Exception("Cannot find user ID in EContractClient"));
-
-            return new ResponseDTO<GetAccessTokenDTO>
-            {
-                IsSuccess = true,
-                StatusCode = 200,
-                Message = "Get access token successfully",
-                Data = new GetAccessTokenDTO
-                {
-                    AccessToken = accessToken,
-                    UserId = userId
-                }
-            };
+            }
         }
 
         public async Task<ResponseDTO> CreateBookingEContractAsync(ClaimsPrincipal userClaim, Guid bookingId, CancellationToken ct)
