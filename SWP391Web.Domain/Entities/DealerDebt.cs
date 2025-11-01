@@ -19,6 +19,7 @@ namespace SWP391Web.Domain.Entities
         public decimal CommissionsAmount { get; set; }
         public decimal PenaltiesAmount { get; set; }
         public decimal ClosingBalance { get; set; }
+        public decimal OverpaidAmount { get; set; }
         public string? ReferenceNo { get; set; }
         public string? Note { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
