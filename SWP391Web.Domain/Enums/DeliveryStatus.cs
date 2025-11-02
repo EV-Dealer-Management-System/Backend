@@ -13,6 +13,8 @@ namespace SWP391Web.Domain.Enums
         InTransit = 3,     
         Arrived = 4,       
         Confirmed = 5,    
-        Accident = 6
+        Accident = 6,
+        Delayed = 7        
+
     }
 }
