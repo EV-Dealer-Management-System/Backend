@@ -711,10 +711,6 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-
-                    }
-                }
-
                 if (newStatus == BookingStatus.Completed)
                 {
 
