@@ -21,11 +21,13 @@ namespace SWP391Web.Application.Services
     {
         public readonly IUnitOfWork _unitOfWork;
         public readonly IMapper _mapper;
+        public readonly IBookingEVService _bookingEVService;
 
-        public VehicleDeliveryService(IUnitOfWork unitOfWork, IMapper mapper)
+        public VehicleDeliveryService(IUnitOfWork unitOfWork, IMapper mapper, IBookingEVService bookingEVService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _bookingEVService = bookingEVService;
         }
         public async Task<ResponseDTO> GetAllVehicleDelivery(DeliveryStatus? status = null)
         {
@@ -119,12 +121,12 @@ namespace SWP391Web.Application.Services
                 }
 
                 var role = user.FindFirst(ClaimTypes.Role)?.Value;
-                if (role != StaticUserRole.Admin && role != StaticUserRole.EVMStaff)
+                if (role != StaticUserRole.Admin && role != StaticUserRole.EVMStaff && role != StaticUserRole.DealerManager)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Only Admin or EVM Staff can update delivery status",
+                        Message = "Only Admin , Dealer Manager or EVM Staff can update delivery status",
                         StatusCode = 403
                     };
                 }
@@ -241,7 +243,7 @@ namespace SWP391Web.Application.Services
                 }
                 else if (newStatus == DeliveryStatus.Confirmed)
                 {
-                    await UpdateStatusConfirmedAsync(delivery);
+                    await _bookingEVService.ConfirmBookingDeliveryAsync(user, delivery.BookingEV.Id, ct);
                 }
 
                 await _unitOfWork.SaveAsync();
@@ -290,50 +292,5 @@ namespace SWP391Web.Application.Services
                 StatusCode = 200,
             };
         }
-
-        private async Task<ResponseDTO> UpdateStatusConfirmedAsync(VehicleDelivery delivery)
-        {
-            delivery.Description = "Giao nhận hoàn tất";
-            delivery.Status = DeliveryStatus.Confirmed;
-            delivery.UpdateAt = DateTime.UtcNow;
-            _unitOfWork.VehicleDeliveryRepository.Update(delivery);
-
-            var booking = delivery.BookingEV;
-            booking.Status = BookingStatus.Completed;
-            _unitOfWork.BookingEVRepository.Update(booking);
-
-            var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(booking.DealerId);
-            if (warehouse == null)
-            {
-                return new ResponseDTO
-                {
-                    IsSuccess = false,
-                    Message = "warehouse not found",
-                    StatusCode = 400
-                };
-            }
-                
-
-            foreach (var dt in booking.BookingEVDetails)
-            {
-                var vehicles = await _unitOfWork.ElectricVehicleRepository
-                    .GetInTransitVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
-
-                foreach (var ev in vehicles.Take(dt.Quantity))
-                {
-                    ev.Status = ElectricVehicleStatus.AtDealer;
-                    ev.WarehouseId = warehouse.Id;
-                    _unitOfWork.ElectricVehicleRepository.Update(ev);
-                }
-            }
-
-            return new ResponseDTO
-            {
-                IsSuccess = true,
-                Message = "Update status successfully",
-                StatusCode = 200
-            };
-        }
-
     }
 }
