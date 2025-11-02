@@ -18,9 +18,9 @@ namespace SWP391Web.API.Controllers
             _bookingEVService = bookingEVService ?? throw new ArgumentNullException(nameof(bookingEVService));
         }
         [HttpPost("create-booking")]
-        public  async Task<ActionResult<ResponseDTO>> CreateBookingEV([FromBody] CreateBookingEVDTO createBookingEVDTO)
+        public  async Task<ActionResult<ResponseDTO>> CreateBookingEV([FromBody] CreateBookingEVDTO createBookingEVDTO, CancellationToken ct)
         {
-            var response = await _bookingEVService.CreateBookingEVAsync(User, createBookingEVDTO);
+            var response = await _bookingEVService.CreateBookingEVAsync(User, createBookingEVDTO, ct);
             return StatusCode(response.StatusCode, response);
         }
 

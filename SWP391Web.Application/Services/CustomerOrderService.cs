@@ -109,6 +109,7 @@ namespace SWP391Web.Application.Services
                     CreatedAt = DateTime.UtcNow,
                     TotalAmount = (int)amount,
                     Status = status,
+                    CreatedBy = userId
                 };
 
                 await _unitOfWork.CustomerOrderRepository.AddAsync(customerOrder, ct);

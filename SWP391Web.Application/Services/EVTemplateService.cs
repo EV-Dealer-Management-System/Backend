@@ -189,7 +189,7 @@ namespace SWP391Web.Application.Services
                 }
                 
 
-                var templates = (await _unitOfWork.EVTemplateRepository.GetTemplatesByVersionAndColorAsync(versionId, colorId)).FirstOrDefault();
+                var templates = await _unitOfWork.EVTemplateRepository.GetTemplatesByVersionAndColorAsync(versionId, colorId);
                 if ( templates == null)
                 {
                     return new ResponseDTO

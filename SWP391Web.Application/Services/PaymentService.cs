@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
 using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Application.DTO.DealerDebt;
 using SWP391Web.Application.DTO.Payment;
 using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
@@ -29,7 +30,10 @@ namespace SWP391Web.Application.Services
         private readonly IHttpContextAccessor _http;
         private readonly IEmailService _emailService;
         private readonly IHubContext<NotificationHub> _hubContext;
-        public PaymentService(IConfiguration cfg, IUnitOfWork unitOfWork, IHttpContextAccessor httpContext, IEmailService emailService, IHubContext<NotificationHub> hubContext)
+        private readonly IDealerDebtService _dealerDebtService;
+        private readonly IDealerTierService _dealerTierService;
+        public PaymentService(IConfiguration cfg, IUnitOfWork unitOfWork, IHttpContextAccessor httpContext, IEmailService emailService, IHubContext<NotificationHub> hubContext, IDealerDebtService dealerDebtService
+            , IDealerTierService dealerTierService)
         {
             _baseUrl = cfg["VNPay:BaseUrl"] ?? throw new Exception("Cannot find VNPay:BaseUrl");
             _tmnCode = cfg["VNPay:TmnCode"] ?? throw new Exception("Cannot find VNPay:TmnCode");
@@ -39,6 +43,8 @@ namespace SWP391Web.Application.Services
             _http = httpContext;
             _emailService = emailService;
             _hubContext = hubContext;
+            _dealerDebtService = dealerDebtService;
+            _dealerTierService = dealerTierService;
         }
         public async Task<ResponseDTO> CreateVNPayLink(Guid customerOrderId, CancellationToken ct)
         {
@@ -69,9 +75,9 @@ namespace SWP391Web.Application.Services
                     amount = order.TotalAmount;
                 }
 
-                amount = (amount * 100);
+                amount = amount * 100;
                 var createDate = ToGmt7(DateTime.UtcNow);
-                var OrderInfo = $"CodeNo-{order.OrderNo}-Price-{amount}";
+                var OrderInfo = $"ORDER|{order.OrderNo}";
                 var expireDate = ToGmt7(DateTime.UtcNow.AddMinutes(15));
                 var orderNo = order.OrderNo.ToString();
                 var clientIp = ResolveClientIp();
@@ -233,11 +239,9 @@ namespace SWP391Web.Application.Services
                             }
                         };
                     }
+
                     var paidAmount = decimal.Parse(ipnDTO.vnp_Amount) / 100;
                     await HandleVNPayCustomerOrder(order, paidAmount, ct);
-
-                    //DateTime dateTimeLocal = DateTime.ParseExact(ipnDTO.vnp_PayDate, "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
-                    //DateTime dateTimeUtc = DateTime.SpecifyKind(dateTimeLocal, DateTimeKind.Unspecified).ToUniversalTime();
 
                     var Transaction = new Transaction
                     {
@@ -252,7 +256,105 @@ namespace SWP391Web.Application.Services
 
                     await _unitOfWork.TransactionRepository.AddAsync(Transaction, ct);
 
+                    var orderInfo = ipnDTO.vnp_OrderInfo ?? string.Empty;
+
+                    if (orderInfo.StartsWith("DEALERPAY|", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var parts = orderInfo.Split('|', StringSplitOptions.RemoveEmptyEntries);
+
+                        if (parts.Length < 2)
+                        {
+                            return new ResponseDTO
+                            {
+                                StatusCode = 200,
+                                Message = "Invalid DEALERPAY format",
+                                Result = new
+                                {
+                                    RspCode = "00",
+                                    Message = "Confirm success (but format invalid)"
+                                }
+                            };
+                        }
+
+                        var dealerId = Guid.Parse(parts[1]);
+                        var refNo = parts.Length >= 3 ? parts[2] : ipnDTO.vnp_TxnRef;
+
+                        await _dealerDebtService.AddPaymentForDealerAsync(dealerId, new RecordPaymentDTO
+                        {
+                            Amount = paidAmount,
+                            ReferenceNo = $"VNPay-{refNo}",
+                            PaidAtUtc = DateTime.UtcNow,
+                            Method = "Transfer"
+                        }, ct);
+
+                        var dealerTransaction = new Transaction
+                        {
+                            CustomerOrderId = null,
+                            Amount = paidAmount,
+                            Provider = "VNPay",
+                            OrderRef = ipnDTO.vnp_TxnRef,
+                            Currency = "VND",
+                            Status = TransactionStatus.Success,
+                            CreatedAt = DateTime.UtcNow,
+                            Note = $"Dealer payment {dealerId}"
+                        };
+                        await _unitOfWork.TransactionRepository.AddAsync(dealerTransaction, ct);
+                        await _unitOfWork.SaveAsync();
+
+                        return new ResponseDTO()
+                        {
+                            StatusCode = 200,
+                            Message = "Dealer payment successful",
+                            Result = new
+                            {
+                                RspCode = "00",
+                                Message = "Confirm success"
+                            }
+                        };
+                    }
+
+                    await HandleVNPayCustomerOrder(order, paidAmount, ct);
+
+                    var transaction = new Transaction
+                    {
+                        CustomerOrderId = order.Id,
+                        Amount = paidAmount,
+                        Provider = "VNPay",
+                        OrderRef = ipnDTO.vnp_TxnRef,
+                        Currency = "VND",
+                        Status = TransactionStatus.Success,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
+
+                    if (order.Status.Equals(OrderStatus.Completed))
+                    {
+                        var dealerId = order.Quote.DealerId;
+
+                        var effectivePolicy = await _dealerTierService.GetEffectivePolicyAsync(dealerId, ct);
+                        if (effectivePolicy is null)
+                        {
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                Message = "Cannot find effective dealer tier policy",
+                                StatusCode = 404
+                            };
+                        }
+                        var commissionRate = effectivePolicy.CommissionPercent;
+                        var commissionAmount = order.TotalAmount * (commissionRate/100);
+
+                        await _dealerDebtService.AddCommissionForDealerAsync(dealerId, new RecordCommissionDTO
+                        {
+                            Amount = commissionAmount!.Value,
+                            ReferenceNo = $"COMMISSION-{order.OrderNo}",
+                            AtUtc = DateTime.UtcNow
+                        }, ct);
+                    }
+
                     await _unitOfWork.SaveAsync();
+
                     return new ResponseDTO()
                     {
                         StatusCode = 200,
