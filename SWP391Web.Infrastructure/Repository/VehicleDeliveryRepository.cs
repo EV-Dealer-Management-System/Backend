@@ -19,7 +19,14 @@ namespace SWP391Web.Infrastructure.Repository
         }
         public async Task<VehicleDelivery?> GetVehicleDeliveryById(Guid deliveryId, CancellationToken ct)
         {
-            return await _context.VehicleDeliveries.FirstOrDefaultAsync(vd => vd.Id == deliveryId,ct);
+                return await _context.VehicleDeliveries
+                    .Include(vd => vd.BookingEV)
+                        .ThenInclude(bev => bev.BookingEVDetails)
+                            .ThenInclude(d => d.Version)
+                    .Include(vd => vd.BookingEV)
+                        .ThenInclude(bev => bev.BookingEVDetails)
+                            .ThenInclude(d => d.Color)
+                    .FirstOrDefaultAsync(vd => vd.Id == deliveryId, ct);
         }
 
         public Task<VehicleDelivery?> VehicleDeliveryByBookingId(Guid BookingId, CancellationToken ct)

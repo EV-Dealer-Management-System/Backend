@@ -17,9 +17,25 @@ namespace SWP391Web.API.Controllers
             _vehicleDeliveryService = vehicleDeliveryService ?? throw new ArgumentNullException(nameof(vehicleDeliveryService));
         }
         [HttpGet("Get-all-deliveries/")]
-        public async Task<ActionResult<ResponseDTO>> getAllVehicleDeliveries([FromQuery] DeliveryStatus? status)
+        public async Task<ActionResult<ResponseDTO>> GetAllVehicleDeliveries([FromQuery] DeliveryStatus? status)
         {
             var response = await _vehicleDeliveryService.GetAllVehicleDelivery(status);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet("Get-by-id/{deliveryId}")]
+        public async Task<ActionResult<ResponseDTO>> GetDeliveryByIdAsync(Guid deliveryId, CancellationToken ct)
+        {
+            var response = await _vehicleDeliveryService.GetVehicleDeliveryById(deliveryId, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut("update-status/{deliveryId}")]
+        public async Task<ActionResult<ResponseDTO>> UpdateDeliveryStatus(
+        Guid deliveryId,
+        [FromQuery] DeliveryStatus newStatus,
+        [FromBody] string? description,
+        CancellationToken ct)
+        {
+            var response = await _vehicleDeliveryService.UpdateVehicleDeliveryStatus(User, deliveryId, newStatus, ct, description);
             return StatusCode(response.StatusCode, response);
         }
     }

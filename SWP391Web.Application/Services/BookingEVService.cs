@@ -697,6 +697,22 @@ namespace SWP391Web.Application.Services
                             StatusCode = 400
                         };
                     }
+
+                    await CreateVehicleDeliveryAsync(bookingEV);
+                }
+
+                if (newStatus == BookingStatus.Completed)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Booking can only be marked as completed when delivery is confirmed.",
+                        StatusCode = 400
+                    };
+                }
+
+
+                    }
                 }
 
                 if (newStatus == BookingStatus.Completed)
@@ -766,7 +782,38 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        
+        private async Task<ResponseDTO> CreateVehicleDeliveryAsync(BookingEV bookingEV)
+        {
+            var vehicleDelivery = new VehicleDelivery
+            {
+                BookingEVId = bookingEV.Id,
+                Description = "Preparing vehicles to delivery",
+                CreatedDate = DateTime.UtcNow,
+                Status = DeliveryStatus.Preparing,
+                UpdateAt = DateTime.UtcNow,
+            };
+
+            await _unitOfWork.VehicleDeliveryRepository.AddAsync(vehicleDelivery,CancellationToken.None);
+
+            foreach(var dt in bookingEV.BookingEVDetails)
+            {
+                var bookedVehicles = await _unitOfWork.ElectricVehicleRepository
+                    .GetBookedVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+
+                foreach(var ev in bookedVehicles.Take(dt.Quantity))
+                {
+                    ev.Status = ElectricVehicleStatus.InTransit;
+                    _unitOfWork.ElectricVehicleRepository.Update(ev);
+                }
+            }
+            await _unitOfWork.SaveAsync();
+            return new ResponseDTO
+            {
+                IsSuccess = true,
+                Message = "Create Vehicle Delivery successfully",
+                StatusCode = 200
+            };
+        }
 
 
         private async Task<ResponseDTO> UpdateQuantityRealTime(Guid versionId, Guid colorId, int quantity)
