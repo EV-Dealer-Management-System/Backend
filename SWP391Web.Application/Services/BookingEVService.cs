@@ -106,18 +106,18 @@ namespace SWP391Web.Application.Services
 
                 foreach (var dt in bookingEV.BookingEVDetails)
                 {
-                    var bookedVehicles = await _unitOfWork.ElectricVehicleRepository
-                        .GetBookedVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
-                    if (bookedVehicles is null || !bookedVehicles.Any())
+                    var inTransitVehicles = await _unitOfWork.ElectricVehicleRepository
+                        .GetInTransitVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+                    if (inTransitVehicles is null || !inTransitVehicles.Any())
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
-                            Message = "No vehicles in booked status.",
+                            Message = "No vehicles in in-transit status.",
                             StatusCode = 404
                         };
                     }
-                    var selectedVehicles = bookedVehicles
+                    var selectedVehicles = inTransitVehicles
                         .OrderBy(ev => ev.ImportDate)
                         .Take(dt.Quantity)
                         .ToList();
