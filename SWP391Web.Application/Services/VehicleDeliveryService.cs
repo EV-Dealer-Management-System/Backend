@@ -121,12 +121,12 @@ namespace SWP391Web.Application.Services
                 }
 
                 var role = user.FindFirst(ClaimTypes.Role)?.Value;
-                if (role != StaticUserRole.Admin && role != StaticUserRole.EVMStaff)
+                if (role != StaticUserRole.Admin && role != StaticUserRole.EVMStaff && role != StaticUserRole.DealerManager)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Only Admin or EVM Staff can update delivery status",
+                        Message = "Only Admin , Dealer Manager or EVM Staff can update delivery status",
                         StatusCode = 403
                     };
                 }

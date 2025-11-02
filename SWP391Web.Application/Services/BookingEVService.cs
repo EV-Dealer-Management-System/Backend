@@ -83,12 +83,12 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if (bookingEV.Status != BookingStatus.Approved)
+                if (bookingEV.Status != BookingStatus.SignedByAdmin)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Can only complete an approved booking.",
+                        Message = "Can only complete an signedByAdmin booking.",
                         StatusCode = 400
                     };
                 }
@@ -699,28 +699,6 @@ namespace SWP391Web.Application.Services
                     }
 
                     await CreateVehicleDeliveryAsync(bookingEV);
-                }
-
-                if (newStatus == BookingStatus.Completed)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Booking can only be marked as completed when delivery is confirmed.",
-                        StatusCode = 400
-                    };
-                }
-
-                if (newStatus == BookingStatus.Completed)
-                {
-
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Unauthorize.",
-                        StatusCode = 403
-                    };
-
                 }
 
                 if (bookingEV.Status == BookingStatus.WaitingDealerSign && newStatus == BookingStatus.Pending)
