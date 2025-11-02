@@ -219,21 +219,12 @@ namespace SWP391Web.Application.Services
                 // change status to pending
                 foreach (var dt in bookingEV.BookingEVDetails)
                 {
-                    var version = await _unitOfWork.ElectricVehicleVersionRepository.GetByIdsAsync(dt.VersionId);
-                    if (version == null)
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = " Version not found ",
-                            StatusCode = 404
-                        };
-                    }
-
                     var availableVehicles = (await _unitOfWork.ElectricVehicleRepository
-                        .GetAvailableVehicleByModelVersionColorAsync(version.ModelId, dt.VersionId, dt.ColorId))
+                        .GetAvailableVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId))
                         .Where(ev => ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
+                        .OrderBy(ev => ev.ImportDate)
                         .ToList();
+
                     if (availableVehicles == null || !availableVehicles.Any())
                     {
                         return new ResponseDTO
@@ -244,7 +235,7 @@ namespace SWP391Web.Application.Services
                         };
                     }
 
-                    if (availableVehicles.Count() < dt.Quantity)
+                    if (availableVehicles.Count < dt.Quantity)
                     {
                         return new ResponseDTO
                         {
@@ -255,7 +246,6 @@ namespace SWP391Web.Application.Services
                     }
 
                     var selectedVehicles = availableVehicles
-                        .OrderBy(ev => ev.ImportDate)
                         .Take(dt.Quantity)
                         .ToList();
 
