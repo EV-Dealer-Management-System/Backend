@@ -39,6 +39,7 @@ namespace SWP391Web.Application.Services
                 var debt = await _unitOfWork.DealerDebtRepository
                     .GetByDealerAndPeriodAsync(dealerId, periodFrom, periodTo, ct);
 
+                var isNew = false;
                 if (debt == null)
                 {
                     decimal openingBalance = 0m;
@@ -69,13 +70,18 @@ namespace SWP391Web.Application.Services
                     };
 
                     await _unitOfWork.DealerDebtRepository.AddAsync(debt, ct);
+                    isNew = true;
                 }
 
                 debt.PurchasesAmount += debtDTO.Amount;
 
                 Recalc(debt);
 
-                _unitOfWork.DealerDebtRepository.Update(debt);
+                if (!isNew)
+                {
+                    _unitOfWork.DealerDebtRepository.Update(debt);
+                }
+
                 await _unitOfWork.SaveAsync();
                 return new ResponseDTO
                 {
@@ -104,6 +110,7 @@ namespace SWP391Web.Application.Services
                 var debt = await _unitOfWork.DealerDebtRepository
                     .GetByDealerAndPeriodAsync(dealerId, targetPeriod.PeriodFrom, targetPeriod.PeriodTo, ct);
 
+                var isNew = false;
                 if (debt is null)
                 {
                     var openingBalance = await GetOpeningBalanceFromLastPeriod(dealerId, ct);
@@ -127,6 +134,7 @@ namespace SWP391Web.Application.Services
                     };
 
                     await _unitOfWork.DealerDebtRepository.AddAsync(debt, ct);
+                    isNew = true;
                 }
 
                 debt.PaymentsAmount += paymentDTO.Amount;
@@ -138,8 +146,10 @@ namespace SWP391Web.Application.Services
 
                 Recalc(debt);
 
-                _unitOfWork.DealerDebtRepository.Update(debt);
-                await _unitOfWork.SaveAsync();
+                if (!isNew)
+                {
+                    _unitOfWork.DealerDebtRepository.Update(debt);
+                }
 
                 return new ResponseDTO(true)
                 {
@@ -165,7 +175,7 @@ namespace SWP391Web.Application.Services
 
                 var debt = await _unitOfWork.DealerDebtRepository
                     .GetByDealerAndPeriodAsync(dealerId, targetPeriod.PeriodFrom, targetPeriod.PeriodTo, ct);
-
+                var isNew = false;
                 if (debt is null)
                 {
                     var openingBalance = await GetOpeningBalanceFromLastPeriod(dealerId, ct);
@@ -189,6 +199,7 @@ namespace SWP391Web.Application.Services
                     };
 
                     await _unitOfWork.DealerDebtRepository.AddAsync(debt, ct);
+                    isNew = true;
                 }
 
                 debt.CommissionsAmount += dto.Amount;
@@ -200,8 +211,10 @@ namespace SWP391Web.Application.Services
 
                 Recalc(debt);
 
-                _unitOfWork.DealerDebtRepository.Update(debt);
-                await _unitOfWork.SaveAsync();
+                if (!isNew)
+                {
+                    _unitOfWork.DealerDebtRepository.Update(debt);
+                }
 
                 return new ResponseDTO(true)
                 {

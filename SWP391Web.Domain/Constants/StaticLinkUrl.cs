@@ -8,7 +8,7 @@ namespace SWP391Web.Domain.Constants
 {
     public static class StaticLinkUrl
     {
-        public const string WebUrl = "https://electricvehiclesystem.click";
+        public const string WebUrl = "https://www.electricvehiclesystem.click";
         public const string ViewDaftEContractURL = WebUrl + "/Econtract/View?downloadUrl=";
         public const string HostWebsite = "electricvehiclesystem.click";
         public const string HostApi = "api.electricvehiclesystem.click";
