@@ -80,6 +80,7 @@ namespace SWP391Web.Application.Services
 
                 OrderStatus status;
                 var amount = quote.TotalAmount;
+                decimal? deposit = null;
                 if (createCustomerOrderDTO.IsPayFull && !createCustomerOrderDTO.IsCash)
                 {
                     status = OrderStatus.FullPending;
@@ -92,13 +93,13 @@ namespace SWP391Web.Application.Services
                 {
                     status = OrderStatus.Depositing;
                     var depositRate = await _depositSetting.GetDepositSetting(user, ct);
-                    amount = quote.TotalAmount * (depositRate.Data!.MaxDepositPercentage / 100);
+                    deposit = amount * (depositRate.Data!.MaxDepositPercentage / 100);
                 }
                 else
                 {
                     status = OrderStatus.DepositPending;
                     var depositRate = await _depositSetting.GetDepositSetting(user, ct);
-                    amount = quote.TotalAmount * (depositRate.Data!.MaxDepositPercentage / 100);
+                    deposit = amount * (depositRate.Data!.MaxDepositPercentage / 100);
                 }
 
                 var customerOrder = new CustomerOrder
@@ -107,7 +108,8 @@ namespace SWP391Web.Application.Services
                     QuoteId = quote.Id,
                     OrderNo = orderNo,
                     CreatedAt = DateTime.UtcNow,
-                    TotalAmount = (int)amount,
+                    TotalAmount = amount,
+                    DepositAmount = deposit.HasValue ? (int)deposit.Value : (int?)null,
                     Status = status,
                     CreatedBy = userId
                 };
@@ -354,6 +356,50 @@ namespace SWP391Web.Application.Services
                     vehicle.Status = ElectricVehicleStatus.AtDealer;
                     _unitOfWork.ElectricVehicleRepository.Update(vehicle);
                 }
+            }
+        }
+
+        public async Task<ResponseDTO> PayDeposit(Guid customerOrderId, CancellationToken ct)
+        {
+            try
+            {
+                var customerOrder = await _unitOfWork.CustomerOrderRepository.GetByIdAsync(customerOrderId);
+                if (customerOrder is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Customer order not found.",
+                        StatusCode = 404,
+                    };
+                }
+
+                if (!customerOrder.Status.Equals(OrderStatus.Depositing))
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Only orders with Depositing status can pay deposit.",
+                        StatusCode = 400,
+                    };
+                }
+
+                await _paymentService.CreateVNPayLink(customerOrder.Id, ct);
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "VNPay link for deposit payment created successfully.",
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"Error to pay deposit: {ex.Message}",
+                    StatusCode = 500,
+                };
             }
         }
     }

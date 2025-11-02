@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.SignalR;
@@ -62,13 +63,16 @@ namespace SWP391Web.Application.Services
                 }
 
                 decimal? amount;
-                if (order.Status.Equals(OrderStatus.FullPending) && order.DepositAmount is not null)
+                var orderNo = order.OrderNo.ToString();
+
+                if (order.Status.Equals(OrderStatus.DepositPending) && order.DepositAmount is not null)
                 {
                     amount = order.DepositAmount;
                 }
-                else if (order.Status.Equals(OrderStatus.DepositPending) && order.DepositAmount is not null)
+                else if (order.Status.Equals(OrderStatus.Depositing) && order.DepositAmount is not null)
                 {
                     amount = (order.TotalAmount - order.DepositAmount);
+                    orderNo = orderNo + "|" + Guid.NewGuid().ToString()[..6];
                 }
                 else
                 {
@@ -79,7 +83,6 @@ namespace SWP391Web.Application.Services
                 var createDate = ToGmt7(DateTime.UtcNow);
                 var OrderInfo = $"ORDER|{order.OrderNo}";
                 var expireDate = ToGmt7(DateTime.UtcNow.AddMinutes(15));
-                var orderNo = order.OrderNo.ToString();
                 var clientIp = ResolveClientIp();
 
                 var data = new SortedDictionary<string, string>(StringComparer.Ordinal)
@@ -224,7 +227,12 @@ namespace SWP391Web.Application.Services
 
                 if (ipnDTO.vnp_ResponseCode == "00" && ipnDTO.vnp_TransactionStatus == "00")
                 {
-                    var order = await _unitOfWork.CustomerOrderRepository.GetByOrderNoAsync(int.Parse(ipnDTO.vnp_TxnRef));
+                    var orderNo = ipnDTO.vnp_TxnRef;
+                    if(orderNo.Contains("|"))
+                    {
+                        orderNo = orderNo[..^7];
+                    }
+                    var order = await _unitOfWork.CustomerOrderRepository.GetByOrderNoAsync(int.Parse(orderNo));
                     if (order is null)
                     {
                         return new ResponseDTO
@@ -236,6 +244,20 @@ namespace SWP391Web.Application.Services
                             {
                                 RspCode = "01",
                                 Message = "Order not found"
+                            }
+                        };
+                    }
+
+                    if (order.Status.Equals(OrderStatus.Completed))
+                    {
+                        return new ResponseDTO
+                        {
+                            StatusCode = 200,
+                            Message = "Already processed",
+                            Result = new
+                            {
+                                RspCode = "00",
+                                Message = "Confirm success"
                             }
                         };
                     }
@@ -276,57 +298,8 @@ namespace SWP391Web.Application.Services
                             };
                         }
 
-                        var dealerId = Guid.Parse(parts[1]);
-                        var refNo = parts.Length >= 3 ? parts[2] : ipnDTO.vnp_TxnRef;
-
-                        await _dealerDebtService.AddPaymentForDealerAsync(dealerId, new RecordPaymentDTO
-                        {
-                            Amount = paidAmount,
-                            ReferenceNo = $"VNPay-{refNo}",
-                            PaidAtUtc = DateTime.UtcNow,
-                            Method = "Transfer"
-                        }, ct);
-
-                        var dealerTransaction = new Transaction
-                        {
-                            CustomerOrderId = null,
-                            Amount = paidAmount,
-                            Provider = "VNPay",
-                            OrderRef = ipnDTO.vnp_TxnRef,
-                            Currency = "VND",
-                            Status = TransactionStatus.Success,
-                            CreatedAt = DateTime.UtcNow,
-                            Note = $"Dealer payment {dealerId}"
-                        };
-                        await _unitOfWork.TransactionRepository.AddAsync(dealerTransaction, ct);
-                        await _unitOfWork.SaveAsync();
-
-                        return new ResponseDTO()
-                        {
-                            StatusCode = 200,
-                            Message = "Dealer payment successful",
-                            Result = new
-                            {
-                                RspCode = "00",
-                                Message = "Confirm success"
-                            }
-                        };
+                        await HandleRecordCommission(parts, ipnDTO.vnp_TxnRef, paidAmount, ct);
                     }
-
-                    await HandleVNPayCustomerOrder(order, paidAmount, ct);
-
-                    var transaction = new Transaction
-                    {
-                        CustomerOrderId = order.Id,
-                        Amount = paidAmount,
-                        Provider = "VNPay",
-                        OrderRef = ipnDTO.vnp_TxnRef,
-                        Currency = "VND",
-                        Status = TransactionStatus.Success,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
 
                     if (order.Status.Equals(OrderStatus.Completed))
                     {
@@ -343,7 +316,7 @@ namespace SWP391Web.Application.Services
                             };
                         }
                         var commissionRate = effectivePolicy.CommissionPercent;
-                        var commissionAmount = order.TotalAmount * (commissionRate/100);
+                        var commissionAmount = order.TotalAmount * (commissionRate / 100);
 
                         await _dealerDebtService.AddCommissionForDealerAsync(dealerId, new RecordCommissionDTO
                         {
@@ -352,21 +325,9 @@ namespace SWP391Web.Application.Services
                             AtUtc = DateTime.UtcNow
                         }, ct);
                     }
-
-                    await _unitOfWork.SaveAsync();
-
-                    return new ResponseDTO()
-                    {
-                        StatusCode = 200,
-                        Message = "Payment successful",
-                        Result = new
-                        {
-                            RspCode = "00",
-                            Message = "Confirm success"
-                        }
-                    };
                 }
 
+                await _unitOfWork.SaveAsync();
                 return new ResponseDTO()
                 {
                     StatusCode = 200,
@@ -392,6 +353,34 @@ namespace SWP391Web.Application.Services
                     }
                 };
             }
+        }
+
+        private async Task HandleRecordCommission(string[] parts, string vnp_TxnRef, decimal paidAmount, CancellationToken ct)
+        {
+
+            var dealerId = Guid.Parse(parts[1]);
+            var refNo = parts.Length >= 3 ? parts[2] : vnp_TxnRef;
+
+            await _dealerDebtService.AddPaymentForDealerAsync(dealerId, new RecordPaymentDTO
+            {
+                Amount = paidAmount,
+                ReferenceNo = $"VNPay-{refNo}",
+                PaidAtUtc = DateTime.UtcNow,
+                Method = "Transfer"
+            }, ct);
+
+            var dealerTransaction = new Transaction
+            {
+                CustomerOrderId = null,
+                Amount = paidAmount,
+                Provider = "VNPay",
+                OrderRef = vnp_TxnRef,
+                Currency = "VND",
+                Status = TransactionStatus.Success,
+                CreatedAt = DateTime.UtcNow,
+                Note = $"Dealer payment|{dealerId}"
+            };
+            await _unitOfWork.TransactionRepository.AddAsync(dealerTransaction, ct);
         }
 
         private async Task HandleVNPayCustomerOrder(CustomerOrder customerOrder, decimal amount, CancellationToken ct)
@@ -425,7 +414,6 @@ namespace SWP391Web.Application.Services
                 }
                 ev.Status = ElectricVehicleStatus.Sold;
                 _unitOfWork.ElectricVehicleRepository.Update(ev);
-                await _unitOfWork.SaveAsync();
                 var quantityCurrent = await _unitOfWork.ElectricVehicleRepository.CountDealerAvailableByVersionColorAsync(customerOrder.Quote.DealerId, ev.ElectricVehicleTemplate.VersionId,
                     ev.ElectricVehicleTemplate.ColorId, ct);
 
@@ -473,7 +461,6 @@ namespace SWP391Web.Application.Services
             };
 
             await _unitOfWork.NotificationRepository.AddAsync(notification, ct);
-            await _unitOfWork.SaveAsync();
 
             await _hubContext.Clients.Group($"Dealer_{dealerId}_{StaticUserRole.DealerManager}").SendAsync("NotificationChanged");
         }
