@@ -17,5 +17,6 @@ namespace SWP391Web.Domain.Entities
         public DateTime? UpdateAt { get; set; } = DateTime.UtcNow;
 
         public BookingEV BookingEV { get; set; } = null!;
+        public ICollection<VehicleDeliveryDetail> VehicleDeliveryDetails { get; set; } = new List<VehicleDeliveryDetail>();
     }
 }
