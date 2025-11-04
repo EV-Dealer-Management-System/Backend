@@ -29,20 +29,33 @@ namespace SWP391Web.Application.Services
             _mapper = mapper;
             _bookingEVService = bookingEVService;
         }
-        public async Task<ResponseDTO> GetAllVehicleDelivery(int pageNumber, int pageSize,DeliveryStatus? status, CancellationToken ct)
+        public async Task<ResponseDTO> GetAllVehicleDelivery(int pageNumber, int pageSize,DeliveryStatus? status, Guid? templateId, CancellationToken ct)
         {
             try
             {
                 Func<IQueryable<VehicleDelivery>, IQueryable<VehicleDelivery>> includes = q => q
-                .Include(vd => vd.BookingEV)
-                    .ThenInclude(b => b.Dealer)
-                .Include(vd => vd.VehicleDeliveryDetails)
-                    .ThenInclude(vdd => vdd.ElectricVehicle);
+                    .Include(vd => vd.BookingEV)
+                        .ThenInclude(b => b.Dealer)
+                    .Include(vd => vd.VehicleDeliveryDetails)
+                        .ThenInclude(vdd => vdd.ElectricVehicle)
+                            .ThenInclude(vdd => vdd.ElectricVehicleTemplate)
+                                .ThenInclude(evt => evt.Version)
+                    .Include(vd => vd.VehicleDeliveryDetails)
+                        .ThenInclude(vdd => vdd.ElectricVehicle)
+                            .ThenInclude(vdd => vdd.ElectricVehicleTemplate)
+                                .ThenInclude(evt => evt.Color);
+
+
 
                 Expression<Func<VehicleDelivery, bool>>? filter = null;
-                if (status.HasValue)
+                if (status.HasValue || templateId.HasValue)
                 {
-                    filter = vd => vd.Status == status.Value;
+                    filter = vd =>
+                        (!status.HasValue || vd.Status == status.Value) &&
+                        (!templateId.HasValue ||
+                            vd.VehicleDeliveryDetails.Any(vdd =>
+                                vdd.ElectricVehicle != null &&
+                                vdd.ElectricVehicle.ElectricVehicleTemplateId == templateId.Value));
                 }
 
                 (IReadOnlyList<VehicleDelivery> items, int total) result;
@@ -55,6 +68,32 @@ namespace SWP391Web.Application.Services
                             pageSize: pageSize,
                             ct: ct);
 
+                if (templateId.HasValue && (result.items == null || !result.items.Any()))
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No vehicle deliveries found for the specified template ID.",
+                        StatusCode = 404
+                    };
+                }
+
+                var deliveries = result.items.ToList();
+
+                var templateSummary = deliveries
+                    .SelectMany(d => d.VehicleDeliveryDetails)
+                    .Where(vdd => vdd.ElectricVehicle != null && vdd.ElectricVehicle.ElectricVehicleTemplateId != null)
+                    .GroupBy(vdd => vdd.ElectricVehicle.ElectricVehicleTemplateId)
+                    .Select(g => new
+                    {
+                        VersionName = g.First().ElectricVehicle.ElectricVehicleTemplate.Version.VersionName,
+                        ColorName = g.First().ElectricVehicle.ElectricVehicleTemplate.Color.ColorName,
+                        TemplateId = g.Key,
+                        VehicleCount = g.Count(),
+                        VinList = g.Select(vdd => vdd.ElectricVehicle.VIN).ToList()
+                    })
+                    .ToList();
+
                 var getDeliveries = _mapper.Map<List<GetVehicleDeliveryDTO>>(result.items);
 
                 return new ResponseDTO
@@ -65,6 +104,7 @@ namespace SWP391Web.Application.Services
                     Result = new
                     {
                         data = getDeliveries,
+                        templateSummary,
                         Pagination = new
                         {
                             PageNumber = pageNumber,
