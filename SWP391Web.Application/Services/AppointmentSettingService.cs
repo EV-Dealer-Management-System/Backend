@@ -351,8 +351,29 @@ namespace SWP391Web.Application.Services
 
 
                 var appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetByDealerIdAsync(dealer.Id);
+                if(appointmentSetting == null)
+                {
+                    appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetDefaultAsync();
+                    if (appointmentSetting == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Appointment setting not found",
+                            StatusCode = 404
+                        };
+                    }
 
-                var getAppointmentSetting = _mapper.Map<AppointmentSetting>(appointmentSetting);
+                    return new ResponseDTO
+                    {
+                        IsSuccess = true,
+                        Message = "Using default appointment setting",
+                        StatusCode = 200,
+                        Result = _mapper.Map<GetAppointSettingDTO>(appointmentSetting)
+                    };
+                }
+
+                var getAppointmentSetting = _mapper.Map<GetAppointSettingDTO>(appointmentSetting);
 
                 return new ResponseDTO
                 {

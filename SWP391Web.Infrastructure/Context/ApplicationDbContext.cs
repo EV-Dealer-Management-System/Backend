@@ -48,6 +48,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<DealerDebt> DealerDebts { get; set; }
         public DbSet<DealerTier> DealerTiers { get; set; }
         public DbSet<VehicleDelivery> VehicleDeliveries { get; set; }
+        public DbSet<VehicleDeliveryDetail> VehicleDeliveryDetails { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -493,6 +494,21 @@ namespace SWP391Web.Infrastructure.Context
                 .HasOne(cfba => cfba.CustomerFeedback)
                 .WithMany(cf => cf.CustomerFBAttachments)
                 .HasForeignKey(cfba => cfba.CustomerFeedBackId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure VehicleDeliveryDetail entity
+
+            modelBuilder.Entity<VehicleDeliveryDetail>()
+                .HasOne(vdd => vdd.VehicleDelivery)
+                .WithMany(vd => vd.VehicleDeliveryDetails)
+                .HasForeignKey(vdd => vdd.VehicleDeliveryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<VehicleDeliveryDetail>()
+                .HasOne(vdd => vdd.ElectricVehicle)
+                .WithMany(ev => ev.VehicleDeliveryDetails)
+                .HasForeignKey(vdd => vdd.ElectricVehicleId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

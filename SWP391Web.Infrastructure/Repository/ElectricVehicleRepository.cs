@@ -123,7 +123,6 @@ namespace SWP391Web.Infrastructure.Repository
                              && ev.ElectricVehicleTemplate.VersionId == versionId
                              && ev.ElectricVehicleTemplate.ColorId == colorId
                              && ev.Status == ElectricVehicleStatus.Available
-                             && ev.WarehouseId != null
                              && ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
                 .OrderBy(ev => ev.ImportDate)
                 .ToListAsync();

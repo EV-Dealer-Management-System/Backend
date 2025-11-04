@@ -26,13 +26,17 @@ namespace SWP391Web.Infrastructure.Repository
                     .Include(vd => vd.BookingEV)
                         .ThenInclude(bev => bev.BookingEVDetails)
                             .ThenInclude(d => d.Color)
+                    .Include(vd => vd.VehicleDeliveryDetails)
+                        .ThenInclude(vdd => vdd.ElectricVehicle)
                     .FirstOrDefaultAsync(vd => vd.Id == deliveryId, ct);
         }
 
-        public Task<VehicleDelivery?> VehicleDeliveryByBookingId(Guid BookingId, CancellationToken ct)
+        public Task<VehicleDelivery?> GetVehicleDeliveryByBookingId(Guid BookingId, CancellationToken ct)
         {
             return _context.VehicleDeliveries
                 .Include(vd => vd.BookingEV)
+                .Include(vd => vd.VehicleDeliveryDetails)
+                    .ThenInclude(d => d.ElectricVehicle)
                 .FirstOrDefaultAsync(vd => vd.BookingEVId == BookingId,ct);
         }
     }

@@ -240,7 +240,7 @@ namespace SWP391Web.Application.Services
                     .Include(t => t.Version)
                         .ThenInclude(v => v.Model)
                     .Include(t => t.Color)
-                    //.Include(t => t.EVAttachments)
+                    .Include(t => t.EVAttachments)
                     .FirstOrDefaultAsync();
                 if (template == null)
                 {
