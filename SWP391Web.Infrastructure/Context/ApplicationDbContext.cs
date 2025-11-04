@@ -510,6 +510,15 @@ namespace SWP391Web.Infrastructure.Context
                 .WithMany(ev => ev.VehicleDeliveryDetails)
                 .HasForeignKey(vdd => vdd.ElectricVehicleId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure DealerDebtTransaction entity
+
+            modelBuilder.Entity<DealerDebtTransaction>()
+                .HasOne(ddt => ddt.Dealer)
+                .WithMany(d => d.DealerDebtTransactions)
+                .HasForeignKey(ddt => ddt.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
