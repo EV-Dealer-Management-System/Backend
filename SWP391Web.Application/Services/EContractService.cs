@@ -294,9 +294,14 @@ namespace SWP391Web.Application.Services
                         Message = "Cannot find dealer manager"
                     };
 
-                var roleId = new List<Guid>
+                var roleIds = new List<Guid>
                 {
                     Guid.Parse(_cfg["EContract:RoleId"] ?? throw new Exception("EContract:RoleId is not exist"))
+                };
+
+                var departmentIds = new List<int>
+                {
+                    int.Parse(_cfg["EContract:DepartmentId"] ?? throw new Exception("EContract:DepartmentId is not exist"))
                 };
 
                 var vnptUser = new VnptUserUpsert
@@ -312,8 +317,8 @@ namespace SWP391Web.Application.Services
                     SignConfirmationEnabled = true,
                     GenerateSelfSignedCertEnabled = false,
                     Status = 1,
-                    DepartmentIds = [4106],
-                    RoleIds = roleId
+                    DepartmentIds = departmentIds,
+                    RoleIds = roleIds
 
                 };
 
