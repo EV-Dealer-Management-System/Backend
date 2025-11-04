@@ -29,13 +29,15 @@ namespace SWP391Web.Application.Services
             _mapper = mapper;
             _bookingEVService = bookingEVService;
         }
-        public async Task<ResponseDTO> GetAllVehicleDelivery(DeliveryStatus? status = null)
+        public async Task<ResponseDTO> GetAllVehicleDelivery(int pageNumber, int pageSize,DeliveryStatus? status, CancellationToken ct)
         {
             try
             {
-                Func<IQueryable<VehicleDelivery>, IQueryable<VehicleDelivery>> includes = q =>
-                q.Include(vd => vd.BookingEV)
-                    .ThenInclude(b => b.Dealer);
+                Func<IQueryable<VehicleDelivery>, IQueryable<VehicleDelivery>> includes = q => q
+                .Include(vd => vd.BookingEV)
+                    .ThenInclude(b => b.Dealer)
+                .Include(vd => vd.VehicleDeliveryDetails)
+                    .ThenInclude(vdd => vdd.ElectricVehicle);
 
                 Expression<Func<VehicleDelivery, bool>>? filter = null;
                 if (status.HasValue)
@@ -43,18 +45,34 @@ namespace SWP391Web.Application.Services
                     filter = vd => vd.Status == status.Value;
                 }
 
-                var deliveries = await _unitOfWork.VehicleDeliveryRepository.GetAllAsync(
-                    filter: filter,
-                    includes: includes);
+                (IReadOnlyList<VehicleDelivery> items, int total) result;
+                result = await _unitOfWork.VehicleDeliveryRepository.GetPagedAsync(
+                            filter: filter,
+                            includes: includes,
+                            orderBy: dm => dm.CreatedDate,
+                            ascending: false,
+                            pageNumber: pageNumber,
+                            pageSize: pageSize,
+                            ct: ct);
 
-                var getDeliveries = _mapper.Map<List<GetVehicleDeliveryDTO>>(deliveries);
+                var getDeliveries = _mapper.Map<List<GetVehicleDeliveryDTO>>(result.items);
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     Message = "Get all deliveries successfully",
                     StatusCode = 200,
-                    Result = getDeliveries
+                    Result = new
+                    {
+                        data = getDeliveries,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = pageSize,
+                            TotalItems = result.total,
+                            TotalPages = (int)Math.Ceiling((double)result.total / pageSize)
+                        }
+                    }
                 };
                    
             }
@@ -223,21 +241,30 @@ namespace SWP391Web.Application.Services
                 delivery.UpdateAt = DateTime.UtcNow;
                 _unitOfWork.VehicleDeliveryRepository.Update(delivery);
 
-                if (newStatus == DeliveryStatus.InTransit)
+                foreach (var dt in delivery.VehicleDeliveryDetails)
                 {
-                    foreach (var dt in delivery.BookingEV.BookingEVDetails)
+                    switch (newStatus)
                     {
-                        var vehicles = await _unitOfWork.ElectricVehicleRepository
-                            .GetBookedVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+                        case DeliveryStatus.Packing:
+                            dt.Status = DeliveryVehicleStatus.Preparing;
+                            dt.Note = "Vehicle is being prepared for shipment";
+                            break;
 
-                        foreach (var ev in vehicles.Take(dt.Quantity))
-                        {
-                            ev.Status = ElectricVehicleStatus.InTransit;
-                            _unitOfWork.ElectricVehicleRepository.Update(ev);
-                        }
+                        case DeliveryStatus.InTransit:
+                            dt.Status = DeliveryVehicleStatus.InTransit;
+                            dt.Note = "Vehicle is on the way to dealer";
+                            break;
+
+                        case DeliveryStatus.Arrived:
+                            dt.Status = DeliveryVehicleStatus.Delivered;
+                            dt.Note = "Vehicle has arrived at dealer";
+                            break;
                     }
+
+                    _unitOfWork.VehicleDeliveryDetailRepository.Update(dt);
                 }
-                else if (newStatus == DeliveryStatus.Accident)
+
+                if (newStatus == DeliveryStatus.Accident)
                 {
                     await UpdateStatusAccidentAsync(delivery, reason!);
                 }
