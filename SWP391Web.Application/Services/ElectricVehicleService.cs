@@ -357,7 +357,7 @@ namespace SWP391Web.Application.Services
                 var companyVehicles = vehicles
                     .Where(v => v.Warehouse != null && v.Warehouse.WarehouseType == WarehouseType.EVInventory)
                     .ToList();
-
+                
                 if (!companyVehicles.Any())
                 {
                     return new ResponseDTO
@@ -377,6 +377,7 @@ namespace SWP391Web.Application.Services
                         VersionName = v.ElectricVehicleTemplate.Version.VersionName,
                         ColorId = v.ElectricVehicleTemplate.Color.Id,
                         ColorName = v.ElectricVehicleTemplate.Color.ColorName
+                        
                     })
                     .Select(g => new
                     {
@@ -391,7 +392,11 @@ namespace SWP391Web.Application.Services
                         {
                             v.VIN,
                             v.WarehouseId,
-                            WarehouseName = v.Warehouse.WarehouseName
+                            WarehouseName = v.Warehouse.WarehouseName,
+                            ImportDate = v.ImportDate.HasValue
+                                ? v.ImportDate.Value.ToLocalTime()
+                                : (DateTime?)null
+
                         }).ToList()
                     })
                     .OrderBy(x => x.ModelName)

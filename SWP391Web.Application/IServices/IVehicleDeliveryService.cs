@@ -12,7 +12,7 @@ namespace SWP391Web.Application.IServices
 {
     public interface IVehicleDeliveryService
     {
-        Task<ResponseDTO> GetAllVehicleDelivery(int pageNumber, int pageSize, DeliveryStatus? status, CancellationToken ct);
+        Task<ResponseDTO> GetAllVehicleDelivery(int pageNumber, int pageSize, DeliveryStatus? status, Guid? templateId, CancellationToken ct);
         Task<ResponseDTO> GetVehicleDeliveryById(Guid deliveryId, CancellationToken ct);
         Task<ResponseDTO> UpdateVehicleDeliveryStatus(ClaimsPrincipal user, Guid deliveryId, DeliveryStatus newStatus, CancellationToken ct, string? reason = null);
     }
