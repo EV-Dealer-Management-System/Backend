@@ -85,5 +85,14 @@ namespace SWP391Web.API.Controllers
             var response = await _dealerTierService.GetEffectivePolicyAsync(dealerId, ct);
             return StatusCode(200, response);
         }
+
+        [HttpGet]
+        [Route("dealer-information")]
+        [Authorize(Roles = StaticUserRole.DealerManager)]
+        public async Task<IActionResult> DealerInformation(CancellationToken ct)
+        {
+            var response = await _dealerService.DealerInformationAsync(User, ct);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

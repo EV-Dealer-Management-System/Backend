@@ -41,6 +41,7 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _context.Dealers
                 .AsNoTracking()
+                .Include(dl => dl.DealerTier)
                 .Include(dl => dl.Manager)
                 .Where(dl => dl.ManagerId == managerId)
                 .FirstOrDefaultAsync(ct);

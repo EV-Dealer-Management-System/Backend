@@ -11,5 +11,6 @@ namespace SWP391Web.Infrastructure.IRepository
     {
         Task<bool> IsExistDealerMemberByEmailAsync(Guid dealerId, string email, CancellationToken ct);
         Task<bool> IsActiveDealerMemberByEmailAsync(Guid dealerId, string email, CancellationToken ct);
+        Task<int> TotalDealerMember(Guid dealerId, CancellationToken ct);
     }
 }

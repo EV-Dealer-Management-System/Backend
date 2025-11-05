@@ -29,5 +29,12 @@ namespace SWP391Web.Infrastructure.Repository
             return await _context.DealerMembers
                 .AnyAsync(dl => dl.DealerId == dealerId && dl.ApplicationUser.Email == email, ct);
         }
+
+        public async Task<int> TotalDealerMember(Guid dealerId, CancellationToken ct)
+        {
+            return await _context.DealerMembers
+                .Where(dm => dm.DealerId == dealerId && dm.IsActive == true)
+                .CountAsync(ct);
+        }
     }
 }

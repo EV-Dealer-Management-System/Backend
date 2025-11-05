@@ -156,7 +156,8 @@ namespace SWP391Web.Application.Mappings
 
             CreateMap<Dealer, GetDealerDTO>()
                 .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager.FullName))
-                .ForMember(dest => dest.ManagerEmail, opt => opt.MapFrom(src => src.Manager.Email)).ReverseMap();
+                .ForMember(dest => dest.ManagerEmail, opt => opt.MapFrom(src => src.Manager.Email))
+                .ForMember(dest => dest.Level, opt => opt.MapFrom(src => src.DealerTier.Level)).ReverseMap();
 
             CreateMap<AppointmentSetting, GetAppointSettingDTO>().ReverseMap();
 

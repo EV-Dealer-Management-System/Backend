@@ -16,7 +16,10 @@ namespace SWP391Web.Application.DTO.Dealer
         public string Name { get; set; } = null!;
         public string Address { get; set; } = null!;
         public string TaxNo { get; set; } = null!;
-        public int DealerLevel { get; set; }
-        public DealerStatus DealerStatus { get; set; }
+        public int Level { get; set; }
+        public Guid? DealerTierId { get; set; }
+        public string? BankAccount { get; set; }
+        public string? BankName { get; set; }
+        public DealerStatus DealerStatus { get; set; } = DealerStatus.Inactive;
     }
 }
