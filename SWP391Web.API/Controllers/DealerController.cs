@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SWP391Web.Application.DTO.Dealer;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Constants;
+using SWP391Web.Domain.Enums;
 
 namespace SWP391Web.API.Controllers
 {
@@ -92,6 +93,24 @@ namespace SWP391Web.API.Controllers
         public async Task<IActionResult> DealerInformation(CancellationToken ct)
         {
             var response = await _dealerService.DealerInformationAsync(User, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPut]
+        [Route("update-dealer-status/{dealerId}")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> UpdateStatusDealer([FromRoute] Guid dealerId, [FromQuery] DealerStatus status, CancellationToken ct)
+        {
+            var response = await _dealerService.UpdateStatusDealer(dealerId, status, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPut]
+        [Route("update-dealer-staff-status")]
+        [Authorize(Roles = StaticUserRole.DealerManager)]
+        public async Task<IActionResult> UpdateStatusDealerStaff([FromQuery] bool isActive, [FromQuery] string applicationUserId, CancellationToken ct)
+        {
+            var response = await _dealerService.UpdateStatusDealerStaff(User, isActive, applicationUserId, ct);
             return StatusCode(response.StatusCode, response);
         }
     }
