@@ -29,9 +29,15 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-available-colors-by-modelid-and-versionid/{modelId}/{versionId}")]
-        public async Task<ActionResult<ResponseDTO>> GetAllColorsByModelIdAndVersionId([FromRoute] Guid modelId, [FromRoute] Guid versionId)
+        public async Task<ActionResult<ResponseDTO>> GetAllColorsForBookingByModelIdAndVersionId([FromRoute] Guid modelId, [FromRoute] Guid versionId)
         {
             var response = await _electricVehicleColorService.GetAvailableColorsByModelIdAndVersionIdAsync(modelId, versionId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet("get-all-colors-by-modelid-and-versionid/{modelId}/{versionId}")]
+        public async Task<ActionResult<ResponseDTO>> GetAllColorsByModelIdAndVersionId([FromRoute] Guid modelId, [FromRoute] Guid versionId)
+        {
+            var response = await _electricVehicleColorService.GetAllColorsByModelIdAndVersionIdAsync(modelId, versionId);
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-color-by-id/{colorId}")]

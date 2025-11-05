@@ -13,6 +13,7 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<ElectricVehicleColor?> GetByNameAsync(string colorName);
         Task<ElectricVehicleColor?> GetByIdsAsync(Guid colorId);
         Task<List<ElectricVehicleColor?>> GetAvailableColorsByModelIdAndVersionIdAsync(Guid modelId, Guid versionId);
+        Task<List<ElectricVehicleColor>> GetAllColorsByModelIdAndVersionIdAsync(Guid modelId, Guid versionId);
         Task<bool> IsColorExistsById(Guid colorId);
         Task<bool> IsColorExistsByName(string colorName);
         Task<bool> IsColorExistsByCode(string colorCode);
