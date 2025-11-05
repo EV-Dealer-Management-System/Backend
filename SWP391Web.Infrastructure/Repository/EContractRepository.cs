@@ -28,5 +28,13 @@ namespace SWP391Web.Infrastructure.Repository
                 .Where(ec => ec.Type == EcontractType.DealerContract && ec.OwnerBy == managerId)
                 .ToListAsync(ct);
         }
+
+        public async Task<EContract?> GetByBookingId(Guid bookingId, CancellationToken ct)
+        {
+            return await _context.EContracts
+                .Include(ec => ec.BookingEV)
+                .Where(ec => ec.BookingEV != null && ec.BookingEV.Id == bookingId && ec.Type == EcontractType.BookingContract)
+                .FirstOrDefaultAsync(ct);
+        }
     }
 }
