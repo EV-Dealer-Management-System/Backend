@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Dealer;
+using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Constants;
@@ -339,6 +340,67 @@ namespace SWP391Web.Application.Services
                     IsSuccess = false,
                     StatusCode = 500,
                     Message = $"Error to get all dealer staffs at DealerService:  {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> DealerInformationAsync(ClaimsPrincipal claimUser, CancellationToken ct)
+        {
+            try
+            {
+                var userId = claimUser.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "User not login yet"
+                    };
+                }
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Users do not own any dealers"
+                    };
+                }
+
+                var memberTotal = await _unitOfWork.DealerMemberRepository.TotalDealerMember(dealer.Id, ct);
+                var econtractDealer = await _unitOfWork.EContractRepository.GetEContractDealerByDealerIdAsync(userId, ct);
+                if (econtractDealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer e-contract information not found"
+                    };
+                }
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Get dealer information successfully.",
+                    Result = new
+                    {
+                        dealer = _mapper.Map<GetDealerDTO>(dealer),
+                        memberTotal = memberTotal,
+                        econtractDealer = _mapper.Map<List<GetEContractDTO>>(econtractDealer)
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to get dealer information at DealerService:  {ex.Message}"
                 };
             }
         }
