@@ -27,6 +27,7 @@ using SWP391Web.Application.DTO.Promotion;
 using SWP391Web.Application.DTO.Quote;
 using SWP391Web.Application.DTO.QuoteDetail;
 using SWP391Web.Application.DTO.VehicleDelivery;
+using SWP391Web.Application.DTO.VehicleDeliveryDetail;
 using SWP391Web.Application.DTO.Warehouse;
 using SWP391Web.Domain.Entities;
 
@@ -201,11 +202,16 @@ namespace SWP391Web.Application.Mappings
 
             CreateMap<DealerTier, GetDealerTierDTO>().ReverseMap();
 
-            CreateMap<VehicleDelivery, GetVehicleDeliveryDTO>().ReverseMap();
-
             CreateMap<DealerDebtTransaction, GetDealerDebtTransactionDTO>().ReverseMap();
 
             CreateMap<Transaction, GetTransactionDTO>().ReverseMap();
+            
+            CreateMap<VehicleDelivery, GetVehicleDeliveryDTO>()
+                .ForMember(dest => dest.VehicleDeliveryDetails,opt => opt.MapFrom(src => src.VehicleDeliveryDetails))
+                .ReverseMap();
+                
+            CreateMap<VehicleDeliveryDetail, GetVehicleDeliveryDetailDTO>()
+                .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.ElectricVehicle.VIN));
         }
     }
 }

@@ -34,8 +34,7 @@ namespace SWP391Web.Infrastructure.Repository
         public Task<AppointmentSetting?> GetDefaultAsync()
         {
             return _context.AppointmentSettings
-                .AsNoTracking()
-                .FirstOrDefaultAsync(a => a.DealerId == null && a.ManagerId == null);
+                .FirstOrDefaultAsync(a => a.DealerId == null);
         }
     }
 }
