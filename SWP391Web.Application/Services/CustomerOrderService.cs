@@ -217,11 +217,6 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public Task<ResponseDTO> GetCustomerOrderByIdAsync(Guid customerOrderId, CancellationToken ct)
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task<ResponseDTO> GetAllCustomerOrders(ClaimsPrincipal userClaim, int pageNumber, int pageSize, OrderStatus? orderStatus, CancellationToken ct)
         {
             try
