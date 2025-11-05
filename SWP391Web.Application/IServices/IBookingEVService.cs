@@ -18,6 +18,5 @@ namespace SWP391Web.Application.IServices
         Task <ResponseDTO> UpdateBookingStatusAsync(ClaimsPrincipal user, Guid bookingId, BookingStatus newStatus);
         Task<ResponseDTO> GetVehicleByBookingIdAsync(Guid bookingId);
         Task<ResponseDTO> ConfirmBookingDeliveryAsync(ClaimsPrincipal user, Guid bookingId, CancellationToken ct);
-        Task UpdateBookingStatusAfterSignAsync(Guid bookingId);
     }
 }

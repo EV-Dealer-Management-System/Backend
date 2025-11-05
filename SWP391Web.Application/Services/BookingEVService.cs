@@ -683,6 +683,31 @@ namespace SWP391Web.Application.Services
                     }
                 }
 
+                if (newStatus == BookingStatus.SignedByAdmin)
+                {
+                    if (role != StaticUserRole.Admin)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Only Admin can sign the booking.",
+                            StatusCode = 403
+                        };
+                    }
+
+                    if (bookingEV.Status != BookingStatus.Approved)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Booking must be approved by EVM Staff before Admin can sign.",
+                            StatusCode = 400
+                        };
+                    }
+
+                    await CreateVehicleDeliveryAsync(bookingEV);
+                }
+
                 if (bookingEV.Status == BookingStatus.WaitingDealerSign && newStatus == BookingStatus.Pending)
                 {
                     foreach (var dt in bookingEV.BookingEVDetails)
@@ -738,22 +763,6 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task UpdateBookingStatusAfterSignAsync(Guid bookingId)
-        {
-            var bookingEV = await _unitOfWork.BookingEVRepository.GetBookingWithIdAsync(bookingId);
-            if (bookingEV == null)
-            {
-                throw new Exception("Booking not found.");
-            }
-
-            if (bookingEV.Status != BookingStatus.Approved)
-            {
-                throw new Exception("Can only sign an approved booking.");
-            }
-
-            await CreateVehicleDeliveryAsync(bookingEV);
-        }
-
         private async Task<ResponseDTO> CreateVehicleDeliveryAsync(BookingEV bookingEV)
         {
             var vehicleDelivery = new VehicleDelivery
@@ -800,6 +809,8 @@ namespace SWP391Web.Application.Services
                     await _unitOfWork.VehicleDeliveryDetailRepository.AddAsync(deliveryDetail, CancellationToken.None);
                 }
             }
+
+            await _unitOfWork.SaveAsync();
 
             var delivery = await _unitOfWork.VehicleDeliveryRepository.GetVehicleDeliveryById(vehicleDelivery.Id, CancellationToken.None);
 
