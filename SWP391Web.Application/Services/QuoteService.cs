@@ -277,14 +277,6 @@ namespace SWP391Web.Application.Services
                             break;
                         }
 
-                        var availableVehicles = await _unitOfWork.ElectricVehicleRepository
-                            .GetAvailableVehicleByDealerAsync(q.DealerId, dt.VersionId, dt.ColorId);
-
-                        if (availableVehicles.Count() < dt.Quantity)
-                        {
-                            isShow = false;
-                            break;
-                        }
                     }
 
                     if (isShow)
