@@ -25,15 +25,16 @@ namespace SWP391Web.Application.Services
         public readonly IPaymentService _paymentService;
         private readonly IDepositSettingService _depositSetting;
         private readonly IDealerDebtService _dealerDebtService;
+        private readonly IDealerDebtTransactionService _dealerDebtTransactionService;
         public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService, IDepositSettingService depositSetting,
-            IDealerDebtService dealerDebtService)
+            IDealerDebtService dealerDebtService, IDealerDebtTransactionService dealerDebtTransactionService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _paymentService = paymentService;
             _depositSetting = depositSetting;
             _dealerDebtService = dealerDebtService;
-
+            _dealerDebtTransactionService = dealerDebtTransactionService;
         }
         public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
         {

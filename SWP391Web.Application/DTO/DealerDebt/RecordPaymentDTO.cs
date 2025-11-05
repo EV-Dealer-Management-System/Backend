@@ -8,10 +8,13 @@ namespace SWP391Web.Application.DTO.DealerDebt
 {
     public class RecordPaymentDTO
     {
-        public decimal Amount { get; set; }
-        public DateTime PaidAtUtc { get; set; }
         public string? ReferenceNo { get; set; }
+        public DateTime PaidAtUtc { get; set; }
+        public decimal Amount { get; set; }
+
+        public string? Method { get; set; }   
+        public string? SourceType { get; set; }
+        public Guid? SourceId { get; set; }
         public string? Note { get; set; }
-        public string? Method { get; set; }
     }
 }

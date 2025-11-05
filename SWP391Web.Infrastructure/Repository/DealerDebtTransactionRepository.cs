@@ -10,19 +10,19 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Infrastructure.Repository
 {
-    public class TransactionRepository : Repository<Transaction>, ITransactionRepository
+    public class DealerDebtTransactionRepository : Repository<DealerDebtTransaction>, IDealerDebtTransactionRepository
     {
         private readonly ApplicationDbContext _context;
-        public TransactionRepository(ApplicationDbContext context) : base(context)
+        public DealerDebtTransactionRepository(ApplicationDbContext context) : base(context)
         {
             _context = context;
         }
 
-        public async Task<bool> IsExistTransactionAsync(string method, string orderRef, CancellationToken ct)
+        public async Task<bool> IsDuplicated(Guid dealerId, string externalId, CancellationToken ct)
         {
-            return await _context.Transactions
+            return await _context.DealerDebtTransactions
                 .AsNoTracking()
-                .AnyAsync(t => t.Provider == method && t.OrderRef == orderRef, ct);
+                .AnyAsync(d => d.DealerId == dealerId && d.ExternalId == externalId, ct);
         }
     }
 }

@@ -9,10 +9,9 @@ namespace SWP391Web.Infrastructure.IRepository
 {
     public interface IDealerDebtRepository : IRepository<DealerDebt>
     {
-        Task<DealerDebt?> GetCurrentQuarterAsync(Guid dealerId, DateTime asOf, CancellationToken ct);
-        Task<DealerDebt> CreateQuarterAsync(Guid dealerId, DateTime asOf, decimal openingBalance, CancellationToken ct);
-        Task<DealerDebt?> GetByDealerAndPeriodAsync(Guid dealerId, DateTime periodFrom, DateTime periodTo, CancellationToken ct);
+        Task<DealerDebt?> GetPrevPeriodAsync(Guid dealerId, DateTime currentPeriodFromUtc, CancellationToken ct);
+        Task<DealerDebt?> GetByDealerAndPeriodTrackedAsync(Guid dealerId, DateTime periodFrom, DateTime periodTo, CancellationToken ct);
+        Task<DealerDebt> GetOrCreateQuarterAsync(Guid dealerId, DateTime occurredAtUtc, CancellationToken ct);
         (DateTime from, DateTime to) GetQuarterRangeUtc(DateTime asOfUtc);
-        Task<DealerDebt?> GetLatestByDealerAsync(Guid dealerId, CancellationToken ct);
     }
 }
