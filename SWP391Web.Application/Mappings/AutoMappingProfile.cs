@@ -9,6 +9,7 @@ using SWP391Web.Application.DTO.Customer;
 using SWP391Web.Application.DTO.CustomerFeedback;
 using SWP391Web.Application.DTO.CustomerOrder;
 using SWP391Web.Application.DTO.Dealer;
+using SWP391Web.Application.DTO.DealerDebt;
 using SWP391Web.Application.DTO.DealerFeedBackDTO;
 using SWP391Web.Application.DTO.DepositSetting;
 using SWP391Web.Application.DTO.EContract;
@@ -21,6 +22,7 @@ using SWP391Web.Application.DTO.EVCInventory;
 using SWP391Web.Application.DTO.EVTemplate;
 using SWP391Web.Application.DTO.Notification;
 using SWP391Web.Application.DTO.OrderDetail;
+using SWP391Web.Application.DTO.Payment;
 using SWP391Web.Application.DTO.Promotion;
 using SWP391Web.Application.DTO.Quote;
 using SWP391Web.Application.DTO.QuoteDetail;
@@ -198,7 +200,12 @@ namespace SWP391Web.Application.Mappings
             CreateMap<Notification, GetNotificationDTO>().ReverseMap();
 
             CreateMap<DealerTier, GetDealerTierDTO>().ReverseMap();
+
             CreateMap<VehicleDelivery, GetVehicleDeliveryDTO>().ReverseMap();
+
+            CreateMap<DealerDebtTransaction, GetDealerDebtTransactionDTO>().ReverseMap();
+
+            CreateMap<Transaction, GetTransactionDTO>().ReverseMap();
         }
     }
 }

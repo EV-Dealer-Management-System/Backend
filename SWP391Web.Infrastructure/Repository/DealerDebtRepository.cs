@@ -17,48 +17,59 @@ namespace SWP391Web.Infrastructure.Repository
         {
             var dt = DateTime.SpecifyKind(asOfUtc, DateTimeKind.Utc);
 
-            var q = (dt.Month - 1) / 3 + 1;
-            int startMonth = (q - 1) * 3 + 1;
+            int firstMonthOfQuarter = ((dt.Month - 1) / 3) * 3 + 1;
 
-            var from = new DateTime(dt.Year, startMonth, 1, 0, 0, 0, DateTimeKind.Utc);
+            var start = new DateTime(dt.Year, firstMonthOfQuarter, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            if ((dt.Month - firstMonthOfQuarter) == 2)
+            {
+                start = start.AddMonths(3);
+            }
+
+            var from = start;
             var to = from.AddMonths(3).AddTicks(-1);
-
             return (from, to);
         }
 
-        public async Task<DealerDebt?> GetCurrentQuarterAsync(Guid dealerId, DateTime asOf, CancellationToken ct)
+
+        public async Task<DealerDebt?> GetPrevPeriodAsync(Guid dealerId, DateTime currentPeriodFromUtc, CancellationToken ct)
         {
-            var (from, to) = GetQuarterRangeUtc(asOf);
             return await _context.DealerDebts
-                .AsNoTracking()
-                .FirstOrDefaultAsync(d =>
-                    d.DealerId == dealerId &&
-                    d.PeriodFrom == from &&
-                    d.PeriodTo == to, ct);
+                .Where(d => d.DealerId == dealerId && d.PeriodTo < currentPeriodFromUtc)
+                .OrderByDescending(d => d.PeriodTo)
+                .FirstOrDefaultAsync(ct);
         }
 
-        public async Task<DealerDebt?> GetByDealerAndPeriodAsync(Guid dealerId, DateTime periodFrom, DateTime periodTo, CancellationToken ct)
+        public async Task<DealerDebt?> GetByDealerAndPeriodTrackedAsync(Guid dealerId, DateTime periodFrom, DateTime periodTo, CancellationToken ct)
         {
             return await _context.DealerDebts
-                .AsNoTracking()
                 .FirstOrDefaultAsync(d =>
                     d.DealerId == dealerId &&
                     d.PeriodFrom == periodFrom &&
                     d.PeriodTo == periodTo, ct);
         }
 
-        public Task<DealerDebt> CreateQuarterAsync(Guid dealerId, DateTime asOf, decimal openingBalance, CancellationToken ct)
+        public async Task<DealerDebt> GetOrCreateQuarterAsync(Guid dealerId, DateTime occurredAtUtc, CancellationToken ct)
         {
-            throw new NotImplementedException();
-        }
+            var (from, to) = GetQuarterRangeUtc(occurredAtUtc);
 
-        public async Task<DealerDebt?> GetLatestByDealerAsync(Guid dealerId, CancellationToken ct)
-        {
-            return await _context.DealerDebts
-                .AsNoTracking()
-                .Where(d => d.DealerId == dealerId)
-                .OrderByDescending(d => d.PeriodTo)
-                .FirstOrDefaultAsync(ct);
+            var period = await GetByDealerAndPeriodTrackedAsync(dealerId, from, to, ct);
+            if (period != null) return period;
+
+            var prev = await GetPrevPeriodAsync(dealerId, from, ct);
+
+            period = new DealerDebt
+            {
+                Id = Guid.NewGuid(),
+                DealerId = dealerId,
+                PeriodFrom = from,
+                PeriodTo = to,
+                OpeningBalance = prev?.ClosingBalance ?? 0m,
+            };
+
+            await _context.DealerDebts.AddAsync(period, ct);
+            await _context.SaveChangesAsync(ct);
+            return period;
         }
     }
 }
