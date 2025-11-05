@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using SWP391Web.Application.DTO;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.EContract;
+using SWP391Web.Application.DTO.VehicleDelivery;
 using SWP391Web.Application.DTO.Warehouse;
 using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
@@ -34,9 +35,8 @@ namespace SWP391Web.Application.Services
         private readonly IS3Service _s3Service;
         private readonly IWarehouseService _warehouseService;
         private readonly IRedisService _redisService;
-        private readonly IBookingEVService _bookingEVService;
         public EContractService(IWarehouseService warehouseService, IConfiguration cfg, HttpClient http, IUnitOfWork unitOfWork, IVnptEContractClient vnpt,
-            IEmailService emailService, IMapper mapper, IS3Service s3Service, IRedisService redisService, IBookingEVService bookingEVService)
+            IEmailService emailService, IMapper mapper, IS3Service s3Service, IRedisService redisService)
         {
             _cfg = cfg;
             _http = http;
@@ -47,8 +47,6 @@ namespace SWP391Web.Application.Services
             _s3Service = s3Service;
             _warehouseService = warehouseService;
             _redisService = redisService;
-            _mapper = mapper;
-            _bookingEVService = bookingEVService;
         }
 
         public async Task<ResponseDTO<GetAccessTokenDTO>> GetAccessTokenAsync()
@@ -735,7 +733,7 @@ namespace SWP391Web.Application.Services
                 else if (signResult.Data.Status.Value is (int)EContractStatus.Completed && econtract.Type is EcontractType.BookingContract)
                 {
                     econtract.BookingEV!.Status = BookingStatus.SignedByAdmin;
-                    await _bookingEVService.UpdateBookingStatusAfterSignAsync(econtract.BookingEV.Id);
+                    await UpdateBookingStatusAfterSignAsync(econtract.BookingEV.Id);
                 }
 
                 econtract.UpdateStatus((EContractStatus)signResult.Data.Status.Value);
@@ -1241,6 +1239,80 @@ namespace SWP391Web.Application.Services
             {
                 return new VnptResult<DeleteSmartCAResponse>($"Exception when deleting SmartCA: {ex.Message}");
             }
+        }
+
+        private async Task UpdateBookingStatusAfterSignAsync(Guid bookingId)
+        {
+            var bookingEV = await _unitOfWork.BookingEVRepository.GetBookingWithIdAsync(bookingId);
+            if (bookingEV == null)
+            {
+                throw new Exception("Booking not found.");
+            }
+
+            if (bookingEV.Status != BookingStatus.Approved)
+            {
+                throw new Exception("Can only sign an approved booking.");
+            }
+
+            await CreateVehicleDeliveryAsync(bookingEV);
+        }
+
+        private async Task<ResponseDTO> CreateVehicleDeliveryAsync(BookingEV bookingEV)
+        {
+            var vehicleDelivery = new VehicleDelivery
+            {
+                BookingEVId = bookingEV.Id,
+                Description = "Preparing vehicles to delivery",
+                CreatedDate = DateTime.UtcNow,
+                Status = DeliveryStatus.Preparing,
+                UpdateAt = DateTime.UtcNow,
+            };
+
+            await _unitOfWork.VehicleDeliveryRepository.AddAsync(vehicleDelivery, CancellationToken.None);
+            await _unitOfWork.SaveAsync();
+            foreach (var dt in bookingEV.BookingEVDetails)
+            {
+                var bookedVehicles = await _unitOfWork.ElectricVehicleRepository
+                    .GetBookedVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+
+                if (bookedVehicles.Count() < dt.Quantity)
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = $"Not enough booked vehicles ",
+                        StatusCode = 400
+                    };
+
+                var selectedVehicles = bookedVehicles
+                    .OrderBy(ev => ev.ImportDate)
+                    .Take(dt.Quantity)
+                    .ToList();
+
+                foreach (var ev in selectedVehicles)
+                {
+                    ev.Status = ElectricVehicleStatus.InTransit;
+                    _unitOfWork.ElectricVehicleRepository.Update(ev);
+
+                    var deliveryDetail = new VehicleDeliveryDetail
+                    {
+                        VehicleDeliveryId = vehicleDelivery.Id,
+                        ElectricVehicleId = ev.Id,
+                        Status = DeliveryVehicleStatus.Preparing,
+                        Note = "Vehicle is being prepared for shipment"
+                    };
+                    await _unitOfWork.VehicleDeliveryDetailRepository.AddAsync(deliveryDetail, CancellationToken.None);
+                }
+            }
+
+            var delivery = await _unitOfWork.VehicleDeliveryRepository.GetVehicleDeliveryById(vehicleDelivery.Id, CancellationToken.None);
+
+            var getDelivery = _mapper.Map<GetVehicleDeliveryDTO>(delivery);
+            return new ResponseDTO
+            {
+                IsSuccess = true,
+                Message = "Create Vehicle Delivery successfully",
+                StatusCode = 200
+            };
         }
     }
 }
