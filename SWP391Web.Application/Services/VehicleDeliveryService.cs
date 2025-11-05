@@ -29,10 +29,39 @@ namespace SWP391Web.Application.Services
             _mapper = mapper;
             _bookingEVService = bookingEVService;
         }
-        public async Task<ResponseDTO> GetAllVehicleDelivery(int pageNumber, int pageSize,DeliveryStatus? status, Guid? templateId, CancellationToken ct)
+        public async Task<ResponseDTO> GetAllVehicleDelivery(ClaimsPrincipal user, int pageNumber, int pageSize,DeliveryStatus? status, Guid? templateId, CancellationToken ct)
         {
             try
             {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
+
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found.",
+                        StatusCode = 401
+                    };
+                }
+
+                Guid? dealerId = null;
+                if (role == StaticUserRole.DealerManager)
+                {
+                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                    if (dealer == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer not found for current user.",
+                            StatusCode = 404
+                        };
+                    }
+                    dealerId = dealer.Id;
+                }
+
                 Func<IQueryable<VehicleDelivery>, IQueryable<VehicleDelivery>> includes = q => q
                     .Include(vd => vd.BookingEV)
                         .ThenInclude(b => b.Dealer)

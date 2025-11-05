@@ -101,7 +101,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .ToListAsync();
         }
 
-        public async Task<List<ElectricVehicle>> GetAvailableVehicleByModelIdAsync(Guid modelId)
+        public async Task<List<ElectricVehicle>> GetAvailableVehicleForBookingByModelIdAsync(Guid modelId)
         {
             return await _context.ElectricVehicles
                 .Include(ev => ev.ElectricVehicleTemplate)
