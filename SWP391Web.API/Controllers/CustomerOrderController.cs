@@ -45,9 +45,9 @@ namespace SWP391Web.API.Controllers
 
         [HttpPut]
         [Route("pay-deposit-customer-order/{customerOrderId}")]
-        public async Task<ActionResult<ResponseDTO>> PayDepositCustomerOrderAsync([FromRoute] Guid customerOrderId, CancellationToken ct)
+        public async Task<ActionResult<ResponseDTO>> PayDepositCustomerOrderAsync([FromRoute] Guid customerOrderId, [FromRoute] bool isCash, CancellationToken ct)
         {
-            var response = await _customerOrderService.PayDeposit(customerOrderId, ct);
+            var response = await _customerOrderService.PayDeposit(customerOrderId, isCash, ct);
             return StatusCode(response.StatusCode, response);
         }
     }

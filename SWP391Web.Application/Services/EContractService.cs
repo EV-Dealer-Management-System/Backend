@@ -34,8 +34,9 @@ namespace SWP391Web.Application.Services
         private readonly IS3Service _s3Service;
         private readonly IWarehouseService _warehouseService;
         private readonly IRedisService _redisService;
+        private readonly IBookingEVService _bookingEVService;
         public EContractService(IWarehouseService warehouseService, IConfiguration cfg, HttpClient http, IUnitOfWork unitOfWork, IVnptEContractClient vnpt,
-            IEmailService emailService, IMapper mapper, IS3Service s3Service, IRedisService redisService)
+            IEmailService emailService, IMapper mapper, IS3Service s3Service, IRedisService redisService, IBookingEVService bookingEVService)
         {
             _cfg = cfg;
             _http = http;
@@ -46,6 +47,8 @@ namespace SWP391Web.Application.Services
             _s3Service = s3Service;
             _warehouseService = warehouseService;
             _redisService = redisService;
+            _mapper = mapper;
+            _bookingEVService = bookingEVService;
         }
 
         public async Task<ResponseDTO<GetAccessTokenDTO>> GetAccessTokenAsync()
@@ -294,9 +297,14 @@ namespace SWP391Web.Application.Services
                         Message = "Cannot find dealer manager"
                     };
 
-                var roleId = new List<Guid>
+                var roleIds = new List<Guid>
                 {
                     Guid.Parse(_cfg["EContract:RoleId"] ?? throw new Exception("EContract:RoleId is not exist"))
+                };
+
+                var departmentIds = new List<int>
+                {
+                    int.Parse(_cfg["EContract:DepartmentId"] ?? throw new Exception("EContract:DepartmentId is not exist"))
                 };
 
                 var vnptUser = new VnptUserUpsert
@@ -312,8 +320,8 @@ namespace SWP391Web.Application.Services
                     SignConfirmationEnabled = true,
                     GenerateSelfSignedCertEnabled = false,
                     Status = 1,
-                    DepartmentIds = [4106],
-                    RoleIds = roleId
+                    DepartmentIds = departmentIds,
+                    RoleIds = roleIds
 
                 };
 
@@ -727,6 +735,7 @@ namespace SWP391Web.Application.Services
                 else if (signResult.Data.Status.Value is (int)EContractStatus.Completed && econtract.Type is EcontractType.BookingContract)
                 {
                     econtract.BookingEV!.Status = BookingStatus.SignedByAdmin;
+                    await _bookingEVService.UpdateBookingStatusAfterSignAsync(econtract.BookingEV.Id);
                 }
 
                 econtract.UpdateStatus((EContractStatus)signResult.Data.Status.Value);

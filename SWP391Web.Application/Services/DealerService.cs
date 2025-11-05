@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Dealer;
+using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Constants;
@@ -339,6 +340,173 @@ namespace SWP391Web.Application.Services
                     IsSuccess = false,
                     StatusCode = 500,
                     Message = $"Error to get all dealer staffs at DealerService:  {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> DealerInformationAsync(ClaimsPrincipal claimUser, CancellationToken ct)
+        {
+            try
+            {
+                var userId = claimUser.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "User not login yet"
+                    };
+                }
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Users do not own any dealers"
+                    };
+                }
+
+                var memberTotal = await _unitOfWork.DealerMemberRepository.TotalDealerMember(dealer.Id, ct);
+                var econtractDealer = await _unitOfWork.EContractRepository.GetEContractDealerByDealerIdAsync(userId, ct);
+                if (econtractDealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer e-contract information not found"
+                    };
+                }
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Get dealer information successfully.",
+                    Result = new
+                    {
+                        dealer = _mapper.Map<GetDealerDTO>(dealer),
+                        memberTotal = memberTotal,
+                        econtractDealer = _mapper.Map<List<GetEContractDTO>>(econtractDealer)
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to get dealer information at DealerService:  {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> UpdateStatusDealer(Guid DealerId, DealerStatus status, CancellationToken ct)
+        {
+            try
+            {
+                var dealer = await _unitOfWork.DealerRepository.GetByIdAsync(DealerId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer not found"
+                    };
+                }
+                dealer.DealerStatus = status;
+                _unitOfWork.DealerRepository.Update(dealer);
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Dealer status updated successfully."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error updating dealer status: {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> UpdateStatusDealerStaff(ClaimsPrincipal userClaim, bool isActive, string applicationUserId, CancellationToken ct)
+        {
+            try
+            {
+                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "User not login yet"
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Users do not own any dealers"
+                    };
+                }
+
+                var dealerMember = await _unitOfWork.DealerMemberRepository.IsDealerMemberBelongDealer(dealer.Id, applicationUserId, ct);
+                if (!dealerMember)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer staff not found in your dealer"
+                    };
+                }
+
+                var dealerStaff = await _unitOfWork.DealerMemberRepository.GetByApplicationId(applicationUserId, ct);
+                if (dealerStaff is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer staff not found"
+                    };
+                }
+
+                dealerStaff.IsActive = isActive;
+                _unitOfWork.DealerMemberRepository.Update(dealerStaff);
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Dealer staff status updated successfully."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error updating dealer staff status: {ex.Message}"
                 };
             }
         }

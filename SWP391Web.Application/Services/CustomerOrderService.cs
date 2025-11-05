@@ -1,7 +1,9 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.CustomerOrder;
+using SWP391Web.Application.DTO.DealerDebt;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
@@ -22,12 +24,17 @@ namespace SWP391Web.Application.Services
         public readonly IMapper _mapper;
         public readonly IPaymentService _paymentService;
         private readonly IDepositSettingService _depositSetting;
-        public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService, IDepositSettingService depositSetting)
+        private readonly IDealerDebtService _dealerDebtService;
+        private readonly IDealerDebtTransactionService _dealerDebtTransactionService;
+        public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService, IDepositSettingService depositSetting,
+            IDealerDebtService dealerDebtService, IDealerDebtTransactionService dealerDebtTransactionService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _paymentService = paymentService;
             _depositSetting = depositSetting;
+            _dealerDebtService = dealerDebtService;
+            _dealerDebtTransactionService = dealerDebtTransactionService;
         }
         public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
         {
@@ -88,12 +95,33 @@ namespace SWP391Web.Application.Services
                 else if (createCustomerOrderDTO.IsPayFull && createCustomerOrderDTO.IsCash)
                 {
                     status = OrderStatus.Completed;
+                    
+                    var recordPayment = new RecordPaymentDTO
+                    {
+                        PaidAtUtc = DateTime.UtcNow,
+                        Amount = amount,
+                        ReferenceNo = $"CustomerOrderId|{orderNo}",
+                        Note = $"Full payment for order {orderNo}",
+                        Method = "Cash",
+                    };
+
+                    await _dealerDebtService.AddPaymentForDealerAsync(dealer.Id, recordPayment, ct);
                 }
                 else if (!createCustomerOrderDTO.IsPayFull && createCustomerOrderDTO.IsCash)
                 {
                     status = OrderStatus.Depositing;
                     var depositRate = await _depositSetting.GetDepositSetting(user, ct);
                     deposit = amount * (depositRate.Data!.MaxDepositPercentage / 100);
+
+                    var recordPayment = new RecordPaymentDTO
+                    {
+                        PaidAtUtc = DateTime.UtcNow,
+                        Amount = deposit.Value,
+                        ReferenceNo = $"CustomerOrderId|{orderNo}",
+                        Note = $"Deposit payment for order {orderNo}",
+                        Method = "Cash",
+                    };
+                    await _dealerDebtService.AddPaymentForDealerAsync(dealer.Id, recordPayment, ct);
                 }
                 else
                 {
@@ -111,12 +139,13 @@ namespace SWP391Web.Application.Services
                     TotalAmount = amount,
                     DepositAmount = deposit.HasValue ? (int)deposit.Value : (int?)null,
                     Status = status,
-                    CreatedBy = userId
+                    CreatedBy = userId,
+                    Quote = quote
                 };
 
                 await _unitOfWork.CustomerOrderRepository.AddAsync(customerOrder, ct);
 
-                await HandleOrderDetail(customerOrder.Id, quote, status, ct);
+                await HandleOrderDetail(customerOrder, ct);
 
                 await _unitOfWork.SaveAsync();
 
@@ -147,34 +176,35 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        private async Task HandleOrderDetail(Guid customerOrderId, Quote quote, OrderStatus orderStatus, CancellationToken ct)
+        private async Task HandleOrderDetail(CustomerOrder customerOrder, CancellationToken ct)
         {
-            foreach (var quoteDetail in quote.QuoteDetails)
+            var orderDetails = customerOrder.Quote.QuoteDetails;
+            foreach (var quoteDetail in orderDetails)
             {
                 var vehicles = await _unitOfWork.ElectricVehicleRepository
                     .GetVehicleByQuantityWithOldestImportDateForDealerAsync(
                         quoteDetail.VersionId,
                         quoteDetail.ColorId,
-                        quote.Dealer.Warehouse.Id,
+                        customerOrder.Quote.Dealer.Warehouse.Id,
                         quoteDetail.Quantity);
 
                 foreach (var vehicle in vehicles)
                 {
                     var orderDetail = new OrderDetail
                     {
-                        CustomerOrderId = customerOrderId,
+                        CustomerOrderId = customerOrder.Id,
                         ElectricVehicleId = vehicle.Id
                     };
                     await _unitOfWork.OrderDetailRepository.AddAsync(orderDetail, ct);
-                    if (orderStatus is OrderStatus.Completed)
+                    if (customerOrder.Status is OrderStatus.Completed)
                     {
                         vehicle.Status = ElectricVehicleStatus.Sold;
                     }
-                    else if (orderStatus is OrderStatus.Depositing)
+                    else if (customerOrder.Status is OrderStatus.Depositing)
                     {
                         vehicle.Status = ElectricVehicleStatus.DepositBooked;
                     }
-                    else if (orderStatus is OrderStatus.FullPending || orderStatus is OrderStatus.DepositPending)
+                    else if (customerOrder.Status is OrderStatus.FullPending || customerOrder.Status is OrderStatus.DepositPending)
                     {
                         vehicle.Status = ElectricVehicleStatus.DealerPending;
                     }
@@ -185,11 +215,6 @@ namespace SWP391Web.Application.Services
                     _unitOfWork.ElectricVehicleRepository.Update(vehicle);
                 }
             }
-        }
-
-        public Task<ResponseDTO> GetCustomerOrderByIdAsync(Guid customerOrderId, CancellationToken ct)
-        {
-            throw new NotImplementedException();
         }
 
         public async Task<ResponseDTO> GetAllCustomerOrders(ClaimsPrincipal userClaim, int pageNumber, int pageSize, OrderStatus? orderStatus, CancellationToken ct)
@@ -359,7 +384,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> PayDeposit(Guid customerOrderId, CancellationToken ct)
+        public async Task<ResponseDTO> PayDeposit(Guid customerOrderId, bool isCash, CancellationToken ct)
         {
             try
             {
@@ -381,6 +406,22 @@ namespace SWP391Web.Application.Services
                         IsSuccess = false,
                         Message = "Only orders with Depositing status can pay deposit.",
                         StatusCode = 400,
+                    };
+                }
+
+                if(isCash)
+                {
+                    customerOrder.Status = OrderStatus.Completed;
+                    _unitOfWork.CustomerOrderRepository.Update(customerOrder);
+
+                    await HandleOrderDetail(customerOrder, ct);
+                    await _unitOfWork.SaveAsync();
+
+                    return new ResponseDTO
+                    {
+                        IsSuccess = true,
+                        Message = "Deposit paid successfully with cash.",
+                        StatusCode = 200,
                     };
                 }
 

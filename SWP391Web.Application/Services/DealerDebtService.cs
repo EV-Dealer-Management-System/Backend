@@ -4,6 +4,7 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.DealerDebt;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
@@ -16,78 +17,41 @@ namespace SWP391Web.Application.Services
     public class DealerDebtService : IDealerDebtService
     {
         private readonly IUnitOfWork _unitOfWork;
-        public DealerDebtService(IUnitOfWork unitOfWork)
+        private readonly IDealerDebtTransactionService _dealerDebtTransactionService;
+        public DealerDebtService(IUnitOfWork unitOfWork, IDealerDebtTransactionService dealerDebtTransactionService)
         {
             _unitOfWork = unitOfWork;
+            _dealerDebtTransactionService = dealerDebtTransactionService;
         }
 
         public async Task<ResponseDTO> AddPurchaseForDealerAsync(Guid dealerId, RecordDebtDTO debtDTO, CancellationToken ct)
         {
             try
             {
-                var confirmDateUtc = debtDTO.ConfirmDateUtc;
-                var year = debtDTO.ConfirmDateUtc.Year;
-                var quarter = GetQuarter(confirmDateUtc);
+                var now = DateTime.SpecifyKind(debtDTO.ConfirmDateUtc, DateTimeKind.Utc);
 
-                if (IsLastMonthOfQuarter(confirmDateUtc))
+                var create = new CreateDealerDebtTransactionDTO
                 {
-                    (year, quarter) = MoveToNextQuarter(confirmDateUtc);
-                }
+                    DealerId = dealerId,
+                    Type = DealerDebtTransactionType.Purchase,
+                    Amount = debtDTO.Amount,
+                    OccurredAtUtc = now,
+                    ExternalId = BuildExtId("PURCHASE", debtDTO.ReferenceNo, dealerId, now),
+                    SourceType = debtDTO.SourceType,
+                    SourceId = debtDTO.SourceId,
+                    SourceNo = debtDTO.ReferenceNo,
+                    ReferenceNo = debtDTO.ReferenceNo,
+                    Note = debtDTO.Note
+                };
 
-                var (periodFrom, periodTo) = _unitOfWork.DealerDebtRepository.GetQuarterRangeUtc(confirmDateUtc);
-
-                var debt = await _unitOfWork.DealerDebtRepository
-                    .GetByDealerAndPeriodAsync(dealerId, periodFrom, periodTo, ct);
-
-                var isNew = false;
-                if (debt == null)
-                {
-                    decimal openingBalance = 0m;
-
-                    var lastDebt = await _unitOfWork.DealerDebtRepository
-                        .GetLatestByDealerAsync(dealerId, ct);
-
-                    if (lastDebt != null)
-                    {
-                        openingBalance = lastDebt.ClosingBalance;
-                    }
-
-                    debt = new DealerDebt
-                    {
-                        Id = Guid.NewGuid(),
-                        DealerId = dealerId,
-                        PeriodFrom = periodFrom,
-                        PeriodTo = periodTo,
-                        OpeningBalance = openingBalance,
-                        PurchasesAmount = 0m,
-                        PaymentsAmount = 0m,
-                        CommissionsAmount = 0m,
-                        PenaltiesAmount = 0m,
-                        ClosingBalance = openingBalance,
-                        ReferenceNo = debtDTO.ReferenceNo,
-                        Note = $"Auto-create debt for Q{quarter}/{year}",
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await _unitOfWork.DealerDebtRepository.AddAsync(debt, ct);
-                    isNew = true;
-                }
-
-                debt.PurchasesAmount += debtDTO.Amount;
-
-                Recalc(debt);
-
-                if (!isNew)
-                {
-                    _unitOfWork.DealerDebtRepository.Update(debt);
-                }
-
+                await _dealerDebtTransactionService.CraeteDealerDebtTransaction(create, ct);
                 await _unitOfWork.SaveAsync();
                 return new ResponseDTO
                 {
-                    StatusCode = 200,
+                    StatusCode = 201,
                     IsSuccess = true,
-                    Message = "Successfully added purchase for dealer debt."
+                    Message = "Successfully added purchase for dealer debt.",
+                    Result = create
                 };
             }
             catch (Exception ex)
@@ -101,55 +65,36 @@ namespace SWP391Web.Application.Services
             }
         }
 
+        private static string BuildExtId(string kind, string? referenceNo, Guid dealerId, DateTime now)
+        {
+            if (!string.IsNullOrWhiteSpace(referenceNo))
+                return $"{kind}:{referenceNo}".Trim();
+
+            return $"{kind}:{dealerId}:{now:yyyyMMddHHmmss}";
+        }
+
         public async Task<ResponseDTO> AddPaymentForDealerAsync(Guid dealerId, RecordPaymentDTO paymentDTO, CancellationToken ct)
         {
             try
             {
-                var targetPeriod = ResolveQuarterPeriod(paymentDTO.PaidAtUtc);
+                var now = DateTime.SpecifyKind(paymentDTO.PaidAtUtc, DateTimeKind.Utc);
 
-                var debt = await _unitOfWork.DealerDebtRepository
-                    .GetByDealerAndPeriodAsync(dealerId, targetPeriod.PeriodFrom, targetPeriod.PeriodTo, ct);
-
-                var isNew = false;
-                if (debt is null)
+                var create = new CreateDealerDebtTransactionDTO
                 {
-                    var openingBalance = await GetOpeningBalanceFromLastPeriod(dealerId, ct);
+                    DealerId = dealerId,
+                    Type = DealerDebtTransactionType.Payment,
+                    Amount = paymentDTO.Amount,
+                    OccurredAtUtc = now,
+                    ExternalId = BuildExtId("PAYMENT", paymentDTO.ReferenceNo, dealerId, now),
+                    Method = paymentDTO.Method,
+                    SourceType = paymentDTO.SourceType,
+                    SourceId = paymentDTO.SourceId,
+                    SourceNo = paymentDTO.ReferenceNo,
+                    ReferenceNo = paymentDTO.ReferenceNo,
+                    Note = paymentDTO.Note
+                };
 
-                    debt = new DealerDebt
-                    {
-                        Id = Guid.NewGuid(),
-                        DealerId = dealerId,
-                        PeriodFrom = targetPeriod.PeriodFrom,
-                        PeriodTo = targetPeriod.PeriodTo,
-                        OpeningBalance = openingBalance,
-                        PurchasesAmount = 0m,
-                        PaymentsAmount = 0m,
-                        CommissionsAmount = 0m,
-                        PenaltiesAmount = 0m,
-                        ClosingBalance = openingBalance,
-                        OverpaidAmount = 0m,
-                        ReferenceNo = paymentDTO.ReferenceNo,
-                        Note = $"Auto-create debt for Q{targetPeriod.Quarter}/{targetPeriod.Year} (payment)",
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await _unitOfWork.DealerDebtRepository.AddAsync(debt, ct);
-                    isNew = true;
-                }
-
-                debt.PaymentsAmount += paymentDTO.Amount;
-
-                if (!string.IsNullOrWhiteSpace(paymentDTO.Method))
-                {
-                    debt.Note = (debt.Note ?? string.Empty) + $" | Payment: {paymentDTO.Method} - {(int)paymentDTO.Amount}";
-                }
-
-                Recalc(debt);
-
-                if (!isNew)
-                {
-                    _unitOfWork.DealerDebtRepository.Update(debt);
-                }
+                await _dealerDebtTransactionService.CraeteDealerDebtTransaction(create, ct);
 
                 return new ResponseDTO(true)
                 {
@@ -171,52 +116,25 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var targetPeriod = ResolveQuarterPeriod(dto.AtUtc);
+                var now = DateTime.SpecifyKind(dto.AtUtc, DateTimeKind.Utc);
 
-                var debt = await _unitOfWork.DealerDebtRepository
-                    .GetByDealerAndPeriodAsync(dealerId, targetPeriod.PeriodFrom, targetPeriod.PeriodTo, ct);
-                var isNew = false;
-                if (debt is null)
+                var create = new CreateDealerDebtTransactionDTO
                 {
-                    var openingBalance = await GetOpeningBalanceFromLastPeriod(dealerId, ct);
+                    DealerId = dealerId,
+                    Type = DealerDebtTransactionType.Commission,
+                    Amount = dto.Amount,
+                    OccurredAtUtc = now,
+                    ExternalId = BuildExtId("COMMISSION", dto.ReferenceNo, dealerId, now),
+                    SourceType = dto.SourceType,
+                    SourceId = dto.SourceId,
+                    SourceNo = dto.ReferenceNo,
+                    ReferenceNo = dto.ReferenceNo,
+                    Note = dto.Note
+                };
 
-                    debt = new DealerDebt
-                    {
-                        Id = Guid.NewGuid(),
-                        DealerId = dealerId,
-                        PeriodFrom = targetPeriod.PeriodFrom,
-                        PeriodTo = targetPeriod.PeriodTo,
-                        OpeningBalance = openingBalance,
-                        PurchasesAmount = 0m,
-                        PaymentsAmount = 0m,
-                        CommissionsAmount = 0m,
-                        PenaltiesAmount = 0m,
-                        ClosingBalance = openingBalance,
-                        OverpaidAmount = 0m,
-                        ReferenceNo = dto.ReferenceNo,
-                        Note = $"Auto-create debt for Q{targetPeriod.Quarter}/{targetPeriod.Year} (commission)",
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await _unitOfWork.DealerDebtRepository.AddAsync(debt, ct);
-                    isNew = true;
-                }
-
-                debt.CommissionsAmount += dto.Amount;
-
-                if (!string.IsNullOrWhiteSpace(dto.Note))
-                {
-                    debt.Note = (debt.Note ?? string.Empty) + $" | Commission: {dto.Note}";
-                }
-
-                Recalc(debt);
-
-                if (!isNew)
-                {
-                    _unitOfWork.DealerDebtRepository.Update(debt);
-                }
-
-                return new ResponseDTO(true)
+                await _dealerDebtTransactionService.CraeteDealerDebtTransaction(create, ct);
+                await _unitOfWork.SaveAsync();
+                return new ResponseDTO
                 {
                     StatusCode = 200,
                     Message = "Successfully recorded commission for dealer."
@@ -230,68 +148,6 @@ namespace SWP391Web.Application.Services
                     Message = $"Failed to record commission: {ex.Message}"
                 };
             }
-        }
-
-        private async Task<decimal> GetOpeningBalanceFromLastPeriod(Guid dealerId, CancellationToken ct)
-        {
-            var lastDebt = await _unitOfWork.DealerDebtRepository.GetLatestByDealerAsync(dealerId, ct);
-            if (lastDebt != null)
-            {
-                if (lastDebt.OverpaidAmount > 0)
-                    return 0m;
-                return lastDebt.ClosingBalance;
-            }
-            return 0m;
-        }
-
-        private (DateTime PeriodFrom, DateTime PeriodTo, int Quarter, int Year) ResolveQuarterPeriod(DateTime atUtc)
-        {
-            var year = atUtc.Year;
-            var quarter = GetQuarter(atUtc);
-
-            if (IsLastMonthOfQuarter(atUtc))
-            {
-                (year, quarter) = MoveToNextQuarter(atUtc);
-            }
-
-            var (from, to) = _unitOfWork.DealerDebtRepository.GetQuarterRangeUtc(new DateTime(year, (quarter - 1) * 3 + 1, 1, 0, 0, 0, DateTimeKind.Utc));
-            return (from, to, quarter, year);
-        }
-
-        private int GetQuarter(DateTime date)
-        {
-            return ((date.Month - 1) / 3) + 1;
-        }
-
-        private static void Recalc(DealerDebt debt)
-        {
-            var raw = debt.ClosingBalance = debt.OpeningBalance + debt.PurchasesAmount - debt.PaymentsAmount - debt.CommissionsAmount + debt.PenaltiesAmount;
-            if (raw < 0)
-            {
-                debt.ClosingBalance = 0;
-                debt.OverpaidAmount = Math.Abs(raw);
-            }
-            else
-            {
-                debt.ClosingBalance = raw;
-                debt.OverpaidAmount = 0;
-            }
-        }
-
-
-
-        public static bool IsLastMonthOfQuarter(DateTime dt)
-        {
-            return dt.Month % 3 == 0;
-        }
-
-        public static (int year, int quarter) MoveToNextQuarter(DateTime asOfUtc)
-        {
-            var quarter = (asOfUtc.Month - 1) / 3 + 1;
-            if (quarter == 4)
-                return (asOfUtc.Year + 1, 1);
-
-            return (asOfUtc.Year, quarter + 1);
         }
     }
 }

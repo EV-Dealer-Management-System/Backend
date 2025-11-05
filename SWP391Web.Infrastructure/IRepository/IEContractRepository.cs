@@ -10,5 +10,6 @@ namespace SWP391Web.Infrastructure.IRepository
     public interface IEContractRepository : IRepository<EContract>
     {
         Task<EContract?> GetByIdAsync(Guid id, CancellationToken ct);
+        Task<List<EContract>?> GetEContractDealerByDealerIdAsync(string managerId, CancellationToken ct);
     }
 }

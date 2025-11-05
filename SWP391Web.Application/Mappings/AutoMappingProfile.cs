@@ -9,6 +9,7 @@ using SWP391Web.Application.DTO.Customer;
 using SWP391Web.Application.DTO.CustomerFeedback;
 using SWP391Web.Application.DTO.CustomerOrder;
 using SWP391Web.Application.DTO.Dealer;
+using SWP391Web.Application.DTO.DealerDebt;
 using SWP391Web.Application.DTO.DealerFeedBackDTO;
 using SWP391Web.Application.DTO.DepositSetting;
 using SWP391Web.Application.DTO.EContract;
@@ -21,6 +22,7 @@ using SWP391Web.Application.DTO.EVCInventory;
 using SWP391Web.Application.DTO.EVTemplate;
 using SWP391Web.Application.DTO.Notification;
 using SWP391Web.Application.DTO.OrderDetail;
+using SWP391Web.Application.DTO.Payment;
 using SWP391Web.Application.DTO.Promotion;
 using SWP391Web.Application.DTO.Quote;
 using SWP391Web.Application.DTO.QuoteDetail;
@@ -154,7 +156,8 @@ namespace SWP391Web.Application.Mappings
 
             CreateMap<Dealer, GetDealerDTO>()
                 .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager.FullName))
-                .ForMember(dest => dest.ManagerEmail, opt => opt.MapFrom(src => src.Manager.Email)).ReverseMap();
+                .ForMember(dest => dest.ManagerEmail, opt => opt.MapFrom(src => src.Manager.Email))
+                .ForMember(dest => dest.Level, opt => opt.MapFrom(src => src.DealerTier.Level)).ReverseMap();
 
             CreateMap<AppointmentSetting, GetAppointSettingDTO>().ReverseMap();
 
@@ -199,9 +202,15 @@ namespace SWP391Web.Application.Mappings
             CreateMap<Notification, GetNotificationDTO>().ReverseMap();
 
             CreateMap<DealerTier, GetDealerTierDTO>().ReverseMap();
+
+            CreateMap<DealerDebtTransaction, GetDealerDebtTransactionDTO>().ReverseMap();
+
+            CreateMap<Transaction, GetTransactionDTO>().ReverseMap();
+            
             CreateMap<VehicleDelivery, GetVehicleDeliveryDTO>()
                 .ForMember(dest => dest.VehicleDeliveryDetails,opt => opt.MapFrom(src => src.VehicleDeliveryDetails))
                 .ReverseMap();
+                
             CreateMap<VehicleDeliveryDetail, GetVehicleDeliveryDetailDTO>()
                 .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.ElectricVehicle.VIN));
         }
