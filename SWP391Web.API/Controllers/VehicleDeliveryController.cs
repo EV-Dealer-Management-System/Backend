@@ -38,5 +38,18 @@ namespace SWP391Web.API.Controllers
             var response = await _vehicleDeliveryService.UpdateVehicleDeliveryStatus(User, deliveryId, newStatus, ct, description);
             return StatusCode(response.StatusCode, response);
         }
+        [HttpPost("inspect-accident/{deliveryId}")]
+        public async Task<ActionResult<ResponseDTO>> InspectAccidentVehicle([FromRoute] Guid deliveryId, [FromBody] List<Guid> damagedVehicleIds, CancellationToken ct)
+        {
+            var response = await _vehicleDeliveryService.InspectAccidentVehicleAsync(User, deliveryId, damagedVehicleIds, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPost("replace-damaged-vehicle/{deliveryId}")]
+        public async Task<ActionResult<ResponseDTO>> ReplaceDamagedVehicle([FromRoute] Guid deliveryId, CancellationToken ct)
+        {
+            var response = await _vehicleDeliveryService.ReplaceDamagedVehicleAsync(User, deliveryId, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
     }
 }
