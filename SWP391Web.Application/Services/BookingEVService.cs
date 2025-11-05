@@ -16,6 +16,7 @@ using SWP391Web.Infrastructure.SignlR;
 using System.Linq.Expressions;
 using System.Security.Claims;
 using SWP391Web.Application.DTO.VehicleDeliveryDetail;
+using StackExchange.Redis;
 
 namespace SWP391Web.Application.Services
 {
@@ -118,7 +119,7 @@ namespace SWP391Web.Application.Services
 
                 foreach (var dt in vehicleDelivery.VehicleDeliveryDetails)
                 {
-                    if(dt.ElectricVehicle != null)
+                    if (dt.ElectricVehicle != null)
                     {
                         dt.ElectricVehicle.Status = ElectricVehicleStatus.AtDealer;
                         dt.ElectricVehicle.WarehouseId = warehouse.Id;
@@ -224,13 +225,13 @@ namespace SWP391Web.Application.Services
                 foreach (var dt in bookingEV.BookingEVDetails)
                 {
                     var version = await _unitOfWork.ElectricVehicleVersionRepository.GetByIdsAsync(dt.VersionId);
-                    if ( version == null)
+                    if (version == null)
                     {
-                        return new ResponseDTO 
-                        { 
-                            IsSuccess = false, 
-                            Message = " Version not found ", 
-                            StatusCode = 404 
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = " Version not found ",
+                            StatusCode = 404
                         };
                     }
 
@@ -682,31 +683,6 @@ namespace SWP391Web.Application.Services
                     }
                 }
 
-                if(newStatus == BookingStatus.SignedByAdmin)
-                {
-                    if (role != StaticUserRole.Admin)
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "Only Admin can sign the booking.",
-                            StatusCode = 403
-                        };
-                    }
-
-                    if (bookingEV.Status != BookingStatus.Approved)
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "Booking must be approved by EVM Staff before Admin can sign.",
-                            StatusCode = 400
-                        };
-                    }
-
-                      await CreateVehicleDeliveryAsync(bookingEV);
-                }
-
                 if (bookingEV.Status == BookingStatus.WaitingDealerSign && newStatus == BookingStatus.Pending)
                 {
                     foreach (var dt in bookingEV.BookingEVDetails)
@@ -762,6 +738,22 @@ namespace SWP391Web.Application.Services
             }
         }
 
+        public async Task UpdateBookingStatusAfterSignAsync(Guid bookingId)
+        {
+            var bookingEV = await _unitOfWork.BookingEVRepository.GetBookingWithIdAsync(bookingId);
+            if (bookingEV == null)
+            {
+                throw new Exception("Booking not found.");
+            }
+
+            if (bookingEV.Status != BookingStatus.Approved)
+            {
+                throw new Exception("Can only sign an approved booking.");
+            }
+
+            await CreateVehicleDeliveryAsync(bookingEV);
+        }
+
         private async Task<ResponseDTO> CreateVehicleDeliveryAsync(BookingEV bookingEV)
         {
             var vehicleDelivery = new VehicleDelivery
@@ -773,9 +765,9 @@ namespace SWP391Web.Application.Services
                 UpdateAt = DateTime.UtcNow,
             };
 
-            await _unitOfWork.VehicleDeliveryRepository.AddAsync(vehicleDelivery,CancellationToken.None);
+            await _unitOfWork.VehicleDeliveryRepository.AddAsync(vehicleDelivery, CancellationToken.None);
             await _unitOfWork.SaveAsync();
-            foreach(var dt in bookingEV.BookingEVDetails)
+            foreach (var dt in bookingEV.BookingEVDetails)
             {
                 var bookedVehicles = await _unitOfWork.ElectricVehicleRepository
                     .GetBookedVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
@@ -805,14 +797,12 @@ namespace SWP391Web.Application.Services
                         Status = DeliveryVehicleStatus.Preparing,
                         Note = "Vehicle is being prepared for shipment"
                     };
-                    await _unitOfWork.VehicleDeliveryDetailRepository.AddAsync(deliveryDetail,CancellationToken.None);
+                    await _unitOfWork.VehicleDeliveryDetailRepository.AddAsync(deliveryDetail, CancellationToken.None);
                 }
             }
 
-            await _unitOfWork.SaveAsync();
+            var delivery = await _unitOfWork.VehicleDeliveryRepository.GetVehicleDeliveryById(vehicleDelivery.Id, CancellationToken.None);
 
-            var delivery = await _unitOfWork.VehicleDeliveryRepository.GetVehicleDeliveryById(vehicleDelivery.Id,CancellationToken.None);
-            
             var getDelivery = _mapper.Map<GetVehicleDeliveryDTO>(delivery);
             return new ResponseDTO
             {
