@@ -23,7 +23,6 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<ElectricVehicle> ElectricVehicles { get; set; }
         public DbSet<EContract> EContracts { get; set; }
         public DbSet<EContractTemplate> EContractTemplates { get; set; }
-        public DbSet<EContractTerm> EContractTerms { get; set; }
         public DbSet<BookingEV> BookingEVs { get; set; }
         public DbSet<BookingEVDetail> BookingEVDetails { get; set; }
         public DbSet<EVCInventory> EVCInventories { get; set; }
@@ -58,7 +57,6 @@ namespace SWP391Web.Infrastructure.Context
             DealerTierSeeder.DealerTierConfigure(modelBuilder);
             EmailSeeder.SeedEmailTemplate(modelBuilder);
             EContractSeeder.EContractTemplateSeeder.SeedDealerEContract(modelBuilder);
-            EContractTermSeeder.SeedTerm(modelBuilder);
             AdminSeeder.AdminConfigure(modelBuilder);
 
             // Customize ASP.NET Identity table names

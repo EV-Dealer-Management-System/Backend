@@ -17,7 +17,6 @@ namespace SWP391Web.Infrastructure.Repository
         public IElectricVehicleVersionRepository ElectricVehicleVersionRepository { get; private set; }
         public IElectricVehicleRepository ElectricVehicleRepository { get; private set; }
         public IEContractTemplateRepository EContractTemplateRepository { get; private set; }
-        public IEContractTermRepository EContractTermRepository { get; private set; }
         public IEContractRepository EContractRepository { get; private set; }
         public IBookingEVRepository BookingEVRepository { get; private set; }
         public IEVCInventoryRepository EVCInventoryRepository { get; private set; }
@@ -56,7 +55,6 @@ namespace SWP391Web.Infrastructure.Repository
             ElectricVehicleVersionRepository = new ElectricVehicleVersionRepository(_context);
             ElectricVehicleRepository = new ElectricVehicleRepository(_context);
             EContractTemplateRepository = new EContractTemplateRepository(_context);
-            EContractTermRepository = new EContractTermRepository(_context);
             EContractRepository = new EContractRepository(_context);
             BookingEVRepository = new BookingEVRepository(_context);
             EVCInventoryRepository = new EVCInventoryRepository(_context);
