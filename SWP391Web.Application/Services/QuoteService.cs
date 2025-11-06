@@ -262,7 +262,7 @@ namespace SWP391Web.Application.Services
                 }
 
 
-                //filterd quote status
+                //filter quote status
                 var filteredQuotes = new List<GetQuoteDTO>();
                 foreach (var q in quotes)
                 {

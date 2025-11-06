@@ -250,15 +250,19 @@ namespace SWP391Web.Infrastructure.Repository
                 .ToListAsync();
         }
 
-        public async Task<ElectricVehicle?> GetFirstAvailableVehicleAsync(Guid versionId, Guid colorId, CancellationToken ct)
+        public async Task<ElectricVehicle?> GetFirstAvailableVehicleAsync(Guid versionId, Guid colorId, IEnumerable<Guid>? excludeVehicleIds, CancellationToken ct)
         {
-            return await _context.ElectricVehicles
+            var query = _context.ElectricVehicles
                 .Include(ev => ev.ElectricVehicleTemplate)
                 .Where(ev => ev.Status == ElectricVehicleStatus.Available
                     && ev.ElectricVehicleTemplate.VersionId == versionId
-                    && ev.ElectricVehicleTemplate.ColorId == colorId)
-                .OrderBy(ev => ev.ImportDate)
-                .FirstOrDefaultAsync(ct);
+                    && ev.ElectricVehicleTemplate.ColorId == colorId);
+            if( excludeVehicleIds != null && excludeVehicleIds.Any())
+            {
+                query = query.Where(ev => !excludeVehicleIds.Contains(ev.Id));
+            }
+
+            return await query.OrderBy(ev => ev.ImportDate).FirstOrDefaultAsync(ct);
         }
     }
 }

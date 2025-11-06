@@ -504,13 +504,24 @@ namespace SWP391Web.Application.Services
                 var damagedVehicle = delivery.VehicleDeliveryDetails
                     .Where(v => v.Status == DeliveryVehicleStatus.Damaged)
                     .ToList();
+                if (!damagedVehicle.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No damaged vehicle found",
+                        StatusCode = 400
+                    };
+                }
                  
+                var usedReplacementIds = new HashSet<Guid>();
+
                 foreach (var dt in damagedVehicle)
                 {
                     var template = dt.ElectricVehicle.ElectricVehicleTemplate;
 
                     var replacement = await _unitOfWork.ElectricVehicleRepository
-                        .GetFirstAvailableVehicleAsync(template.VersionId, template.ColorId, ct);
+                        .GetFirstAvailableVehicleAsync(template.VersionId, template.ColorId, usedReplacementIds, ct);
                     if(replacement == null)
                     {
                         return new ResponseDTO
@@ -529,6 +540,7 @@ namespace SWP391Web.Application.Services
                     _unitOfWork.ElectricVehicleRepository.Update(replacement);
                     _unitOfWork.VehicleDeliveryDetailRepository.Update(dt);
 
+                    usedReplacementIds.Add(replacement.Id);
                 }
 
                 delivery.Status = DeliveryStatus.InTransit;
