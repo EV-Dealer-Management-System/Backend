@@ -325,7 +325,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetEVCInventoryAsync(ClaimsPrincipal user)
+        public async Task<ResponseDTO> GetEVCInventoryAsync(ClaimsPrincipal user, int pageNumber, int pageSize, CancellationToken ct)
         {
             try
             {
@@ -390,7 +390,9 @@ namespace SWP391Web.Application.Services
                         Quantity = g.Count(),
                         Vehicles = g.Select(v => new
                         {
+                            v.Id,
                             v.VIN,
+                            v.Status,
                             v.WarehouseId,
                             WarehouseName = v.Warehouse.WarehouseName,
                             ImportDate = v.ImportDate.HasValue
@@ -404,12 +406,30 @@ namespace SWP391Web.Application.Services
                     .ThenBy(x => x.ColorName)
                     .ToList();
 
+                var totalItems = groupedInventory.Count;
+                var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+
+                var pagedData = groupedInventory
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     StatusCode = 200,
                     Message = "Get company inventory successfully",
-                    Result = groupedInventory
+                    Result = new
+                    {
+                        data = pagedData,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = pageSize,
+                            TotalItems = totalItems,
+                            TotalPages = totalPages
+                        }
+                    }
                 };
             }
             catch (Exception ex)
