@@ -52,6 +52,16 @@ namespace SWP391Web.Application.Service
                     };
                 }
 
+                if (user.LockoutEnabled)
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "Account is deactivated. Please contact support.",
+                        IsSuccess = false,
+                        StatusCode = 403
+                    };
+                }
+
                 var isPasswordValid = await _unitOfWork.UserManagerRepository.CheckPasswordAsync(user, loginUserDTO.Password);
                 if (!isPasswordValid)
                 {
