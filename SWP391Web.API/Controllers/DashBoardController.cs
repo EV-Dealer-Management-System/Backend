@@ -32,5 +32,11 @@ namespace SWP391Web.API.Controllers
             var response = await _dashBoardService.GetDealerRevenueByQuarterAsync(User, year, ct);
             return StatusCode(response.StatusCode, response);
         }
+        [HttpGet("get-dealer-staff-dashboard")]
+        public async Task<ActionResult<ResponseDTO>> GetDealerStaffDashBoard(CancellationToken ct)
+        {
+            var response = await _dashBoardService.GetDealerStaffDashboardAsync(User, ct);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

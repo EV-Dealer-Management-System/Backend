@@ -40,6 +40,7 @@ namespace SWP391Web.Infrastructure.Repository
                                 && t.Status == TransactionStatus.Success
                                 && t.CreatedAt.Year == year)
                     .ToListAsync(ct);
+        }
         public async Task<Transaction?> GetByCustomerOrderIdAsync(Guid customerOrderId, CancellationToken ct)
         {
             return await _context.Transactions
