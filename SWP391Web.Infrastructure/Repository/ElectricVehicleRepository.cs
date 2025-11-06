@@ -264,5 +264,12 @@ namespace SWP391Web.Infrastructure.Repository
 
             return await query.OrderBy(ev => ev.ImportDate).FirstOrDefaultAsync(ct);
         }
+
+        public Task<int> CountAvailableByDealerAsync(Guid dealerId, CancellationToken ct)
+        {
+            return _context.ElectricVehicles
+        .Where(ev => ev.Warehouse.DealerId == dealerId && ev.Status == ElectricVehicleStatus.AtDealer)
+        .CountAsync(ct);
+        }
     }
 }

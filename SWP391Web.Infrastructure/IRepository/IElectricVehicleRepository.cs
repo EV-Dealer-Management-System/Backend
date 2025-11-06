@@ -29,6 +29,7 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<List<ElectricVehicle>> GetVehicleByQuantityWithOldestImportDateForDealerAsync(Guid versionId, Guid colorId, Guid warehouseId, int quantity);
         Task<int> CountDealerAvailableByVersionColorAsync(Guid dealerId, Guid versionId, Guid colorId, CancellationToken ct);
         Task<ElectricVehicle?> GetByVersionColorId(Guid VersionId, Guid ColorId);
+        Task<int> CountAvailableByDealerAsync(Guid dealerId, CancellationToken ct);
         Task<ElectricVehicle?> GetFirstAvailableVehicleAsync(Guid versionId, Guid colorId, IEnumerable<Guid>? excludeVehicleIds, CancellationToken ct);
     }
 }

@@ -19,6 +19,11 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
+        public Task<int> CountByDealerIdAsync(Guid dealerId, CancellationToken ct)
+        {
+             return _context.BookingEVs.Where(b => b.DealerId == dealerId).CountAsync(ct);
+        }
+
         public async Task<List<BookingEV>> GetAllBookingWithDetailAsync()
         {
             {

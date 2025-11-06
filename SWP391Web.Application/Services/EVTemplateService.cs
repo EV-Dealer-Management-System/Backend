@@ -10,8 +10,10 @@ using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SWP391Web.Application.Services
 {
@@ -116,17 +118,53 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetAllVehicleTemplateAsync()
+        public async Task<ResponseDTO> GetAllVehicleTemplateAsync(int pageNumber, int pageSize, string? search, Guid? templateId,CancellationToken ct)
         {
             try
             {
-                var templates = await _unitOfWork.EVTemplateRepository.GetAllAsync(
-                    includes: q => q
-                        .Include(t => t.Version)
-                            .ThenInclude(v => v.Model)
-                        .Include(t => t.Color));
-                        //.Include(t => t.EVAttachments));
-                var getTemples = _mapper.Map<List<GetEVTemplateDTO>>(templates);
+                Func<IQueryable<ElectricVehicleTemplate>, IQueryable<ElectricVehicleTemplate>> includes = q => q
+                    .Include(t => t.Version)
+                        .ThenInclude(v => v.Model)
+                    .Include(t => t.Color);
+
+                Expression<Func<ElectricVehicleTemplate, bool>> filter = t =>
+                    t.IsActive == true &&
+                    (!templateId.HasValue || t.Id == templateId.Value);
+
+                if (templateId.HasValue || !string.IsNullOrWhiteSpace(search))
+                {
+                    var lowered = search?.Trim().ToLower();
+                    filter = t =>
+                        t.IsActive == true &&
+                        (!templateId.HasValue || t.Id == templateId.Value) &&
+                        (string.IsNullOrWhiteSpace(lowered)
+                            || (t.Version != null && t.Version.VersionName.ToLower().Contains(lowered))
+                            || (t.Version.Model != null && t.Version.Model.ModelName.ToLower().Contains(lowered))
+                            || (t.Color != null && t.Color.ColorName.ToLower().Contains(lowered)));
+                }
+
+                (IReadOnlyList<ElectricVehicleTemplate> items, int total) result =
+                    await _unitOfWork.EVTemplateRepository.GetPagedAsync(
+                        filter: filter,
+                        includes: includes,
+                        orderBy: t => t.Price,
+                        ascending: false,
+                        pageNumber: pageNumber,
+                        pageSize: pageSize,
+                        ct: ct
+                    );
+
+                if (result.items == null || !result.items.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "No vehicle templates found."
+                    };
+                }
+
+                var getTemples = _mapper.Map<List<GetEVTemplateDTO>>(result.items);
 
                 foreach (var tem in getTemples)
                 {
@@ -148,7 +186,17 @@ namespace SWP391Web.Application.Services
                     IsSuccess = true,
                     Message = "Get all Template successfully",
                     StatusCode = 200,
-                    Result = getTemples
+                    Result = new
+                    {
+                        data = getTemples,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = pageSize,
+                            TotalItems = result.total,
+                            TotalPages = (int)Math.Ceiling((double)result.total / pageSize)
+                        }
+                    }
                 };
             }
             catch (Exception ex)
@@ -304,25 +352,43 @@ namespace SWP391Web.Application.Services
                 //Take photo
                 if (updateEVTemplateDTO.AttachmentKeys != null && updateEVTemplateDTO.AttachmentKeys.Any())
                 {
-                    //Remove all photo
-                    foreach (var att in template.EVAttachments.ToList())
+                    var oldAttachments = template.EVAttachments.ToList();
+                    try
                     {
-                        await _s3Service.RemoveElectricVehicleFile(att.Key);
-                        _unitOfWork.EVAttachmentRepository.Remove(att);
-                    }
-
-                    template.EVAttachments.Clear();
-
-                    //Add new photo
-                    foreach (var key in updateEVTemplateDTO.AttachmentKeys)
-                    {
-                        var fileName = Path.GetFileName(key);
-                        template.EVAttachments.Add(new EVAttachment
+                        // delete old photo
+                        foreach (var att in oldAttachments)
                         {
-                            ElectricVehicleTemplateId = template.Id,
-                            FileName = fileName,
-                            Key = key
-                        });
+                            await _s3Service.RemoveElectricVehicleFile(att.Key);
+                            _unitOfWork.EVAttachmentRepository.Remove(att);
+                        }
+
+                        // remove from entity
+                        template.EVAttachments.Clear();
+
+                        // Add new photo
+                        foreach (var key in updateEVTemplateDTO.AttachmentKeys)
+                        {
+                            var fileName = Path.GetFileName(key);
+                            template.EVAttachments.Add(new EVAttachment
+                            {
+                                ElectricVehicleTemplateId = template.Id,
+                                FileName = fileName,
+                                Key = key
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // if delete photo error then rollback
+                        foreach (var oldAtt in oldAttachments)
+                            template.EVAttachments.Add(oldAtt);
+
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            StatusCode = 500,
+                            Message = $"Failed to update attachments: {ex.Message}"
+                        };
                     }
                 }
 

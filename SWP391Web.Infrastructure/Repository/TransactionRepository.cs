@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.IRepository;
 using System;
@@ -16,6 +17,29 @@ namespace SWP391Web.Infrastructure.Repository
         public TransactionRepository(ApplicationDbContext context) : base(context)
         {
             _context = context;
+        }
+
+        public async Task<decimal> GetDealerRevenueAsync(Guid dealerId, CancellationToken ct)
+        {
+            return  await _context.Transactions
+                .Include(t => t.CustomerOrder)
+                    .ThenInclude(co => co.Quote)
+                .Where(t => t.CustomerOrder.Quote.DealerId == dealerId
+                        && t.Status == TransactionStatus.Success)
+                .SumAsync(t => t.Amount, ct);
+        }
+
+        public async Task<List<Transaction>> GetDealerTransactionsByYearAsync(Guid dealerId, int year, CancellationToken ct)
+        {
+            return await _context.Transactions
+                    .Include(t => t.CustomerOrder)
+                        .ThenInclude(co => co.Quote)
+                    .Include(t => t.CustomerOrder)
+                        .ThenInclude(co => co.OrderDetails)
+                    .Where(t => t.CustomerOrder.Quote.DealerId == dealerId
+                                && t.Status == TransactionStatus.Success
+                                && t.CreatedAt.Year == year)
+                    .ToListAsync(ct);
         }
 
         public async Task<bool> IsExistTransactionAsync(string method, string orderRef, CancellationToken ct)
