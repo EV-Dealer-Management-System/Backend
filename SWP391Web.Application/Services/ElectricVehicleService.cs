@@ -354,28 +354,30 @@ namespace SWP391Web.Application.Services
 
                 var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllEVCVehiclesWithDetailAsync();
 
-                var companyVehicles = vehicles
-                    .Where(v => v.Warehouse != null && v.Warehouse.WarehouseType == WarehouseType.EVInventory)
-                    .ToList();
+                List<ElectricVehicle> filteredVehicles;
 
-                if (warehouseId.HasValue)
+                if( warehouseId.HasValue )
                 {
-                    companyVehicles = companyVehicles
-                        .Where(v => v.WarehouseId == warehouseId.Value)
-                        .ToList();
+                    // take all vehicles from this warehouseId, no matter evc or dealer
+                    filteredVehicles = vehicles.Where(v => v.WarehouseId == warehouseId.Value).ToList();
+                }
+                else
+                {
+                    // warehouseId null → take alll evc inventory only
+                    filteredVehicles = vehicles.Where(v => v.Warehouse != null && v.Warehouse.WarehouseType == WarehouseType.EVInventory).ToList();
                 }
 
-                if (!companyVehicles.Any())
+                if (!filteredVehicles.Any())
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        StatusCode = 404,
-                        Message = "No vehicles found in company inventory."
+                        Message = "No vehicles found",
+                        StatusCode = 404
                     };
                 }
 
-                var groupedInventory = companyVehicles
+                var groupedInventory = filteredVehicles
                     .GroupBy(v => new
                     {
                         ModelId = v.ElectricVehicleTemplate.Version.Model.Id,
