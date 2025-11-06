@@ -16,6 +16,8 @@ namespace SWP391Web.Infrastructure.Seeders
 
             private static readonly Guid BookingTemplateId = Guid.Parse("2e932187-140c-4ccf-807f-5e7cc1061663");
 
+            private static readonly Guid CustomerDepositTemplateId = Guid.Parse("a3b5ed56-8d8f-4fd1-9f0a-4dbe2a0a44b7");
+
             private static readonly DateTime CreatedAtUtc = new DateTime(2025, 10, 06, 0, 0, 0, DateTimeKind.Utc);
 
             private const string CommonPartiesBlock = @"
@@ -646,6 +648,133 @@ namespace SWP391Web.Infrastructure.Seeders
 </html>
 ";
 
+
+            private const string CustomerDepositContractHtml = @"
+<!doctype html>
+<html lang=""vi"">
+<head>
+  <meta charset=""utf-8"" />
+  <title>HỢP ĐỒNG ĐẶT CỌC MUA XE – ĐƠN HÀNG #{{ order.no }}</title>
+  <style>
+    @page { size:A4; margin:10mm 14mm 14mm 14mm; }
+    body { background:#fff; font-family:'Noto Sans','DejaVu Sans','Arial',sans-serif; font-size:12pt; line-height:1.5; color:#000; }
+    h1,h2,h3,h4 { text-align:center; margin:4px 0; }
+    p { margin:4px 0; }
+    .muted { color:#777; font-size:10pt; }
+    .section-title { margin-top:12px; font-weight:bold; text-transform:uppercase; }
+    table { width:100%; border-collapse:collapse; margin-top:8px; }
+    th,td { border:1px solid #444; padding:6px 8px; vertical-align:top; }
+    thead { display: table-header-group; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 16px; }
+    .signature-table { width:100%; margin-top:24px; table-layout:fixed; border-collapse:collapse; }
+    .signature-table td { width:50%; vertical-align:bottom; padding:0 6px; }
+    .sign-slot { position:relative; padding:10px; }
+    .anchor { position:absolute; bottom:10px; left:10px; font-size:1pt; line-height:1; color:#ffffff; opacity:0.01; letter-spacing:-0.2pt; user-select:none; }
+  </style>
+</head>
+<body>
+  <h2>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</h2>
+  <h4>Độc lập - Tự do - Hạnh phúc</h4>
+  <h2>HỢP ĐỒNG ĐẶT CỌC MUA XE</h2>
+  <p style=""text-align:center""><b>Mã đơn hàng: #{{ order.no }} • Ngày lập: {{ order.date }}</b></p>
+
+  <div class=""section-title"">Các bên</div>
+  <div class=""grid"">
+    <div>
+      <p><b>BÊN A (ĐẠI LÝ / ĐƠN VỊ BÁN):</b></p>
+      <p>- Tên đơn vị: {{ dealer.name }}</p>
+      <p>- Địa chỉ: {{ dealer.address }}</p>
+      <p>- MST: {{ dealer.taxNo }}</p>
+      <p>- Điện thoại: {{ dealer.phone }}</p>
+      <p>- Email: {{ dealer.email }}</p>
+      <p>- Đại diện: {{ roles.A.representative }} ({{ roles.A.title }})</p>
+      <p>- Tài khoản: {{ dealer.bankAccount }} tại {{ dealer.bankName }}</p>
+    </div>
+    <div>
+      <p><b>BÊN B (KHÁCH HÀNG):</b></p>
+      <p>- Họ và tên: {{ customer.fullName }}</p>
+      <p>- Số ĐT: {{ customer.phone }}</p>
+      <p>- Email: {{ customer.email }}</p>
+      <p>- CCCD/Hộ chiếu: {{ customer.idNo }}</p>
+      <p>- Địa chỉ: {{ customer.address }}</p>
+    </div>
+  </div>
+
+  <div class=""section-title"">Điều 1. Thông tin đơn hàng và khoản đặt cọc</div>
+  <div class=""grid"">
+    <div><b>Tổng giá trị đơn hàng (dự kiến):</b> {{ money.orderTotal }}</div>
+    <div><b>Số tiền đặt cọc:</b> {{ money.deposit }}</div>
+    <div><b>Số tiền còn lại:</b> {{ money.remaining }}</div>
+    <div><b>Phương thức đặt cọc:</b> {{ order.paymentMethod }}</div>
+  </div>
+  <p><i>Ghi chú:</i> Giá trị đơn hàng có thể thay đổi theo cấu hình/màu sắc/thời điểm giao nhận. Mọi điều chỉnh giá sẽ được hai bên xác nhận bằng phụ lục/phiếu điều chỉnh đính kèm.</p>
+
+  <div class=""section-title"">Điều 2. Danh mục xe đặt mua</div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Mẫu xe / Phiên bản</th>
+        <th>Màu</th>
+        <th>Số lượng</th>
+        <th>Ghi chú</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ order.vehicleRows }}
+    </tbody>
+  </table>
+
+  <div class=""section-title"">Điều 3. Thời hạn giữ hàng & giao hàng</div>
+  <p>3.1. Bên A giữ hàng tương ứng số lượng trong Điều 2 tối đa <b>{{ policy.holdDays }}</b> ngày kể từ ngày đặt cọc, trừ khi hai bên có thỏa thuận khác bằng văn bản.</p>
+  <p>3.2. Dự kiến giao/nhận tại: {{ logistics.place }} • Thời gian dự kiến: {{ logistics.eta }} (có thể điều chỉnh theo tồn kho & vận chuyển).</p>
+
+  <div class=""section-title"">Điều 4. Thanh toán</div>
+  <p>4.1. Bên B thanh toán phần còn lại <b>trước hoặc tại thời điểm nhận xe</b> theo một trong các hình thức: chuyển khoản, thẻ, tiền mặt (tuân thủ quy định pháp luật về hạn mức tiền mặt).</p>
+  <p>4.2. Quá hạn thanh toán quá <b>{{ policy.lateDays }}</b> ngày so với lịch dự kiến, Bên A có quyền: (i) chấm dứt giữ hàng; và/hoặc (ii) áp dụng phí lưu kho/chi phí phát sinh thực tế (nếu có).</p>
+
+  <div class=""section-title"">Điều 5. Chính sách đặt cọc & hoàn hủy</div>
+  <p>5.1. Khoản đặt cọc mang tính <b>bảo đảm nghĩa vụ mua</b>; nếu Bên B đơn phương hủy không do lỗi của Bên A, khoản cọc <b>không hoàn lại</b>.</p>
+  <p>5.2. Trường hợp Bên A không thể cung ứng xe đúng cấu hình đã xác nhận trong thời hạn giữ hàng (Điều 3.1) và Bên B không đồng ý phương án thay thế, Bên A hoàn trả toàn bộ tiền cọc trong vòng <b>07 ngày làm việc</b>.</p>
+  <p>5.3. Nếu hai bên thống nhất thay đổi cấu hình/phiên bản/màu, hợp đồng này vẫn có hiệu lực và được điều chỉnh bằng phụ lục.</p>
+
+  <div class=""section-title"">Điều 6. Bảo hành, chất lượng & trách nhiệm</div>
+  <p>6.1. Xe được bảo hành theo chính sách bảo hành hiện hành của hãng/nhà sản xuất.</p>
+  <p>6.2. Khi nhận xe, Bên B có trách nhiệm kiểm tra ngoại quan, phụ kiện, chứng từ; mọi khiếu nại sai khác phải thông báo trong vòng <b>03 ngày</b> để được hỗ trợ.</p>
+
+  <div class=""section-title"">Điều 7. Bảo mật & dữ liệu</div>
+  <p>7.1. Bên B đồng ý để Bên A sử dụng thông tin liên hệ nhằm phục vụ bảo hành, nhắc bảo dưỡng, thông báo chương trình (có thể hủy đăng ký bất kỳ lúc nào).</p>
+
+  <div class=""section-title"">Điều 8. Hiệu lực, chấm dứt & giải quyết tranh chấp</div>
+  <p>8.1. Hợp đồng có hiệu lực từ ngày ký đến khi hai bên hoàn tất nghĩa vụ, hoặc được thay thế bởi hợp đồng mua bán chính thức khi giao xe.</p>
+  <p>8.2. Tranh chấp ưu tiên thương lượng; không thành sẽ đưa ra cơ quan có thẩm quyền tại <b>TP. Hồ Chí Minh</b> theo pháp luật Việt Nam.</p>
+
+  <table class=""signature-table"">
+    <tr>
+      <td>
+        <div class=""sign-slot"">
+          <div class=""muted""><b>ĐẠI DIỆN BÊN A (ĐẠI LÝ)</b></div>
+          <div><b>{{ roles.A.representative }}</b></div>
+          <div>{{ roles.A.title }}</div>
+          <div class=""muted"">Ký, ghi rõ họ tên, đóng dấu</div>
+          <div class=""anchor"">{{ roles.A.signatureAnchor }}</div>
+        </div>
+      </td>
+      <td>
+        <div class=""sign-slot"">
+          <div class=""muted""><b>ĐẠI DIỆN BÊN B (KHÁCH HÀNG)</b></div>
+          <div><b>{{ customer.fullName }}</b></div>
+          <div class=""muted"">Ký, ghi rõ họ tên</div>
+          <div class=""anchor"">{{ roles.B.signatureAnchor }}</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <div class=""muted"">Trang {{ page }} / {{ pages }}</div>
+</body>
+</html>";
+
             public static void SeedDealerEContract(ModelBuilder modelBuilder)
             {
                 modelBuilder.Entity<EContractTemplate>().HasData(
@@ -700,6 +829,15 @@ namespace SWP391Web.Infrastructure.Seeders
                         Code = "BOOKINGECONTRACT",
                         Name = "Xác nhận đặt xe – điều xe về đại lý",
                         ContentHtml = BookingContractHtml,
+                        CreatedAt = CreatedAtUtc,
+                        IsDeleted = false
+                    },
+                    new
+                    {
+                        Id = CustomerDepositTemplateId,
+                        Code = "CUSTOMER_DEPOSIT_CONTRACT",
+                        Name = "Hợp đồng đặt cọc mua xe (Khách hàng)",
+                        ContentHtml = CustomerDepositContractHtml,
                         CreatedAt = CreatedAtUtc,
                         IsDeleted = false
                     }
