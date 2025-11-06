@@ -18,7 +18,7 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public async Task<Promotion?> GetPromotionByIdAsync(Guid id)
+        public async Task<Promotion?> GetPromotionByIdAsync(Guid? id)
         {
             return await _context.Promotions.FirstOrDefaultAsync(p => p.Id == id);
         }
@@ -36,6 +36,16 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<bool> IsExistPromotionByNameAsync(string name)
         {
             return await _context.Promotions.AnyAsync(p => p.Name == name);
+        }
+
+        public async Task<Promotion?> GetActivePromotionByVersionIdAsync(Guid versionId)
+        {
+            return await _context.Promotions.FirstOrDefaultAsync(p => p.VersionId == versionId && p.IsActive);
+        }
+
+        public async Task<Promotion?> GetActivePromotionByModelIdAsync(Guid modelId)
+        {
+            return await _context.Promotions.FirstOrDefaultAsync(p => p.ModelId == modelId && p.IsActive);
         }
     }
 }

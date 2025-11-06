@@ -25,6 +25,22 @@ namespace SWP391Web.Domain.Entities
             ContentHtml = contentHtml;
         }
 
+        public void UpdateName(string name)
+        {
+            Name = name;
+        }
+
+        public void UpdateContentHtml(string contentHtml)
+        {
+            ContentHtml = contentHtml;
+        }
+
+        public void Update(string name, string contentHtml)
+        {
+            Name = name;
+            ContentHtml = contentHtml;
+        }
+
         public ICollection<EContract> EContracts { get; set; } = new List<EContract>();
 
     }

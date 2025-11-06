@@ -21,6 +21,11 @@ namespace SWP391Web.Infrastructure.Repository
             return await _userManager.AccessFailedAsync(user);
         }
 
+        public async Task<IdentityResult> ResetAccessFailedAsync(ApplicationUser user)
+        {
+            return await _userManager.ResetAccessFailedCountAsync(user);
+        }
+
         public async Task<IdentityResult> AddToRoleAsync(ApplicationUser user, string role)
         {
             return await _userManager.AddToRoleAsync(user, role)
@@ -59,7 +64,7 @@ namespace SWP391Web.Infrastructure.Repository
 
         public async Task<ApplicationUser?> GetByIdAsync(string id)
         {
-            return await _userManager.FindByIdAsync(id);
+            return await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
         }
 
         public async Task<IList<string>> GetRoleAsync(ApplicationUser user)
@@ -81,7 +86,7 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _userManager.ResetPasswordAsync(user, token, newPassword);
         }
-        
+
         public async Task<IdentityResult> SetPassword(ApplicationUser user, string newPassword)
         {
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
@@ -102,6 +107,22 @@ namespace SWP391Web.Infrastructure.Repository
         {
             var roles = await _userManager.GetRolesAsync(user);
             return await _userManager.RemoveFromRolesAsync(user, roles);
+        }
+
+        public async Task<IdentityResult> CreateAsync(ApplicationUser user)
+        {
+            return await _userManager.CreateAsync(user);
+        }
+
+        public async Task<IdentityResult> AddLoginGoogleAsync(ApplicationUser user, string googleSub)
+        {
+            var info = new UserLoginInfo("Google", googleSub, "Google");
+            return await _userManager.AddLoginAsync(user, info);
+        }
+
+        public async Task<IList<UserLoginInfo>> HasLogin(ApplicationUser user)
+        {
+            return await _userManager.GetLoginsAsync(user);
         }
     }
 }

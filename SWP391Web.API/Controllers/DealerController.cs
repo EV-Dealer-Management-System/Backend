@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SWP391Web.Application.DTO.Dealer;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Constants;
+using SWP391Web.Domain.Enums;
 
 namespace SWP391Web.API.Controllers
 {
@@ -12,9 +13,11 @@ namespace SWP391Web.API.Controllers
     public class DealerController : ControllerBase
     {
         private readonly IDealerService _dealerService;
-        public DealerController(IDealerService dealerService)
+        private readonly IDealerTierService _dealerTierService;
+        public DealerController(IDealerService dealerService, IDealerTierService dealerTierService)
         {
             _dealerService = dealerService;
+            _dealerTierService = dealerTierService;
         }
 
         [HttpPost]
@@ -34,6 +37,80 @@ namespace SWP391Web.API.Controllers
             [FromQuery] int pageSize = 10, CancellationToken ct = default)
         {
             var response = await _dealerService.GetAllDealerStaffAsync(User, filterOn, filterQuery, sortBy, isAcsending, pageNumber, pageSize, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpGet]
+        [Route("get-all-dealers")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> GetAllDealers([FromQuery] string? filterOn, [FromQuery] string? filterQuery,
+            [FromQuery] string? sortBy, [FromQuery] bool? isAcsending, [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10, CancellationToken ct = default)
+        {
+            var response = await _dealerService.GetAllDealerAsync(filterOn, filterQuery, sortBy, isAcsending, pageNumber, pageSize, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPut]
+        [Route("update-dealer-tier/{dealerTierId}")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> UpdateDealerTier([FromRoute] Guid dealerTierId, [FromBody] UpdateDealerTierDTO updateDealer, CancellationToken ct)
+        {
+            var response = await _dealerTierService.UpdateDealerTier(dealerTierId, updateDealer, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpGet]
+        [Route("get-all-dealer-tiers")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> GetAllDealerTiers(CancellationToken ct)
+        {
+            var response = await _dealerTierService.GetAllDealerTiers(ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost]
+        [Route("create-dealer-policy-override/{dealerId}")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> CreateDealerPolicyOverride([FromRoute] Guid dealerId, [FromBody] CreateDealerPolicyOverrideDTO createDealerPolicy, CancellationToken ct)
+        {
+            var response = await _dealerTierService.CreateDealerPolicyOverrideAsync(dealerId, createDealerPolicy, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpGet]
+        [Route("get-effective-policy")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> GetEffectivePolicy([FromQuery] Guid dealerId, CancellationToken ct)
+        {
+            var response = await _dealerTierService.GetEffectivePolicyAsync(dealerId, ct);
+            return StatusCode(200, response);
+        }
+
+        [HttpGet]
+        [Route("dealer-information")]
+        [Authorize(Roles = StaticUserRole.DealerManager)]
+        public async Task<IActionResult> DealerInformation(CancellationToken ct)
+        {
+            var response = await _dealerService.DealerInformationAsync(User, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPut]
+        [Route("update-dealer-status/{dealerId}")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> UpdateStatusDealer([FromRoute] Guid dealerId, [FromQuery] DealerStatus status, CancellationToken ct)
+        {
+            var response = await _dealerService.UpdateStatusDealer(dealerId, status, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPut]
+        [Route("update-dealer-staff-status")]
+        [Authorize(Roles = StaticUserRole.DealerManager)]
+        public async Task<IActionResult> UpdateStatusDealerStaff([FromQuery] bool isActive, [FromQuery] string applicationUserId, CancellationToken ct)
+        {
+            var response = await _dealerService.UpdateStatusDealerStaff(User, isActive, applicationUserId, ct);
             return StatusCode(response.StatusCode, response);
         }
     }

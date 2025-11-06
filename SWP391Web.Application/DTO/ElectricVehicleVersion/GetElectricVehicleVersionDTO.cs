@@ -15,7 +15,6 @@ namespace SWP391Web.Application.DTO.ElectricVehicleVersion
         public decimal MotorPower { get; set; }
         public decimal BatteryCapacity { get; set; }
         public int RangePerCharge { get; set; }
-        public SupplyStatus SupplyStatus { get; set; }
         public int TopSpeed { get; set; }
         public decimal Weight { get; set; }
         public decimal Height { get; set; }

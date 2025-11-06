@@ -60,7 +60,7 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut("update-vehicle-status/{vehicleId}")]
-        public async Task<ActionResult> UpdateVehicleStatusAsync([FromRoute] Guid vehicleId, [FromRoute] StatusVehicle status)
+        public async Task<ActionResult> UpdateVehicleStatusAsync([FromRoute] Guid vehicleId, [FromRoute] ElectricVehicleStatus status)
         {
             var response = await _electricVehicleService.UpdateVehicleStatusAsync(vehicleId, status);
             return StatusCode(response.StatusCode, response);
@@ -80,13 +80,11 @@ namespace SWP391Web.API.Controllers
             var response = await _electricVehicleService.GetDealerInventoryAsync(User);
             return StatusCode(response.StatusCode, response);
         }
-
-        [HttpGet("get-sample-vehicles")]
-        public async Task<ActionResult<ResponseDTO>> GetSampleVehiclesAsync()
+        [HttpGet("get-evc-inventory")]
+        public async Task<ActionResult<ResponseDTO>> GetEVCInventoryAsync()
         {
-            var response = await _electricVehicleService.GetSampleVehiclesAsync(User);
+            var response = await _electricVehicleService.GetEVCInventoryAsync(User);
             return StatusCode(response.StatusCode, response);
         }
-
     }
 }

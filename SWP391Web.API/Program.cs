@@ -1,9 +1,12 @@
 using Amazon.Extensions.NETCore.Setup;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Infrastructure;
 using SWP391Web.API.Extentions;
+using SWP391Web.Application.IService;
+using SWP391Web.Application.Service;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.Seeders;
 using SWP391Web.Infrastructure.SignlR;
@@ -39,6 +42,10 @@ builder.Services.AddEndpointsApiExplorer();
 // Base on Extensions.ServiceCollectionExtensions
 builder.Services.RegisterService();
 
+// Register Google Authentication
+// Base on Extensions.WebApplicationBuilderExtensions
+//builder.AddGoogleAuthentication();
+
 // Register Authentication service
 // Base on Extensions.WebApplicationBuilderExtensions
 builder.AddAuthenticationService();
@@ -53,13 +60,17 @@ builder.AddSwaggerGen();
 
 builder.AddRedisCacheService();
 
+builder.Services.AddMemoryCache();
+
 builder.AddHttpVNPT();
 
 var allowedOrigins = new[] {
     "http://localhost:5173",
     "https://metrohcmc.xyz",
     "https://electricvehiclesystem.click",
-    "https://api.electricvehiclesystem.click"
+    "https://api.electricvehiclesystem.click",
+    "https://localhost:5173",
+    "https://www.electricvehiclesystem.click"
 };
 
 builder.Services.AddCors(opt =>
@@ -72,12 +83,14 @@ builder.Services.AddCors(opt =>
     );
 });
 
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
 var forwardOptions = new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    ForwardLimit = null
 };
 forwardOptions.KnownNetworks.Clear();
 forwardOptions.KnownProxies.Clear();
@@ -106,23 +119,45 @@ app.MapGet("/health", () => Results.Ok("Healthy"));
 
 app.UseRouting();
 
-app.Use(async (context, next) =>
-{
-    try
-    {
-        await next();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Pipeline error: {ex.Message}");
-        throw;
-    }
-});
-
 app.UseCors("FrontEnd");
+
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
+    ctx.Response.Headers["X-Frame-Options"] = "DENY";
+    await next();
+});
+app.UseCookiePolicy(new CookiePolicyOptions
+{
+    MinimumSameSitePolicy = SameSiteMode.None,
+    Secure = CookieSecurePolicy.Always
+});
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapHub<NotificationHub>("/api/notificationHub")
+   .RequireCors("FrontEnd");
+
+app.MapGet("/api/me", (HttpContext ctx) =>
+{
+    if (!ctx.User.Identity?.IsAuthenticated ?? true) return Results.Unauthorized();
+    var name = ctx.User.Identity!.Name ?? "";
+    var email = ctx.User.Claims.FirstOrDefault(c => c.Type.Contains("email", StringComparison.OrdinalIgnoreCase))?.Value ?? "";
+    var role = ctx.User.Claims.FirstOrDefault(c =>
+        c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value ?? "";
+    return Results.Ok(new { name, email, role });
+}).RequireAuthorization();
+
+app.MapGet("/api/auth/google", (HttpContext ctx) =>
+{
+    var props = new Microsoft.AspNetCore.Authentication.AuthenticationProperties
+    {
+        RedirectUri = "/login-success"
+    };
+    return Results.Challenge(props, new[] { GoogleDefaults.AuthenticationScheme });
+});
 
 app.MapControllers();
 
@@ -132,7 +167,5 @@ using (var scope = app.Services.CreateScope())
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     await RoleSeeder.SeedRolesAsync(roleManager);
 }
-
-app.MapHub<NotificationHub>("/api/notificationHub");
 
 app.Run();

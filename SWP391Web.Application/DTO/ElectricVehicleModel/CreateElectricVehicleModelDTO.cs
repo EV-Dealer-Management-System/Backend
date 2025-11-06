@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SWP391Web.Domain.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,5 +14,6 @@ namespace SWP391Web.Application.DTO.ElectricVehicleModel
         public string? Description { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsActive { get; set; }
+        public StatusModel Status { get; set; } = StatusModel.Available;
     }
 }

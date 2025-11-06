@@ -9,15 +9,13 @@ namespace SWP391Web.Application.DTO.ElectricVehicle
 {
     public class CreateElecticVehicleDTO
     {
+        public Guid ElectricVehicleTemplateId { get; set; }
         public Guid WarehouseId { get; set; }
-        public Guid VersionId { get; set; }
-        public Guid ColorId { get; set; }
-        public string VIN { get; set; }
-        public StatusVehicle Status { get; set; }
+        public ElectricVehicleStatus Status { get; set; }
+        public List<string> VINList { get; set; } = new();
         public DateTime? ManufactureDate { get; set; }
         public DateTime? ImportDate { get; set; }
         public DateTime? WarrantyExpiryDate { get; set; }
-        public decimal CostPrice { get; set; }
-        public List<string> AttachmentKeys { get; set; } = new();
+       
     }
 }

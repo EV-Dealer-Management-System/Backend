@@ -1,5 +1,6 @@
 ﻿using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.ElectricVehicleColor;
+using SWP391Web.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +17,7 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> CreateColorAsync(CreateElectricVehicleColorDTO createElectricVehicleColorDTO);
         Task<ResponseDTO> UpdateColorAsync(Guid colorId, UpdateElectricVehicleColor updateElectricVehicleColor);
         Task<ResponseDTO> DeleteColorAsync(Guid colorId);
+        Task<ResponseDTO> GetAllColorsByModelIdAndVersionIdAsync(Guid modelId, Guid versionId);
         Task<ResponseDTO> GetColorByNameAsync(string colorName);
         Task<ResponseDTO> GetColorByCodeAsync(string colorCode);
         

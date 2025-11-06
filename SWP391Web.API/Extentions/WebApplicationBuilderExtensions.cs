@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -15,24 +17,65 @@ public static class WebApplicationBuilderExtensions
     {
         builder.Services.AddAuthentication(options =>
         {
-            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        }).AddJwtBearer(options =>
-          {
-              options.SaveToken = true;
-              options.RequireHttpsMetadata = false;
-              options.TokenValidationParameters = new TokenValidationParameters()
-              {
-                  ValidAudience = builder.Configuration["JWT:ValidAudience"],
-                  ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
-                  IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"] ?? throw new InvalidOperationException("Canot find JWT secret"))),
-                  ValidateIssuer = true,
-                  ValidateAudience = true,
-                  ValidateLifetime = true,
-                  ValidateIssuerSigningKey = true,
-              };
-          });
+        })
+            .AddCookie("External", options =>
+            {
+                options.Cookie.Name = "ExternalLogin";
+                options.Cookie.HttpOnly = true;
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
+                options.Cookie.SameSite = SameSiteMode.None;
+                options.SlidingExpiration = true;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            })
+            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                options.SaveToken = true;
+                options.RequireHttpsMetadata = true;
+                options.TokenValidationParameters = new TokenValidationParameters()
+                {
+                    ValidAudience = builder.Configuration["JWT:ValidAudience"],
+                    ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"] ?? throw new InvalidOperationException("Canot find JWT secret"))),
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+
+                    RoleClaimType = ClaimTypes.Role,
+                    NameClaimType = ClaimTypes.NameIdentifier
+                };
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) &&
+                            path.StartsWithSegments("/api/notificationHub"))
+                        {
+                            context.Token = accessToken;
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
+            })
+            .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+            {
+                options.ClientId = builder.Configuration["Google:ClientId"]
+                    ?? throw new InvalidOperationException("Google ClientId is not configured.");
+                options.ClientSecret = builder.Configuration["Google:ClientSecret"]
+                    ?? throw new InvalidOperationException("Google ClientSecret is not configured.");
+
+                options.CallbackPath = "/signin-google";
+
+                options.SignInScheme = "External";
+
+                options.CorrelationCookie.SameSite = SameSiteMode.None;
+                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.SaveTokens = true;
+            });
 
         return builder;
     }
@@ -78,18 +121,17 @@ public static class WebApplicationBuilderExtensions
         builder.Services.AddHttpClient<IEContractService, EContractService>(client =>
         {
             client.BaseAddress = new Uri(
-                builder.Configuration["SmartCA:BaseUrl"]
-                ?? throw new Exception("Cannot find base url in SmartCA"));
+                builder.Configuration["EContractClient:BaseUrl"]
+                ?? throw new Exception("Cannot find base url in EContractClient"));
 
-            client.Timeout = TimeSpan.FromSeconds(30);
+            client.Timeout = TimeSpan.FromSeconds(300);
 
             client.DefaultRequestHeaders.Accept.Add(
                 new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-            client.DefaultRequestHeaders.ConnectionClose = true;
         })
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
     {
-        MaxConnectionsPerServer = 1,
+        MaxConnectionsPerServer = 2,
         AllowAutoRedirect = true,
         AutomaticDecompression = System.Net.DecompressionMethods.All,
         SslProtocols = System.Security.Authentication.SslProtocols.Tls12,

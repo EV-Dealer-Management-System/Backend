@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,5 +12,6 @@ namespace SWP391Web.Infrastructure.IRepository
     {
         Task<Quote?> GetQuoteByIdAsync(Guid quoteId);
         Task<bool> IsQuoteExistByIdAsync(Guid quoteId);
+        Task<List<Quote>> GetAllQuotesWithDetailAsync(Expression<Func<Quote, bool>>? filter = null);
     }
 }

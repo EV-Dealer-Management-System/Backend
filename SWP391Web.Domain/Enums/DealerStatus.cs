@@ -8,7 +8,7 @@ namespace SWP391Web.Domain.Enums
 {
     public enum DealerStatus
     {
-        Inactive = 0,
-        Active = 1
+        Active = 0,
+        Inactive = 1,
     }
 }

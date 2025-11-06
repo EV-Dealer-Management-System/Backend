@@ -17,8 +17,10 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> CreateVersionAsync(CreateElectricVehicleVersionDTO createElectricVehicleVersionDTO);
         Task<ResponseDTO> UpdateVersionAsync(Guid versionId, UpdateElectricVehicleVersionDTO updateElectricVehicleVersionDTO);
         Task<ResponseDTO> DeleteVersionAsync(Guid versionId);
+        Task<ResponseDTO> GetAllAvailableVersionsForBookingByModelIdAsync(Guid modelId);
         Task<ResponseDTO> GetAllAvailableVersionsByModelIdAsync(Guid modelId);
-        Task<ResponseDTO> UpdateVersionStatusAsync(Guid versionId, SupplyStatus newStatus);
+
+
 
     }
 }

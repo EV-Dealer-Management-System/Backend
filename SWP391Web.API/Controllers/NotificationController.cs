@@ -1,0 +1,26 @@
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Application.IServices;
+
+namespace SWP391Web.API.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class NotificationController : ControllerBase
+    {
+        private readonly INotificationService _notificationService;
+        public NotificationController(INotificationService notificationService)
+        {
+            _notificationService = notificationService;
+        }
+
+        [HttpGet]
+        [Route("get-all-notification")]
+        public async Task<ActionResult<ResponseDTO>> GetAllNotification([FromQuery] int pageNumber, [FromQuery] int pageSize, CancellationToken ct)
+        {
+            var result = await _notificationService.GetAllNotification(User, pageNumber, pageSize, ct);
+            return StatusCode(result.StatusCode, result);
+        }
+    }
+}

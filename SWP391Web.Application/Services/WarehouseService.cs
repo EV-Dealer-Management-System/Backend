@@ -30,17 +30,19 @@ namespace SWP391Web.Application.Services
                 {
                     DealerId = createWarehouseDTO.DealerId,
                     EVCInventoryId = createWarehouseDTO.EVCInventoryId,
-                    WarehouseType = createWarehouseDTO.WarehouseType
+                    WarehouseType = createWarehouseDTO.WarehouseType,
+                    WarehouseName = createWarehouseDTO.WarehouseName,
                 };
 
                 await _unitOfWork.WarehouseRepository.AddAsync(warehouse, CancellationToken.None);
                 await _unitOfWork.SaveAsync();
+                var getWarehouse = _mapper.Map<GetWarehouseDTO>(warehouse);
 
                 return new ResponseDTO
                 {
                     StatusCode = 201,
                     Message = "Warehouse created successfully.",
-                    Result = warehouse
+                    Result = getWarehouse
                 };
             }
             catch (Exception ex)

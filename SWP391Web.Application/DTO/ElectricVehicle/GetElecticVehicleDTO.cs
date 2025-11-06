@@ -14,28 +14,32 @@ namespace SWP391Web.Application.DTO.ElectricVehicle
     public class GetElecticVehicleDTO
     {
         public Guid Id { get; set; }
-        public Guid WarehouseId { get; set; }
-        public ViewVersionName? Version { get; set; }
-        public ViewColorName? Color { get; set; }
-        public string VIN { get; set; }
-        public StatusVehicle Status { get; set; }
+        public ViewTemplate? ElectricVehicleTemplate { get; set; }
+        public ViewWarehouse? Warehouse { get; set; }
+        public string VIN { get; set; } = null!;
+        public ElectricVehicleStatus Status { get; set; }
         public DateTime? ManufactureDate { get; set; }
         public DateTime? ImportDate { get; set; }
         public DateTime? WarrantyExpiryDate { get; set; }
-        public decimal CostPrice { get; set; }
-        public List<string> ImgUrl { get; set; } = new();
-    }
-    public class ViewVersionName
-    {
-        public Guid VersionId { get; set; }
-        public string? VersionName { get; set; }
-        public Guid ModelId { get; set; }
-        public string? ModelName { get; set; }
+        public DateTime? DeliveryDate { get; set; }
+        public DateTime? DealerReceivedDate { get; set; }
     }
 
-    public class ViewColorName
+    public class ViewTemplate
     {
-        public Guid ColorId{ get; set; }
-        public string? ColorName{ get; set; }
+        public Guid EVTemplateId { get; set; }
+        public Guid VersionId { get; set; }
+        public string VersionName { get; set; }
+        public Guid ModelId { get; set; }
+        public string ModelName { get; set; }
+        public Guid ColorId { get; set; }
+        public string ColorName { get; set; }
     }
+
+    public class ViewWarehouse
+    {
+        public Guid WarehouseId { get; set; }
+        public string Name { get; set; }
+    }
+    
 }

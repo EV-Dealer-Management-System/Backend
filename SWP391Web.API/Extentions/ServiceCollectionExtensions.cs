@@ -10,7 +10,9 @@ using SWP391Web.Application.Service;
 using SWP391Web.Application.Services;
 using SWP391Web.Application.Validations;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Infrastructure.Client;
 using SWP391Web.Infrastructure.Context;
+using SWP391Web.Infrastructure.IClient;
 using SWP391Web.Infrastructure.IRepository;
 using SWP391Web.Infrastructure.Repository;
 
@@ -25,8 +27,8 @@ namespace SWP391Web.API.Extentions
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IRedisService, RedisService>();
-            services.AddScoped<IDashBoardService, DashBoardService>();
             services.AddScoped<ICustomerService, CustomerService>();
+            services.AddScoped<ICustomerOrderService, CustomerOrderService>();
             services.AddScoped<IEContractService, EContractService>();
             services.AddScoped<IGHNService, GHNService>();
             services.AddScoped<IElectricVehicleColorService, ElectricVehicleColorService>();
@@ -42,6 +44,18 @@ namespace SWP391Web.API.Extentions
             services.AddScoped<IEVCService, EVCService>();
             services.AddScoped<IQuoteService, QuoteService>();
             services.AddScoped<IDealerService, DealerService>();
+            services.AddScoped<IEVTemplateService, EVTemplateService>();
+            services.AddScoped<IPaymentService, PaymentService>();
+            services.AddScoped<IAppointmentSettingService, AppointmentSettingService>();
+            services.AddScoped<IAppointmentService, AppointmentService>();
+            services.AddScoped<IDepositSettingService, DepositSettingService>();
+            services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IDealerFeedbackService, DealerFeedbackService>();
+            services.AddScoped<ICustomerFeedbackService, CustomerFeedbackService>();
+            services.AddScoped<IDealerTierService, DealerTierService>();
+            services.AddScoped<IDealerDebtService, DealerDebtService>();
+            services.AddScoped<IVehicleDeliveryService, VehicleDeliveryService>();
+            services.AddScoped<IDealerDebtTransactionService, DealerDebtTransactionService>();
 
             // Register Infrastructure Repositories
             services.AddScoped<IUnitOfWork, UnitOfWork>();

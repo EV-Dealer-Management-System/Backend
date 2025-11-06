@@ -9,7 +9,6 @@ namespace SWP391Web.Infrastructure.IRepository
     public interface IUnitOfWork
     {
         public IUserManagerRepository UserManagerRepository { get; }
-        public ICustomerRepository CustomerRepository { get; }
         public IEmailTemplateRepository EmailTemplateRepository { get; }
         public ICustomerOrderRepository CustomerOrderRepository { get; }
         public IDealerRepository DealerRepository { get; }
@@ -27,6 +26,26 @@ namespace SWP391Web.Infrastructure.IRepository
         public IPromotionRepository PromotionRepository { get; }
         public IEVAttachmentRepository EVAttachmentRepository { get; }
         public IDealerMemberRepository DealerMemberRepository { get; }
+        public IEVTemplateRepository EVTemplateRepository { get; }
+        public IBookingDetailRepository BookingDetailRepository { get; }
+        public ICustomerRepository CustomerRepository { get; }
+        public IAppointmentSettingRepository AppointmentSettingRepository { get; }
+        public IAppointmentRepository AppointmentRepository { get; }
+        public IDealerFeedbackRepository DealerFeedbackRepository { get; }
+        public ITransactionRepository TransactionRepository { get; }
+        public IDepositSettingRepository DepositSettingRepository { get; }
+        public INotificationRepository NotificationRepository { get; }
+        public IOrderDetailRepository OrderDetailRepository { get; }
+        public IDealerFBAttachmentRepository DealerFBAttachmentRepository { get; }
+        public ICustomerFeedbackRepository CustomerFeedbackRepository { get; }
+        public ICustomerFBAttachRepository CustomerFBAttachRepository { get; }
+        public IDealerTierRepository DealerTierRepository { get; }
+        public IDealerPolicyOverrideRepository DealerPolicyOverrideRepository { get; }
+        public IDealerDebtRepository DealerDebtRepository { get; }
+        public IVehicleDeliveryRepository VehicleDeliveryRepository { get; }
+        public IDealerDebtTransactionRepository DealerDebtTransactionRepository { get; }
+        public IVehicleDeliveryDetailRepository VehicleDeliveryDetailRepository { get; }
+
         Task<int> SaveAsync();
     }
 }

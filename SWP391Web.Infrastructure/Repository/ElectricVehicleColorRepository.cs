@@ -19,14 +19,27 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
+        public async Task<List<ElectricVehicleColor>> GetAllColorsByModelIdAndVersionIdAsync(Guid modelId, Guid versionId)
+        {
+                var colors = await _context.ElectricVehicleTemplates
+                    .Include(t => t.Color)
+                    .Include(t => t.Version)
+                    .Where(t => t.Version.ModelId == modelId
+                             && t.VersionId == versionId)
+                    .Select(t => t.Color)
+                    .ToListAsync();
+            return colors;
+        }
+
         public async Task<List<ElectricVehicleColor?>> GetAvailableColorsByModelIdAndVersionIdAsync(Guid modelId, Guid versionId)
         {
             var colors = await _context.ElectricVehicles
-                .Where(ev => ev.Version.ModelId == modelId
-                     && ev.VersionId == versionId
-                     && ev.Status == StatusVehicle.Available
+                .Include(ev => ev.ElectricVehicleTemplate)
+                .Where(ev => ev.ElectricVehicleTemplate.Version.ModelId == modelId
+                     && ev.ElectricVehicleTemplate.VersionId == versionId
+                     && ev.Status == ElectricVehicleStatus.Available
                      && ev.Warehouse.EVCInventoryId != null)
-                .Select(ev => ev.Color)
+                .Select(ev => ev.ElectricVehicleTemplate.Color)
                 .Distinct()
                 .ToListAsync();
             return colors;

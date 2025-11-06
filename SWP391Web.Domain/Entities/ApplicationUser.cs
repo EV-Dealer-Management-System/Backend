@@ -8,12 +8,13 @@ namespace SWP391Web.Domain.Entities
         public string? Sex { get; set; }
         public DateOnly? DateOfBirth { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        public ICollection<Dealer> Dealers { get; set; } = new List<Dealer>();
         public ICollection<Dealer> ManagingDealers { get; set; } = new List<Dealer>();
 
-        public EContract EContract = null!;
-        public Quote Quote = null!;
+        public ICollection<EContract> EContracts { get; set; } = new List<EContract>();
+        public ICollection<Quote> Quotes { get; set; } = new List<Quote>();
         public ICollection<DealerMember> DealerMembers { get; set; } = new List<DealerMember>();
+        public AppointmentSetting? AppointmentSetting { get; set; }
+        public DepositSetting? DepositSetting { get; set; }
+        public ICollection<CustomerOrder> CustomerOrders { get; set; } = new List<CustomerOrder>();
     }
 }

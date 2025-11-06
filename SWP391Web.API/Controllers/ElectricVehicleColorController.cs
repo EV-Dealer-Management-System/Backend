@@ -29,27 +29,21 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-available-colors-by-modelid-and-versionid/{modelId}/{versionId}")]
-        public async Task<ActionResult<ResponseDTO>> GetAllColorsByModelIdAndVersionId([FromRoute] Guid modelId, [FromRoute] Guid versionId)
+        public async Task<ActionResult<ResponseDTO>> GetAllColorsForBookingByModelIdAndVersionId([FromRoute] Guid modelId, [FromRoute] Guid versionId)
         {
             var response = await _electricVehicleColorService.GetAvailableColorsByModelIdAndVersionIdAsync(modelId, versionId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet("get-all-colors-by-modelid-and-versionid/{modelId}/{versionId}")]
+        public async Task<ActionResult<ResponseDTO>> GetAllColorsByModelIdAndVersionId([FromRoute] Guid modelId, [FromRoute] Guid versionId)
+        {
+            var response = await _electricVehicleColorService.GetAllColorsByModelIdAndVersionIdAsync(modelId, versionId);
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-color-by-id/{colorId}")]
         public async Task<ActionResult<ResponseDTO>> GetColorById([FromRoute] Guid colorId)
         {
             var response = await _electricVehicleColorService.GetColorByIdAsync(colorId);
-            return StatusCode(response.StatusCode, response);
-        }
-        [HttpGet("get-color-by-name/{colorName}")]
-        public async Task<ActionResult<ResponseDTO>> GetColorByName([FromRoute] string colorName)
-        {
-            var response = await _electricVehicleColorService.GetColorByNameAsync(colorName);
-            return StatusCode(response.StatusCode, response);
-        }
-        [HttpGet("get-color-by-code/{colorCode}")]
-        public async Task<ActionResult<ResponseDTO>> GetColorByCode([FromRoute] string colorCode)
-        {
-            var response = await _electricVehicleColorService.GetColorByCodeAsync(colorCode);
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut("update-color/{colorId}")]

@@ -14,85 +14,23 @@ namespace SWP391Web.Infrastructure.Seeders
         public static void SeedEmailTemplate(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<EmailTemplate>().HasData(
-               new
-               {
-                   Id = Guid.Parse("34835833-11aa-4760-a6bb-a1034f8ec9dc"),
-                   TemplateName = "SendVerifyEmail",
-                   SenderName = "SWP391",
-                   SenderEmail = "hoangtuzami@gmail.com",
-                   Category = "Verify",
-                   SubjectLine = "Xác minh địa chỉ Email của bạn",
-                   PreHeaderText = "Tài khoản của bạn đang chờ xác minh",
-                   PersonalizationTags = "{Login}",
-                   BodyContent = @"
-<!DOCTYPE html>
-<html lang='vi'>
-<head>
-    <meta charset='UTF-8'>
-    <title>Xác minh Email</title>
-</head>
-<body style='font-family: Segoe UI, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0;'>
-    <table width='100%' cellpadding='0' cellspacing='0' style='background-color: #f4f4f4; padding: 40px 0;'>
-        <tr>
-            <td align='center'>
-                <table width='600' cellpadding='0' cellspacing='0' style='background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'>
-                    <tr>
-                        <td style='background-color: #007bff; padding: 20px; text-align: center; color: white;'>
-                            <h2 style='margin: 0;'>SWP391</h2>
-                            <p style='margin: 0;'>Xác minh tài khoản của bạn</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 30px;'>
-                            <p style='font-size: 16px;'>Cảm ơn bạn đã đăng ký tài khoản tại <strong>SWP391</strong>.</p>
-                            <p style='font-size: 16px;'>Để hoàn tất quá trình đăng ký, vui lòng nhấn vào nút bên dưới để xác minh địa chỉ email của bạn:</p>
-                            <div style='text-align: center; margin: 30px 0;'>
-                                <a href='{Login}' style='background-color: #007bff; color: white; padding: 14px 28px; text-decoration: none; font-size: 16px; border-radius: 6px; display: inline-block;'>Xác minh ngay</a>
-                            </div>
-                            <p style='font-size: 14px; color: #666;'>Nếu bạn không yêu cầu đăng ký tài khoản này, vui lòng bỏ qua email này hoặc liên hệ với chúng tôi nếu có bất kỳ thắc mắc nào.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style='background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 13px; color: #999;'>
-                            <p style='margin: 0;'>Trân trọng,</p>
-                            <p style='margin: 0;'>Đội ngũ <strong>SWP391</strong></p>
-                            <p style='margin: 0;'>Mọi thắc mắc xin liên hệ: <a href='https://SWP391.vn' style='color: #007bff; text-decoration: none;'>SWP391.vn</a></p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>",
-                   FooterContent = "SWP391 Support Team",
-                   CallToAction = "<a href=\"{Login}\">Xác minh tài khoản</a>",
-                   Language = "Vietnamese",
-                   RecipientType = "Customer",
-                   CreatedBy = "System",
-                   CreatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
-                   UpdatedBy = "System",
-                   UpdatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
-                   Status = EmailStatus.Active
-               });
-
-            modelBuilder.Entity<EmailTemplate>().HasData(
    new
    {
        Id = Guid.Parse("8f6d9d5d-2f91-4df8-9f70-ec5a09c4f111"),
        TemplateName = "ResetPassword",
-       SenderName = "SWP391",
+       SenderName = "EVSystem Support",
        SenderEmail = "hoangtuzami@gmail.com",
        Category = "Authentication",
        SubjectLine = "Yêu cầu đặt lại mật khẩu",
-       PreHeaderText = "Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản SWP391",
+       PreHeaderText = "Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản",
        PersonalizationTags = "{ResetLink}",
        BodyContent = @"
+
 <!DOCTYPE html>
 <html lang='vi'>
 <head>
     <meta charset='UTF-8'>
-    <title>Đặt lại mật khẩu</title>
+    <title>Hệ thống xe điện ABX - Đặt lại mật khẩu</title>
 </head>
 <body style='font-family: Segoe UI, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0;'>
     <table width='100%' cellpadding='0' cellspacing='0' style='background-color: #f4f4f4; padding: 40px 0;'>
@@ -101,14 +39,14 @@ namespace SWP391Web.Infrastructure.Seeders
                 <table width='600' cellpadding='0' cellspacing='0' style='background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'>
                     <tr>
                         <td style='background-color: #dc3545; padding: 20px; text-align: center; color: white;'>
-                            <h2 style='margin: 0;'>SWP391</h2>
+                            <h2 style='margin: 0;'>Electric Vehicle Management System</h2>
                             <p style='margin: 0;'>Đặt lại mật khẩu</p>
                         </td>
                     </tr>
                     <tr>
                         <td style='padding: 30px;'>
                             <p style='font-size: 16px;'>Xin chào,</p>
-                            <p style='font-size: 16px;'>Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn tại <strong>SWP391</strong>.</p>
+                            <p style='font-size: 16px;'>Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn tại <strong>Hệ thống xe điện ABX</strong>.</p>
                             <p style='font-size: 16px;'>Vui lòng nhấn vào nút bên dưới để đặt lại mật khẩu:</p>
                             <div style='text-align: center; margin: 30px 0;'>
                                 <a href='{ResetLink}' style='background-color: #dc3545; color: white; padding: 14px 28px; text-decoration: none; font-size: 16px; border-radius: 6px; display: inline-block;'>Đặt lại mật khẩu</a>
@@ -119,8 +57,8 @@ namespace SWP391Web.Infrastructure.Seeders
                     <tr>
                         <td style='background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 13px; color: #999;'>
                             <p style='margin: 0;'>Trân trọng,</p>
-                            <p style='margin: 0;'>Đội ngũ <strong>SWP391</strong></p>
-                            <p style='margin: 0;'>Mọi thắc mắc xin liên hệ: <a href='https://SWP391.vn' style='color: #dc3545; text-decoration: none;'>SWP391.vn</a></p>
+                            <p style='margin: 0;'>Đội ngũ <strong>EVSytem Team</strong></p>
+                            <p style='margin: 0;'>Mọi thắc mắc xin liên hệ: <a href='https://electricvehiclesystem.click' style='color: #dc3545; text-decoration: none;'>https://electricvehiclesystem.click</a></p>
                         </td>
                     </tr>
                 </table>
@@ -145,14 +83,15 @@ namespace SWP391Web.Infrastructure.Seeders
               {
                   Id = Guid.Parse("c1b4c5a2-0e9b-4f11-aa2f-3cf19b0f9e0b"),
                   TemplateName = "NotifyContractPdf",
-                  SenderName = "SWP391",
+                  SenderName = "EVSystem Support",
                   SenderEmail = "hoangtuzami@gmail.com",
                   Category = "Contract",
-                  SubjectLine = "Thông báo hợp đồng: {ContractSubject}",
+                  SubjectLine = "Thông báo hợp đồng",
                   PreHeaderText = "Hợp đồng của bạn đã sẵn sàng để xem/tải (PDF).",
                   // Liệt kê các placeholder bạn dự định thay thế
                   PersonalizationTags = "{FullName},{ContractSubject},{DownloadLink},{Company},{SupportEmail}",
                   BodyContent = @"
+
 <!DOCTYPE html>
 <html lang='vi'>
 <head>
@@ -166,7 +105,7 @@ namespace SWP391Web.Infrastructure.Seeders
                 <table width='600' cellpadding='0' cellspacing='0' style='background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);'>
                     <tr>
                         <td style='background-color: #0ea5e9; padding: 20px; text-align: center; color: white;'>
-                            <h2 style='margin: 0;'>SWP391</h2>
+                            <h2 style='margin: 0;'>EVSystem Support</h2>
                             <p style='margin: 0;'>Thông báo hợp đồng</p>
                         </td>
                     </tr>
@@ -185,7 +124,7 @@ namespace SWP391Web.Infrastructure.Seeders
                     <tr>
                         <td style='background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 13px; color: #999;'>
                             <p style='margin: 0;'>Trân trọng,</p>
-                            <p style='margin: 0;'><strong>{Company}</strong> - Đội ngũ hỗ trợ SWP391</p>
+                            <p style='margin: 0;'><strong>{Company}</strong> - Đội ngũ hỗ trợ EVSystem Support</p>
                             <p style='margin: 0;'>Đây là email tự động, vui lòng không phản hồi.</p>
                         </td>
                     </tr>
@@ -195,7 +134,7 @@ namespace SWP391Web.Infrastructure.Seeders
     </table>
 </body>
 </html>",
-                  FooterContent = "SWP391 Support Team",
+                  FooterContent = "EVSystem Support",
                   CallToAction = "<a href=\"{DownloadLink}\">Xem/Tải hợp đồng (PDF)</a>",
                   Language = "Vietnamese",
                   RecipientType = "Customer",
@@ -210,13 +149,14 @@ namespace SWP391Web.Infrastructure.Seeders
     {
         Id = Guid.Parse("b7f0a7cb-0d7c-4f1e-9c8e-9c1d4a2b7f11"),
         TemplateName = "DealerWelcome",
-        SenderName = "SWP391",
+        SenderName = "EVSystem Support",
         SenderEmail = "hoangtuzami@gmail.com",
         Category = "Dealer",
         SubjectLine = "Chúc mừng! Tài khoản đại lý của bạn đã được kích hoạt",
         PreHeaderText = "Thông tin đăng nhập và liên kết truy cập hệ thống",
         PersonalizationTags = "{FullName},{DealerName},{UserName},{Password},{LoginUrl},{Company},{SupportEmail}",
         BodyContent = @"
+
 <!DOCTYPE html>
 <html lang='vi'>
 <head>
@@ -237,7 +177,7 @@ namespace SWP391Web.Infrastructure.Seeders
                     <tr>
                         <td style='padding: 30px;'>
                             <p style='font-size: 16px;'>Xin chào <strong>{FullName}</strong>,</p>
-                            <p style='font-size: 16px;'>Chúc mừng bạn đã trở thành đại lý của <strong>{Company}</strong> cho đơn vị <strong>{DealerName}</strong>.</p>
+                            <p style='font-size: 16px;'>Chúc mừng bạn đã trở thành đại lý của công ty chúng tôi.</p>
                             <p style='font-size: 16px;'>Dưới đây là thông tin đăng nhập của bạn:</p>
                             <table width='100%' cellpadding='0' cellspacing='0' style='background-color:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; margin: 14px 0;'>
                                 <tr>
@@ -269,7 +209,7 @@ namespace SWP391Web.Infrastructure.Seeders
                     <tr>
                         <td style='background-color: #f1f1f1; padding: 20px; text-align: center; font-size: 13px; color: #999;'>
                             <p style='margin: 0;'>Trân trọng,</p>
-                            <p style='margin: 0;'><strong>{Company}</strong> - Đội ngũ hỗ trợ SWP391</p>
+                            <p style='margin: 0;'><strong>{Company}</strong> - Đội ngũ hỗ trợ EVSystem Support</p>
                             <p style='margin: 0;'>Đây là email tự động, vui lòng không phản hồi.</p>
                         </td>
                     </tr>
@@ -279,7 +219,7 @@ namespace SWP391Web.Infrastructure.Seeders
     </table>
 </body>
 </html>",
-        FooterContent = "SWP391 Support Team",
+        FooterContent = "EVSystem Support",
         CallToAction = "<a href=\"{LoginUrl}\">Đăng nhập ngay</a>",
         Language = "Vietnamese",
         RecipientType = "Customer",
@@ -599,6 +539,98 @@ new
     Status = EmailStatus.Active
 });
 
+            modelBuilder.Entity<EmailTemplate>().HasData(
+new
+{
+    Id = Guid.Parse("A8D5E7F1-13B2-4F0C-BE9F-9D5E6C2B8F7A"),
+    TemplateName = "NotifyPaymentLinkToCustomer",
+    SenderName = "EVSystem",
+    SenderEmail = "hoangtuzami@gmail.com",
+    Category = "Payment",
+    SubjectLine = "[EVSystem] Liên kết thanh toán đơn hàng",
+    PreHeaderText = "Đơn hàng của bạn đã được tạo. Vui lòng thanh toán để hoàn tất quá trình đặt hàng.",
+    PersonalizationTags = "{CustomerName},{OrderNo},{OrderAmount},{PaymentLink}",
+    BodyContent = @"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Thanh toán đơn hàng</title>
+  <style>
+    body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; margin:0; padding:0; background:#f3f4f6; color:#333; }
+    .wrap { padding:40px 0; }
+    .card { width:640px; margin:auto; background:#fff; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; }
+    .header { background:linear-gradient(90deg,#1565C0,#42A5F5); color:#fff; text-align:center; padding:28px 20px; }
+    .header h1 { margin:0; font-size:26px; font-weight:700; }
+    .header p { margin:8px 0 0; font-size:15px; opacity:.95; }
+    .content { padding:40px 45px; line-height:1.75; }
+    .content p { font-size:15px; margin:0 0 12px; }
+    .box { background:#f9fafb; border:1px solid #e0e0e0; border-radius:10px; padding:18px 22px; margin:22px 0; }
+    .box table { width:100%; border-collapse:collapse; }
+    .box td { padding:8px 0; font-size:15px; vertical-align:top; }
+    .box td:first-child { width:190px; font-weight:600; color:#444; }
+    .btn { display:inline-block; padding:14px 32px; background:#1976D2; color:#fff !important; text-decoration:none; border-radius:8px; font-weight:600; font-size:16px; letter-spacing:.3px; transition:.25s; }
+    .btn:hover { background:#0D47A1; transform:translateY(-2px); }
+    .note { font-size:13px; color:#666; margin-top:24px; border-top:1px dashed #ddd; padding-top:16px; }
+    .footer { background:#fafafa; text-align:center; padding:22px; font-size:13px; color:#777; border-top:1px solid #eee; }
+    .footer a { color:#1976D2; text-decoration:none; }
+    @media (max-width:640px){ .card{width:95%} .content{padding:28px} }
+  </style>
+</head>
+<body>
+  <div class='wrap'>
+    <div class='card'>
+      <div class='header'>
+        <h1>Electric Vehicle Management System</h1>
+        <p>Thanh toán đơn hàng #{OrderNo}</p>
+      </div>
+      <div class='content'>
+        <p>Xin chào <strong>{CustomerName}</strong>,</p>
+        <p>Cảm ơn bạn đã đặt hàng tại EVSystem. Vui lòng thanh toán để xác nhận đơn hàng của bạn.</p>
+
+        <div class='box'>
+          <table>
+            <tr>
+              <td>Mã đơn hàng:</td>
+              <td><strong>#{OrderNo}</strong></td>
+            </tr>
+            <tr>
+              <td>Số tiền cần thanh toán:</td>
+              <td><strong>{OrderAmount} VND</strong></td>
+            </tr>
+          </table>
+        </div>
+
+        <p style='text-align:center; margin:28px 0;'>
+          <a href='{PaymentLink}' class='btn'>Thanh toán ngay</a>
+        </p>
+
+        <p class='note'>
+          💡 <strong>Lưu ý:</strong><br>
+          • Liên kết thanh toán chỉ có hiệu lực trong 15 phút kể từ thời điểm tạo.<br>
+          • Nếu bạn gặp sự cố khi thanh toán, vui lòng liên hệ bộ phận hỗ trợ EVSystem.<br>
+          • Sau khi thanh toán thành công, đơn hàng sẽ được xử lý ngay lập tức.
+        </p>
+      </div>
+      <div class='footer'>
+        <p>Trân trọng,<br><strong>EVSystem Billing Team</strong></p>
+        <p>Website: <a href='https://electricvehiclesystem.click'>electricvehiclesystem.click</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>",
+    FooterContent = "EVSystem Billing – Electric Vehicle Management System",
+    CallToAction = "<a href=\"{PaymentLink}\" class=\"btn\">Thanh toán ngay</a>",
+    Language = "Vietnamese",
+    RecipientType = "Customer",
+    CreatedBy = "System",
+    CreatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+    UpdatedBy = "System",
+    UpdatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+    Status = EmailStatus.Active
+});
 
         }
     }

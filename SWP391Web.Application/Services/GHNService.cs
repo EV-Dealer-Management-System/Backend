@@ -1,6 +1,6 @@
 ﻿using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.IServices;
-using SWP391Web.Infrastructure.IRepository;
+using SWP391Web.Infrastructure.IClient;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -93,26 +93,28 @@ namespace SWP391Web.Application.Services
 
         public async Task<ResponseDTO> ProvincesOpenGetProvinceResponse(CancellationToken ct)
         {
-            try
-            {
-                var response = await _ghnClient.ProvincesOpenGetProvinceResponse(ct);
-                return new ResponseDTO
-                {
-                    IsSuccess = true,
-                    StatusCode = 200,
-                    Message = "Success to get province list",
-                    Result = response
-                };
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO
-                {
-                    IsSuccess = false,
-                    Message = $"An error occurred while processing your request. {ex.Message}",
-                    StatusCode = 500
-                };
-            }
+            //try
+            //{
+            //    var response = await _ghnClient.ProvincesOpenGetProvinceResponse(ct);
+            //    return new ResponseDTO
+            //    {
+            //        IsSuccess = true,
+            //        StatusCode = 200,
+            //        Message = "Success to get province list",
+            //        Result = response
+            //    };
+            //}
+            //catch (Exception ex)
+            //{
+            //    return new ResponseDTO
+            //    {
+            //        IsSuccess = false,
+            //        Message = $"An error occurred while processing your request. {ex.Message}",
+            //        StatusCode = 500
+            //    };
+            //}
+
+            throw new NotImplementedException();
         }
 
         public async Task<ResponseDTO> ProvincesOpenGetWardResponse(string provinceCode, CancellationToken ct)

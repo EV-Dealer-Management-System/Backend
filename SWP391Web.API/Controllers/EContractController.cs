@@ -43,15 +43,15 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult<ResponseDTO>> GetAccessToken()
         {
             var r = await _econtractService.GetAccessTokenAsync();
-            return Ok(r);
+            return StatusCode(r.StatusCode, r);
         }
 
         [HttpPost]
         [Route("ready-dealer-contracts")]
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
-        public async Task<ActionResult<ResponseDTO>> CreateEContractAsync([FromBody] CreateEContractDTO dto, CancellationToken ct)
+        public async Task<ActionResult<ResponseDTO>> CreateEContractAsync([FromQuery] Guid eContractId, CancellationToken ct)
         {
-            var r = await _econtractService.CreateEContractAsync(User, dto, ct);
+            var r = await _econtractService.CreateEContractAsync(User, eContractId, ct);
             return StatusCode(r.StatusCode, r);
         }
 
@@ -151,6 +151,15 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPost]
+        [Route("delete-smartca")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ResponseDTO>> DeleteSmartCA([FromBody] DeleteSmartCARequest dto)
+        {
+            var r = await _econtractService.DeleteSmartCA(dto);
+            return Ok(r);
+        }
+
+        [HttpPost]
         [Route("update-econtract")]
         [Consumes("application/json")]
         [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
@@ -163,9 +172,9 @@ namespace SWP391Web.API.Controllers
         [HttpGet]
         [Route("get-all-econtract-list")]
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
-        public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default)
+        public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default, [FromQuery] EcontractType econtractType = default)
         {
-            var r = await _econtractService.GetAllEContractList(pageNumber, pageSize, eContractStatus);
+            var r = await _econtractService.GetAllEContractList(pageNumber, pageSize, eContractStatus, econtractType);
             return Ok(r);
         }
 
@@ -195,12 +204,20 @@ namespace SWP391Web.API.Controllers
             return StatusCode((int)r.StatusCode, r);
         }
 
-        [HttpPost]
-        [Route("snapshot-econtract-by-key")]
-        public async Task<ActionResult<ResponseDTO>> SnapshotEcontractByKey([FromQuery] Guid econtractId, [FromForm] string key, CancellationToken ct)
+        //[HttpPost]
+        //[Route("create-booking-confirm-econtract")]
+        //public async Task<ActionResult<ResponseDTO>> CreateBookingConfirmEcontract([FromQuery] Guid bookingId, CancellationToken ct)
+        //{
+        //    var response = await _econtractService.CreateBookingEContractAsync(User, bookingId, ct);
+        //    return StatusCode(response.StatusCode, response);
+        //}
+
+        [HttpDelete]
+        [Route("delete-econtract-draft/{econtractId}")]
+        public async Task<ActionResult<ResponseDTO>> DeleteEContractDraft([FromRoute] Guid econtractId, CancellationToken ct)
         {
-            var response = await _econtractService.SnapshotEcontract(econtractId, key, ct);
-            return StatusCode(response.StatusCode, response);
+            var r = await _econtractService.DeleteEContractDraft(econtractId, ct);
+            return StatusCode(r.StatusCode, r);
         }
     }
 }

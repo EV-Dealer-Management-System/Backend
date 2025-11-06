@@ -1,5 +1,6 @@
 ﻿using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Dealer;
+using SWP391Web.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,5 +14,10 @@ namespace SWP391Web.Application.IServices
     {
         Task<ResponseDTO> CreateDealerStaffAsync(ClaimsPrincipal user, CreateDealerStaffDTO createDealerStaffDTO, CancellationToken ct);
         Task<ResponseDTO> GetAllDealerStaffAsync(ClaimsPrincipal claimUser, string? filterOn, string? filterQuery, string? sortBy, bool? isAcsending, int pageNumber, int PageSize, CancellationToken ct);
+        Task<ResponseDTO> GetAllDealerAsync(string? filterOn, string? filterQuery, string? sortBy, bool? isAcsending, int pageNumber, int PageSize, CancellationToken ct);
+        Task<ResponseDTO> DealerInformationAsync(ClaimsPrincipal claimUser, CancellationToken ct);
+        Task<ResponseDTO> UpdateStatusDealer(Guid DealerId, DealerStatus status, CancellationToken ct);
+        Task<ResponseDTO> UpdateStatusDealerStaff(ClaimsPrincipal userClaim, bool isActive, string applicationUserId, CancellationToken ct);
     }
+
 }

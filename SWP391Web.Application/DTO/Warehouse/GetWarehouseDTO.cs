@@ -12,6 +12,7 @@ namespace SWP391Web.Application.DTO.Warehouse
         public Guid Id { get; set; }
         public Guid? DealerId { get; set; }
         public Guid? EVCInventoryId { get; set; }
+        public string? WarehouseName { get; set; }
         public WarehouseType WarehouseType { get; set; }
     }
 }

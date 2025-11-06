@@ -29,10 +29,10 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpGet]
-        [Route("get-econtract-template-by-econtract-id/{eContractId}")]
+        [Route("get-econtract-template-by-id/{eContractId}")]
         public async Task<ActionResult<ResponseDTO>> GetEContractTemplateByEcontractIdAsync([FromRoute] Guid eContractId, CancellationToken ct)
         {
-            var result = await _eContractTemplateService.GetEContractTemplateByEcontractIdAsync(eContractId, ct);
+            var result = await _eContractTemplateService.GetEContractTemplateByIdAsync(eContractId, ct);
             if (result.IsSuccess)
             {
                 return StatusCode(result.StatusCode, result.Result);
@@ -49,6 +49,14 @@ namespace SWP391Web.API.Controllers
             {
                 return StatusCode(result.StatusCode, result);
             }
+            return StatusCode(result.StatusCode, result);
+        }
+
+        [HttpPut]
+        [Route("update-econtract-template")]
+        public async Task<ActionResult<ResponseDTO>> UpdateEContractTemplateAsync([FromQuery] string code, [FromBody] UpdateEContractTemplateDTO templateDTO, CancellationToken ct)
+        {
+            var result = await _eContractTemplateService.UpdateEcontractTemplateAsync(code, templateDTO, ct);
             return StatusCode(result.StatusCode, result);
         }
     }

@@ -42,7 +42,8 @@ namespace SWP391Web.Application.Services
                     ModelName = createElectricVehicleModelDTO.ModelName,
                     Description = createElectricVehicleModelDTO.Description,
                     CreatedAt = DateTime.UtcNow,
-                    IsActive = true
+                    IsActive = true,
+                    Status = createElectricVehicleModelDTO.Status
                 };
 
                 if (electricVehicleModel is null)
@@ -116,12 +117,38 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var models = await _unitOfWork.ElectricVehicleModelRepository.GetAllAsync();
+                var models = (await _unitOfWork.ElectricVehicleModelRepository.GetAllAsync()).Where(m => m.IsActive == true);
                 var getModels = _mapper.Map<List<GetElectricVehicleModelDTO>>(models);
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     Message = "Model retrieve successfully",
+                    Result = getModels,
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500,
+                };
+
+            }
+        }
+
+        public async Task<ResponseDTO> GetAllWithVersionAsync()
+        {
+            try
+            {
+                var models = await _unitOfWork.ElectricVehicleModelRepository.GetAllWithVersionAsync();
+                var getModels = _mapper.Map<List<GetElectricVehicleModelDTO>>(models);
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Model has at least 1 version successfully",
                     Result = getModels,
                     StatusCode = 200,
                 };

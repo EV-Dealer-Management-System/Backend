@@ -38,18 +38,11 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
-        [HttpPut("delete-promotion/{promotionId}")]
+        [HttpDelete("delete-promotion/{promotionId}")]
 
         public async Task<ActionResult<ResponseDTO>> DeletePromotion([FromRoute] Guid promotionId)
         {
             var response = await _promotionService.DeletePromotionAsync(promotionId);
-            return StatusCode(response.StatusCode, response);
-        }
-
-        [HttpGet("get-promotion-by-name/{name}")]
-        public async Task<ActionResult<ResponseDTO>> GetPromotionByName([FromRoute] string name)
-        {
-            var response = await _promotionService.GetPromotionByNameAsync(name);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -59,8 +52,13 @@ namespace SWP391Web.API.Controllers
             var response = await _promotionService.GetAllAsync();
             return StatusCode(response.StatusCode, response);
         }
-        
 
-        
+        [HttpGet("get-promotions-for-quote")]
+        public async Task<ActionResult<ResponseDTO>> GetPromotionsForQuote([FromQuery] Guid? modelId, [FromQuery] Guid? versionId)
+        {
+            var response = await _promotionService.GetPromotionsForQuoteAsync(modelId, versionId);
+            return StatusCode(response.StatusCode, response);
+
+        }
     }
 }

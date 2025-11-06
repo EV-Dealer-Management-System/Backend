@@ -8,9 +8,17 @@ namespace SWP391Web.Domain.Entities
 {
     public class Customer
     {
-        public Guid CustomerId { get; set; }
-        public required string UserId { get; set; }
+        public Guid Id { get; set; }
+        public string? FullName { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? Email { get; set; }
+        public string? Address { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public string? Note { get; set; }
 
-        public ApplicationUser User { get; set; } = null!;
+        public ICollection<CustomerOrder> CustomerOrders { get; set; } = new List<CustomerOrder>();
+        public ICollection<Dealer> Dealers { get; set; } = new List<Dealer>();
+        public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+        public ICollection<CustomerFeedback> CustomerFeedbacks { get; set; } = new List<CustomerFeedback>();
     }
 }

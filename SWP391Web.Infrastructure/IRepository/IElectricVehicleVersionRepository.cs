@@ -13,6 +13,8 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<bool> IsVersionExistsByName(string versionName);
         Task<ElectricVehicleVersion?> GetByIdsAsync(Guid versionId);
         Task<ElectricVehicleVersion?> GetByNameAsync(string versionName);
+        Task<List<ElectricVehicleVersion>> GetAllVersionsByModelIdAsync(Guid modelId);
+
 
     }
 }

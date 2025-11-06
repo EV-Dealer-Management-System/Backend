@@ -18,6 +18,14 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
+        public async Task<List<ElectricVehicleModel>> GetAllWithVersionAsync()
+        {
+            return await _context.ElectricVehicleModels
+                .Include(m => m.Versions)
+                .Where(m => m.IsActive && m.Versions.Any(v => v.IsActive == true))
+                .ToListAsync();
+        }
+
         public async Task<ElectricVehicleModel?> GetByIdsAsync(Guid modelId)
         {
             return await _context.ElectricVehicleModels

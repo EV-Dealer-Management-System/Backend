@@ -17,10 +17,10 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context;
         }
 
-        public List<EVAttachment>? GetAttachmentsByElectricVehicleId(Guid electricVehicleId)
+        public List<EVAttachment>? GetAttachmentsByElectricVehicleTemplateId(Guid electricVehicleTemplateId)
         {
-            return  _context.EVAttachments
-                .Where(att => att.ElectricVehicleId == electricVehicleId).ToList();
+            return _context.EVAttachments
+                .Where(att => att.ElectricVehicleTemplateId == electricVehicleTemplateId).ToList();
         }
     }
 }

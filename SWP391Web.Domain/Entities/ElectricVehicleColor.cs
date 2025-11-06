@@ -14,7 +14,7 @@ namespace SWP391Web.Domain.Entities
         public string? ColorCode { get; set; }
         public decimal ExtraCost { get; set; }
 
-        public ICollection<ElectricVehicle> ElectricVehicles { get; set; } = new List<ElectricVehicle>();
+        public ICollection<ElectricVehicleTemplate> ElectricVehicleTemplates { get; set; } = new List<ElectricVehicleTemplate>();
         public ICollection<BookingEVDetail> BookingEVDetails { get; set; } = new List<BookingEVDetail>();
         public ICollection<QuoteDetail> QuoteDetails { get; set; } = new List<QuoteDetail>();
     }

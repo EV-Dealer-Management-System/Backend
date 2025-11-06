@@ -1,4 +1,6 @@
-﻿using AutoMapper;
+﻿using Amazon.Runtime.Internal.Util;
+using AutoMapper;
+using Microsoft.Extensions.Caching.Memory;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.IService;
 using SWP391Web.Domain.Constants;
@@ -14,15 +16,17 @@ namespace SWP391Web.Application.Service
         private readonly IEmailService _emailService;
         private readonly ITokenService _tokenService;
         private readonly IMapper _mapper;
-        public AuthService(IUnitOfWork unitOfWork, IEmailService emailService, ITokenService tokenService, IMapper mapper)
+        private readonly IMemoryCache _cache;
+        public AuthService(IUnitOfWork unitOfWork, IEmailService emailService, ITokenService tokenService, IMapper mapper, IMemoryCache cache)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         }
 
-        public async Task<ResponseDTO> LoginUser(LoginUserDTO loginUserDTO)
+        public async Task<ResponseDTO> LoginUser(LoginUserDTO loginUserDTO, CancellationToken ct)
         {
             try
             {
@@ -43,6 +47,16 @@ namespace SWP391Web.Application.Service
                     return new ResponseDTO
                     {
                         Message = $"Account is locked. Try again in {remainingMinutes} minutes.",
+                        IsSuccess = false,
+                        StatusCode = 403
+                    };
+                }
+
+                if (user.LockoutEnabled)
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "Account is deactivated. Please contact support.",
                         IsSuccess = false,
                         StatusCode = 403
                     };
@@ -70,10 +84,12 @@ namespace SWP391Web.Application.Service
                     };
                 }
 
-                var accessToken = await _tokenService.GenerateJwtAccessTokenAysnc(user);
+                var accessToken = await _tokenService.GenerateJwtAccessTokenAysnc(user, ct);
                 var refreshToken = await _tokenService.GenerateJwtRefreshTokenAsync(user, loginUserDTO.RememberMe);
 
                 var getUser = _mapper.Map<GetApplicationUserDTO>(user);
+
+                await _unitOfWork.UserManagerRepository.ResetAccessFailedAsync(user);
 
                 return new ResponseDTO
                 {
@@ -259,5 +275,105 @@ namespace SWP391Web.Application.Service
                 };
             }
         }
+
+        public async Task<ResponseDTO> HandleGoogleCallbackAsync(ClaimsPrincipal userClaims, CancellationToken ct)
+        {
+            try
+            {
+                var email = userClaims.FindFirst(ClaimTypes.Email)?.Value;
+                var name = userClaims.FindFirst(ClaimTypes.Name)?.Value;
+                var googleSub = userClaims.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (googleSub is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 400,
+                        Message = "Google Sub (NameIdentifier) claim is missing."
+                    };
+                }
+
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "User not found in internal system."
+                    };
+                }
+
+                var user = await _unitOfWork.UserManagerRepository.GetByEmailAsync(email);
+
+                if (user is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "User not found"
+                    };
+                }
+                var logins = await _unitOfWork.UserManagerRepository.HasLogin(user);
+                var hasGoogleLinked = logins.Any(login => login.LoginProvider == "Google" && login.ProviderKey == googleSub);
+                if (!hasGoogleLinked)
+                {
+                    var linkResult = await _unitOfWork.UserManagerRepository.AddLoginGoogleAsync(user, googleSub);
+                    if (!linkResult.Succeeded)
+                    {
+                        var msg = string.Join("; ", linkResult.Errors.Select(e => e.Description));
+                        var status = msg.Contains("already exists", StringComparison.OrdinalIgnoreCase) ? 409 : 500;
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            StatusCode = status,
+                            Message = $"Failed to link Google account: {msg}"
+                        };
+                    }
+                }
+
+                var accessToken = await _tokenService.GenerateJwtAccessTokenAysnc(user, ct);
+                var refreshToken = await _tokenService.GenerateJwtRefreshTokenAsync(user, rememberMe: true);
+
+                await _unitOfWork.SaveAsync();
+                var getUser = _mapper.Map<GetApplicationUserDTO>(user);
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Google login successful",
+                    Result = new AuthResultDTO
+                    {
+                        AccessToken = accessToken,
+                        RefreshToken = refreshToken,
+                        UserData = getUser
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error at HandleGoogleCallbackAsync: {ex.Message}"
+                };
+            }
+        }
+
+        public Task StoreAsync(string ticket, AuthResultDTO value, TimeSpan ttl)
+        {
+            _cache.Set(ticket, value, ttl);
+            return Task.CompletedTask;
+        }
+
+        public Task<AuthResultDTO?> RedeemAsync(string ticket) 
+        { 
+            if (_cache.TryGetValue<AuthResultDTO>(ticket, out var payload)) 
+            { 
+                _cache.Remove(ticket); 
+                return Task.FromResult<AuthResultDTO?>(payload); 
+            } 
+            return Task.FromResult<AuthResultDTO?>(null); }
     }
 }

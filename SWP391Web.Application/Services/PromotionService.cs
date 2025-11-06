@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Aspose.Words.Tables;
+using AutoMapper;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Promotion;
 using SWP391Web.Application.IServices;
@@ -36,6 +37,37 @@ namespace SWP391Web.Application.Services
                         Message = "Promotion is exist"
                     };
                 }
+                if (createPromotionDTO.ModelId.HasValue)
+                {
+                    var existByModel = await _unitOfWork.PromotionRepository
+                        .GetActivePromotionByModelIdAsync(createPromotionDTO.ModelId.Value);
+
+                    if (existByModel != null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            StatusCode = 400,
+                            Message = "This model already has an active promotion."
+                        };
+                    }
+                }
+
+                if (createPromotionDTO.VersionId.HasValue)
+                {
+                    var existByVersion = await _unitOfWork.PromotionRepository
+                        .GetActivePromotionByVersionIdAsync(createPromotionDTO.VersionId.Value);
+
+                    if (existByVersion != null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            StatusCode = 400,
+                            Message = "This version already has an active promotion."
+                        };
+                    }
+                }
 
                 if (createPromotionDTO.StartDate >= createPromotionDTO.EndDate)
                 {
@@ -72,7 +104,7 @@ namespace SWP391Web.Application.Services
                 }
                 else if (createPromotionDTO.DiscountType == DiscountType.FixAmount)
                 {
-                    if(createPromotionDTO.FixedAmount <= 0)
+                    if (createPromotionDTO.FixedAmount <= 0)
                     {
                         return new ResponseDTO
                         {
@@ -98,7 +130,7 @@ namespace SWP391Web.Application.Services
                     IsActive = true
                 };
 
-                if(promotion == null)
+                if (promotion == null)
                 {
                     return new ResponseDTO
                     {
@@ -108,7 +140,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                await _unitOfWork.PromotionRepository.AddAsync(promotion , CancellationToken.None);
+                await _unitOfWork.PromotionRepository.AddAsync(promotion, CancellationToken.None);
                 await _unitOfWork.SaveAsync();
 
                 return new ResponseDTO
@@ -157,7 +189,7 @@ namespace SWP391Web.Application.Services
                     Message = "Delete promotion successfully"
                 };
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return new ResponseDTO
                 {
@@ -172,19 +204,28 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var promotions = (await _unitOfWork.PromotionRepository.GetAllAsync())
-                    .Where(p => p.IsActive == true);
+                var allPromotions = await _unitOfWork.PromotionRepository.GetAllAsync();
 
-                var getPromotion = _mapper.Map<List<GetPromotionDTO>>(promotions);
+                //Deactivate expired promotions
+                foreach (var promo in allPromotions)
+                {
+                    if (promo.IsActive && promo.EndDate < DateTime.UtcNow)
+                    {
+                        promo.IsActive = false;
+                        _unitOfWork.PromotionRepository.Update(promo);
+                    }
+                }
+                await _unitOfWork.SaveAsync();
+
+                var getPromotions = _mapper.Map<List<GetPromotionDTO>>(allPromotions);
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    Message = "Get all promotion successfully",
-                    Result = getPromotion
+                    Message = "Get active promotions successfully",
+                    Result = getPromotions
                 };
-
             }
             catch (Exception ex)
             {
@@ -202,13 +243,13 @@ namespace SWP391Web.Application.Services
             try
             {
                 var promotion = await _unitOfWork.PromotionRepository.GetPromotionByIdAsync(promotionId);
-                if (promotion == null)
+                if (promotion == null || !promotion.IsActive || promotion.StartDate > DateTime.UtcNow || promotion.EndDate < DateTime.UtcNow)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
                         StatusCode = 404,
-                        Message = "Promotion not exist"
+                        Message = "Promotion not exist or expired"
                     };
                 }
 
@@ -222,7 +263,7 @@ namespace SWP391Web.Application.Services
                     Result = getPromotion
                 };
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return new ResponseDTO
                 {
@@ -238,7 +279,7 @@ namespace SWP391Web.Application.Services
             try
             {
                 var promotions = await _unitOfWork.PromotionRepository.GetPromotionByNameAsync(name);
-                if(promotions == null)
+                if (promotions == null)
                 {
                     return new ResponseDTO
                     {
@@ -268,7 +309,83 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> UpdatePromotionAsync(Guid promotionId, UpdatePromotionDTO updatePromotionDTO)
+        public async Task<ResponseDTO> GetPromotionsForQuoteAsync(Guid? modelId, Guid? versionId)
+        {
+            try
+            {
+                var allPromotions = await _unitOfWork.PromotionRepository.GetAllAsync();
+
+                //Deactive promotion expired
+                foreach (var p in allPromotions)
+                {
+                    if (p.IsActive && p.EndDate < DateTime.UtcNow)
+                    {
+                        p.IsActive = false;
+                        _unitOfWork.PromotionRepository.Update(p);
+                    }
+                }
+
+                await _unitOfWork.SaveAsync();
+
+                //Take valid promotion
+                var validPromotions = allPromotions
+                    .Where(p => p.IsActive && p.StartDate <= DateTime.UtcNow && p.EndDate >= DateTime.UtcNow).ToList();
+
+                //Take promotion have model and version
+                var specificPromotions = validPromotions
+                    .Where(p => p.ModelId.HasValue
+                           && p.VersionId.HasValue
+                           && p.VersionId == versionId
+                           && p.ModelId == modelId)
+                    .ToList();
+
+                // take all promotion
+                var globalPromotion = validPromotions
+                    .Where(p => !p.ModelId.HasValue && !p.VersionId.HasValue)
+                    .ToList();
+
+                // valid model and version
+                if (modelId.HasValue && versionId.HasValue)
+                {
+                    var modelExists = await _unitOfWork.ElectricVehicleModelRepository.IsModelExistsById(modelId.Value);
+                    var versionExists = await _unitOfWork.ElectricVehicleVersionRepository.IsVersionExistsById(versionId.Value);
+
+                    if (!modelExists || !versionExists)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            StatusCode = 404,
+                            Message = "Selected Model or Version does not exist."
+                        };
+                    }
+                }
+
+                var totalPromotion = specificPromotions.Concat(globalPromotion).ToList();
+
+                var getPromotions = _mapper.Map<List<GetPromotionDTO>>(totalPromotion);
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Get promotion for quote successfully",
+                    StatusCode = 200,
+                    Result = getPromotions
+                };
+
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> UpdatePromotionAsync(Guid promotionId, UpdatePromotionDTO dto)
         {
             try
             {
@@ -279,24 +396,24 @@ namespace SWP391Web.Application.Services
                     {
                         IsSuccess = false,
                         StatusCode = 404,
-                        Message = "Promotion not exist"
+                        Message = "Promotion not found"
                     };
                 }
 
-                //Validate Start & End Day
-                if (updatePromotionDTO.StartDate.HasValue && updatePromotionDTO.EndDate.HasValue)
+                // Validate Date
+                if (dto.StartDate.HasValue && dto.EndDate.HasValue)
                 {
-                    if (updatePromotionDTO.StartDate >= updatePromotionDTO.EndDate)
+                    if (dto.StartDate >= dto.EndDate)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
                             StatusCode = 400,
-                            Message = "Start Date must before End Date"
+                            Message = "Start Date must be before End Date"
                         };
                     }
 
-                    if (updatePromotionDTO.StartDate < DateTime.UtcNow || updatePromotionDTO.EndDate < DateTime.UtcNow)
+                    if (dto.StartDate < DateTime.UtcNow || dto.EndDate < DateTime.UtcNow)
                     {
                         return new ResponseDTO
                         {
@@ -306,97 +423,84 @@ namespace SWP391Web.Application.Services
                         };
                     }
                 }
-                if (updatePromotionDTO.StartDate.HasValue && updatePromotionDTO.EndDate is null)
+
+                // Validate Discount Type
+                if (dto.DiscountType == DiscountType.Percentage)
                 {
-                    if (updatePromotionDTO.StartDate > promotion.EndDate)
+                    if (!dto.Percentage.HasValue || dto.Percentage < 0 || dto.Percentage > 100)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
                             StatusCode = 400,
-                            Message = "Start Date can not below End Date"
+                            Message = "Percentage must be between 0 and 100"
                         };
                     }
                 }
-
-                if (updatePromotionDTO.DiscountType == DiscountType.Percentage)
+                else if (dto.DiscountType == DiscountType.FixAmount)
                 {
-                    if (updatePromotionDTO.Percentage is not null)
-                    {
-                        if (updatePromotionDTO.Percentage < 0 || updatePromotionDTO.Percentage > 100)
-                        {
-                            return new ResponseDTO
-                            {
-                                IsSuccess = false,
-                                StatusCode = 400,
-                                Message = "Percentage must be 0 to 100"
-                            };
-                        }
-                    }
-                }
-                else if (updatePromotionDTO.DiscountType == DiscountType.FixAmount)
-                {
-                    if (updatePromotionDTO.FixedAmount == null || updatePromotionDTO.FixedAmount <= 0)
+                    if (!dto.FixedAmount.HasValue || dto.FixedAmount <= 0)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
                             StatusCode = 400,
-                            Message = "Fix Amount must over 0"
+                            Message = "Fixed amount must be greater than 0"
                         };
                     }
                 }
 
-                if (!string.IsNullOrEmpty(updatePromotionDTO.Name))
+
+                // Validate name promotion if the same
+                if (!string.IsNullOrWhiteSpace(dto.Name))
                 {
-                    var newName = updatePromotionDTO.Name.Trim().ToUpper();
+                    var newName = dto.Name.Trim().ToUpper();
                     if (newName != promotion.Name)
                     {
-                        var isExist = await _unitOfWork.PromotionRepository.IsExistPromotionByNameExceptAsync(newName, promotion.Id);
+                        var isExist = await _unitOfWork.PromotionRepository
+                            .IsExistPromotionByNameExceptAsync(newName, promotion.Id);
                         if (isExist)
                         {
                             return new ResponseDTO
                             {
                                 IsSuccess = false,
                                 StatusCode = 400,
-                                Message = "promotion is exist"
+                                Message = "Promotion name already exists"
                             };
                         }
+
                         promotion.Name = newName;
                     }
                 }
 
-                // Update các trường khác nếu có
-                if (!string.IsNullOrWhiteSpace(updatePromotionDTO.Description))
+                // Orther
+                if (!string.IsNullOrWhiteSpace(dto.Description))
+                    promotion.Description = dto.Description.Trim();
+
+                if (dto.StartDate.HasValue)
+                    promotion.StartDate = dto.StartDate.Value;
+
+                if (dto.EndDate.HasValue)
+                    promotion.EndDate = dto.EndDate.Value;
+
+                promotion.DiscountType = dto.DiscountType;
+
+                if (dto.DiscountType == DiscountType.Percentage)
                 {
-                    promotion.Description = updatePromotionDTO.Description.Trim();
+                    promotion.Percentage = dto.Percentage;
+                    promotion.FixedAmount = null;
+                }
+                else
+                {
+                    promotion.FixedAmount = dto.FixedAmount;
+                    promotion.Percentage = null;
                 }
 
-                if (updatePromotionDTO.StartDate.HasValue && updatePromotionDTO.StartDate > DateTime.MinValue)
-                {
-                    promotion.StartDate = updatePromotionDTO.StartDate.Value;
-                }
-
-                if (updatePromotionDTO.EndDate.HasValue && updatePromotionDTO.EndDate > DateTime.MinValue)
-                {
-                    promotion.EndDate = updatePromotionDTO.EndDate.Value;
-                }
-
-                if (Enum.IsDefined(typeof(DiscountType), updatePromotionDTO.DiscountType))
-                {
-                    promotion.DiscountType = updatePromotionDTO.DiscountType;
-                }
-
-                if (updatePromotionDTO.DiscountType == DiscountType.Percentage && updatePromotionDTO.Percentage.HasValue)
-                {
-                    promotion.Percentage = updatePromotionDTO.Percentage;
-                    promotion.FixedAmount = null; // Đặt FixedAmount thành null nếu PromotionType là Percentage
-                }
-                else if (updatePromotionDTO.FixedAmount.HasValue)
-                {
-                    promotion.FixedAmount = updatePromotionDTO.FixedAmount;
-                    promotion.Percentage = null; // Đặt Percentage thành null nếu PromotionType là FixedAmount
-                }
+                // Update ModelId and VersionId
+                if (dto.ModelId.HasValue)
+                    promotion.ModelId = dto.ModelId;
+                if (dto.VersionId.HasValue)
+                    promotion.VersionId = dto.VersionId;
 
                 _unitOfWork.PromotionRepository.Update(promotion);
                 await _unitOfWork.SaveAsync();
@@ -405,12 +509,11 @@ namespace SWP391Web.Application.Services
                 {
                     IsSuccess = true,
                     StatusCode = 200,
-                    Message = "Update promotion successfully",
+                    Message = "Promotion updated successfully",
                     Result = promotion
                 };
             }
-            
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return new ResponseDTO
                 {
@@ -422,3 +525,4 @@ namespace SWP391Web.Application.Services
         }
     }
 }
+

@@ -11,5 +11,7 @@ namespace SWP391Web.Infrastructure.IRepository
     {
         Task<BookingEV?> GetBookingWithIdAsync(Guid bookingId);
         Task<bool> IsBookingExistsById(Guid bookingId);
+        Task<List<BookingEV>> GetAllBookingWithDetailAsync();
+        Task<List<ElectricVehicle?>> GetVehiclesByBookingIdAsync(Guid bookingId);
     }
 }

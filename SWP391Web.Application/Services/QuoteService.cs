@@ -10,6 +10,7 @@ using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -52,6 +53,17 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
+                var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(dealer.Id);
+                if (warehouse == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Warehouse 's dealer is not found ",
+                        StatusCode = 404
+                    };
+                }
+
                 Quote quote = new Quote
                 {
                     DealerId = dealer.Id,
@@ -90,65 +102,69 @@ namespace SWP391Web.Application.Services
                         };
                     }
 
-                    var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(dealer.Id);
-                    if(warehouse == null)
+                    var availableVehicles = await _unitOfWork.ElectricVehicleRepository
+                        .GetAvailableVehicleByDealerAsync(dealer.Id,version.Id,color.Id);
+                    if (availableVehicles == null)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
-                            Message = "Warehouse 's dealer is not found ",
+                            Message = "No available vehicle in dealer 's warehouse",
                             StatusCode = 404
                         };
                     }
 
-                    var vehicle = await _unitOfWork.ElectricVehicleRepository.GetByVersionColorAndWarehouseAsync(version.Id , color.Id , warehouse.Id);
-                    if(vehicle == null)
+                    var templates = (await _unitOfWork.EVTemplateRepository.GetTemplatesByVersionAndColorAsync(version.Id,color.Id));
+                    if (templates == null)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
-                            Message = "No vehicle found",
+                            Message = "No templates found",
                             StatusCode = 404
                         };
                     }
 
-                    // get promotion 
-                    var promotion = await _unitOfWork.PromotionRepository.GetPromotionByIdAsync(dt.PromotionId);
-                    if (promotion == null)
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "Promotion not found",
-                            StatusCode = 404
-                        };
-                    }
-
-                    if (!promotion.IsActive || promotion.StartDate > DateTime.UtcNow || promotion.EndDate < DateTime.UtcNow)
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "Promotion not active",
-                            StatusCode = 404
-                        };
-                    }
-
-                    decimal basePrice = vehicle.CostPrice;
+                    decimal basePrice = templates.Price;
                     decimal extraPrice = color.ExtraCost;
                     decimal unitPrice = basePrice + extraPrice;
                     decimal discount = 0;
+                    Promotion? promotion = null;
 
-                    if ((promotion.ModelId == null && promotion.VersionId == null) 
-                        || (promotion.ModelId == version.ModelId && promotion.VersionId == version.Id))
+                    if (dt.PromotionId != null)
                     {
-                        if(promotion.DiscountType == DiscountType.Percentage && promotion.Percentage.HasValue)
+                        promotion = await _unitOfWork.PromotionRepository.GetPromotionByIdAsync(dt.PromotionId.Value);
+                        if(promotion == null)
                         {
-                            discount = (unitPrice * promotion.Percentage.Value) / 100;
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                Message = "Promotion not found",
+                                StatusCode = 404,
+                            };
                         }
-                        else if(promotion.DiscountType == DiscountType.FixAmount && promotion.FixedAmount.HasValue)
+
+                        if (!promotion.IsActive || promotion.StartDate > DateTime.UtcNow || promotion.EndDate < DateTime.UtcNow)
                         {
-                            discount = promotion.FixedAmount.Value;
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                Message = "Promotion not active",
+                                StatusCode = 400
+                            };
+                        }
+
+                        if ((promotion.ModelId == null && promotion.VersionId == null)
+                            || (promotion.ModelId == version.ModelId && promotion.VersionId == version.Id))
+                        {
+                            if (promotion.DiscountType == DiscountType.Percentage && promotion.Percentage.HasValue)
+                            {
+                                discount = (unitPrice * promotion.Percentage.Value) / 100;
+                            }
+                            else if (promotion.DiscountType == DiscountType.FixAmount && promotion.FixedAmount.HasValue)
+                            {
+                                discount = promotion.FixedAmount.Value;
+                            }
                         }
                     }
 
@@ -196,13 +212,12 @@ namespace SWP391Web.Application.Services
 
             }
 
-        public async Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user)
+        public async Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user, QuoteStatus? status = null)
         {
             try
             {
                 var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if(userId == null)
+                if (userId == null)
                 {
                     return new ResponseDTO
                     {
@@ -214,10 +229,16 @@ namespace SWP391Web.Application.Services
 
                 var role = user.FindFirst(ClaimTypes.Role)?.Value;
 
-                var quotes = new List<Quote>();
+                Expression<Func<Quote, bool>>? filter = null;
+                if (status.HasValue)
+                    filter = q => q.Status == status.Value;
+
+                List<Quote> quotes;
+
                 if (role == StaticUserRole.DealerManager || role == StaticUserRole.DealerStaff)
                 {
-                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
+                    var dealer = await _unitOfWork.DealerRepository
+                        .GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
                     if (dealer == null)
                     {
                         return new ResponseDTO
@@ -228,34 +249,59 @@ namespace SWP391Web.Application.Services
                         };
                     }
 
-                    quotes = (await _unitOfWork.QuoteRepository.GetAllAsync())
-                                .Where(q => q.DealerId == dealer.Id)
-                                .ToList();
+                    if (filter != null)
+                        filter = q => q.DealerId == dealer.Id && q.Status == status.Value;
+                    else
+                        filter = q => q.DealerId == dealer.Id;
+
+                    quotes = await _unitOfWork.QuoteRepository.GetAllQuotesWithDetailAsync(filter);
                 }
                 else
                 {
-                    quotes = (await _unitOfWork.QuoteRepository.GetAllAsync()).ToList();
+                    quotes = await _unitOfWork.QuoteRepository.GetAllQuotesWithDetailAsync(filter);
                 }
 
-                var getQuotes = _mapper.Map<List<GetQuoteDTO>>(quotes);
+
+                //filter quote status
+                var filteredQuotes = new List<GetQuoteDTO>();
+                foreach (var q in quotes)
+                {
+                    bool isShow = true;
+
+                    foreach (var dt in q.QuoteDetails)
+                    {
+                        if (dt.Promotion != null && dt.Promotion.EndDate.HasValue &&
+                            dt.Promotion.EndDate < DateTime.UtcNow)
+                        {
+                            isShow = false;
+                            break;
+                        }
+
+                    }
+
+                    if (isShow)
+                    {
+                        filteredQuotes.Add(_mapper.Map<GetQuoteDTO>(q));
+                    }
+                }
+
                 return new ResponseDTO
                 {
                     IsSuccess = true,
-                    Message = "Quotes retrieve successfully",
+                    Message = "Get all quotes successfully",
                     StatusCode = 200,
-                    Result = getQuotes
+                    Result = filteredQuotes
                 };
             }
             catch (Exception ex)
             {
-                return new ResponseDTO()
+                return new ResponseDTO
                 {
                     IsSuccess = false,
                     Message = ex.Message,
-                    StatusCode = 500,
+                    StatusCode = 500
                 };
             }
-
         }
 
         public async Task<ResponseDTO> GetQuoteByIdAsync(ClaimsPrincipal user,  Guid id)
@@ -296,8 +342,23 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var getQuote = _mapper.Map<GetQuoteDTO>(quote);
+                foreach (var dt in quote.QuoteDetails)
+                {
+                    var availableVehicles = await _unitOfWork.ElectricVehicleRepository
+                        .GetAvailableVehicleByDealerAsync(quote.DealerId, dt.VersionId, dt.ColorId);
 
+                    if (availableVehicles.Count() < dt.Quantity)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Not enough vehicles in warehouse for this quote",
+                            StatusCode = 404
+                        };
+                    }
+                }
+
+                var getQuote = _mapper.Map<GetQuoteDTO>(quote);
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -414,7 +475,7 @@ namespace SWP391Web.Application.Services
                         //Change status to InTransit
                         foreach( var ev in selectedVehicle)
                         {
-                            ev.Status = StatusVehicle.InTransit;
+                            ev.Status = ElectricVehicleStatus.InTransit;
                             _unitOfWork.ElectricVehicleRepository.Update(ev);
                         }
                     }

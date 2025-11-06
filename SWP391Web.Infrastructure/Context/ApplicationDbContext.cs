@@ -26,22 +26,41 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<EContractTerm> EContractTerms { get; set; }
         public DbSet<BookingEV> BookingEVs { get; set; }
         public DbSet<BookingEVDetail> BookingEVDetails { get; set; }
-        public DbSet<EVCInventory> EVCInventories { get; set; } 
+        public DbSet<EVCInventory> EVCInventories { get; set; }
         public DbSet<Warehouse> Warehouses { get; set; }
         public DbSet<Quote> Quotes { get; set; }
         public DbSet<Promotion> Promotions { get; set; }
         public DbSet<EVAttachment> EVAttachments { get; set; }
         public DbSet<QuoteDetail> QuoteDetails { get; set; }
+        public DbSet<ElectricVehicleTemplate> ElectricVehicleTemplates { get; set; }
         public DbSet<DealerMember> DealerMembers { get; set; }
+        public DbSet<OrderDetail> OrderDetails { get; set; }
+        public DbSet<AppointmentSetting> AppointmentSettings { get; set; }
+        public DbSet<Appointment> Appointments { get; set; }
+        public DbSet<DepositSetting> DepositSettings { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<CustomerFeedback> CustomerFeedbacks { get; set; }
+        public DbSet<DealerFeedback> DealerFeedbacks { get; set; }
+        public DbSet<DealerFBAttachment> DealerFBAttachments { get; set; }
+        public DbSet<CustomerFBAttachment> CustomerFBAttachments { get; set; }
+        public DbSet<DealerPolicyOverride> DealerPolicyOverrides { get; set; }
+        public DbSet<DealerDebt> DealerDebts { get; set; }
+        public DbSet<DealerTier> DealerTiers { get; set; }
+        public DbSet<VehicleDelivery> VehicleDeliveries { get; set; }
+        public DbSet<VehicleDeliveryDetail> VehicleDeliveryDetails { get; set; }
+        public DbSet<DealerDebtTransaction> DealerDebtTransactions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
             //Seed initial data
+            DealerTierSeeder.DealerTierConfigure(modelBuilder);
             EmailSeeder.SeedEmailTemplate(modelBuilder);
             EContractSeeder.EContractTemplateSeeder.SeedDealerEContract(modelBuilder);
             EContractTermSeeder.SeedTerm(modelBuilder);
+            AdminSeeder.AdminConfigure(modelBuilder);
 
             // Customize ASP.NET Identity table names
             modelBuilder.Entity<ApplicationUser>(b =>
@@ -65,61 +84,64 @@ namespace SWP391Web.Infrastructure.Context
             modelBuilder.Entity<IdentityUserToken<string>>(b =>
                 b.ToTable("UserTokens"));
 
-
-            //modelBuilder.Entity<Dealer>()
-            //    .HasMany(dl => dl.ApplicationUsers)
-            //    .WithMany(au => au.Dealers)
-            //    .UsingEntity<Dictionary<string, string>>(
-            //        "DealerMembers",
-            //        j => j
-            //            .HasOne<ApplicationUser>()
-            //            .WithMany()
-            //            .HasForeignKey("ApplicationUserId")
-            //            .HasConstraintName("FK_DealerMember_ApplicationUsers_ApplicationUserId")
-            //            .OnDelete(DeleteBehavior.Restrict),
-            //        j => j
-            //            .HasOne<Dealer>()
-            //            .WithMany()
-            //            .HasForeignKey("DealerId")
-            //            .HasConstraintName("FK_DealerMember_Dealers_DealerId")
-            //            .OnDelete(DeleteBehavior.Restrict),
-            //        j =>
-            //        {
-            //            j.HasKey("DealerId", "ApplicationUserId");
-            //            j.ToTable("DealerMembers");
-            //        });
-
             /******************************************************************************/
             // Configure Dealer entity
 
-            // Dealer - ApplicationUser (many-to-many) relationship
-            //modelBuilder.Entity<Dealer>()
-            //    .HasMany(d => d.ApplicationUsers)
-            //    .WithMany(u => u.Dealers)
-            //    .UsingEntity<Dictionary<string, object>>(
-            //        "DealerMembers",
-            //        j => j
-            //            .HasOne<ApplicationUser>()
-            //            .WithMany()
-            //            .HasForeignKey("ApplicationUserId")
-            //            .HasConstraintName("FK_DealerMembers_ApplicationUsers_ApplicationUserId")
-            //            .OnDelete(DeleteBehavior.Restrict),
+            modelBuilder.Entity<Dealer>()
+                .HasOne(d => d.DealerTier)
+                .WithMany(dd => dd.Dealers)
+                .HasForeignKey(dd => dd.DealerTierId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            //        j => j
-            //            .HasOne<Dealer>()
-            //            .WithMany()
-            //            .HasForeignKey("DealerId")
-            //            .HasConstraintName("FK_DealerMembers_Dealers_DealerId")
-            //            .OnDelete(DeleteBehavior.Restrict),
-            //        j =>
-            //        {
-            //            j.HasKey("DealerId", "ApplicationUserId");
-            //            j.Property<Guid>("DealerId");
-            //            j.Property<string>("ApplicationUserId");
-            //            j.ToTable("DealerMembers");
-            //            j.HasIndex("DealerId");
-            //            j.HasIndex("ApplicationUserId");
-            //        });
+            /******************************************************************************/
+            // Configure DealerDebt entity
+
+            modelBuilder.Entity<DealerDebt>()
+                .HasOne(dd => dd.Dealer)
+                .WithMany(d => d.DealerDebts)
+                .HasForeignKey(dd => dd.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure DealerPolicyOverride entity
+
+            modelBuilder.Entity<DealerPolicyOverride>()
+                .HasOne(dpo => dpo.Dealer)
+                .WithMany(d => d.PolicyOverrides)
+                .HasForeignKey(dpo => dpo.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure Customer entity
+
+
+            modelBuilder.Entity<Customer>()
+                .HasMany(d => d.Dealers)
+                .WithMany(u => u.Customers)
+                .UsingEntity<Dictionary<string, object>>(
+                    "DealerCustomers",
+                    j => j
+                        .HasOne<Dealer>()
+                        .WithMany()
+                        .HasForeignKey("DealerId")
+                        .HasConstraintName("FK_DealerCustomers_Dealers_DealerId")
+                        .OnDelete(DeleteBehavior.Restrict),
+                    j => j
+                        .HasOne<Customer>()
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .HasConstraintName("FK_DealerCustomers_Customers_CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict),
+                    j =>
+                    {
+                        j.HasKey("DealerId", "CustomerId");
+                        j.Property<Guid>("DealerId");
+                        j.Property<Guid>("CustomerId");
+                        j.ToTable("DealerCustomers");
+                        j.HasIndex("DealerId");
+                        j.HasIndex("CustomerId");
+                    });
+
 
             // Dealer - Manager (ApplicationUser) one-to-many relationship
             modelBuilder.Entity<Dealer>()
@@ -136,15 +158,9 @@ namespace SWP391Web.Infrastructure.Context
             // Configure ElectricVehicle entity
 
             modelBuilder.Entity<ElectricVehicle>()
-                .HasOne(ev => ev.Version)
+                .HasOne(ev => ev.ElectricVehicleTemplate)
                 .WithMany(vs => vs.ElectricVehicles)
-                .HasForeignKey(ev => ev.VersionId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<ElectricVehicle>()
-                .HasOne(ev => ev.Color)
-                .WithMany(c => c.ElectricVehicles)
-                .HasForeignKey(ev => ev.ColorId)
+                .HasForeignKey(ev => ev.ElectricVehicleTemplateId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<ElectricVehicle>()
@@ -196,19 +212,19 @@ namespace SWP391Web.Infrastructure.Context
                 .HasForeignKey(b => b.DealerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<BookingEV>()
+                .HasOne(b => b.EContract)
+                .WithOne(e => e.BookingEV)
+                .HasForeignKey<BookingEV>(b => b.EContractId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             /******************************************************************************/
             // Configure EContract entity
 
             modelBuilder.Entity<EContract>()
-                .HasOne(e => e.Ower)
-                .WithOne(o => o.EContract)
-                .HasForeignKey<EContract>(e => e.OwnerBy)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<EContract>()
-                .HasOne(e => e.EContractTemplate)
-                .WithMany(t => t.EContracts)
-                .HasForeignKey(e => e.TemplateId)
+                .HasOne(e => e.Owner)
+                .WithMany(o => o.EContracts)
+                .HasForeignKey(e => e.OwnerBy)
                 .OnDelete(DeleteBehavior.Restrict);
 
             /******************************************************************************/
@@ -230,9 +246,9 @@ namespace SWP391Web.Infrastructure.Context
             // Configure EVAttachment entity
 
             modelBuilder.Entity<EVAttachment>()
-                .HasOne(eva => eva.ElectricVehicle)
+                .HasOne(eva => eva.ElectricVehicleTemplate)
                 .WithMany(ev => ev.EVAttachments)
-                .HasForeignKey(eva => eva.ElectricVehicleId)
+                .HasForeignKey(eva => eva.ElectricVehicleTemplateId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             /******************************************************************************/
@@ -246,8 +262,8 @@ namespace SWP391Web.Infrastructure.Context
 
             modelBuilder.Entity<Quote>()
                 .HasOne(q => q.CreatedByUser)
-                .WithOne(u => u.Quote)
-                .HasForeignKey<Quote>(q => q.CreatedBy)
+                .WithMany(u => u.Quotes)
+                .HasForeignKey(q => q.CreatedBy)
                 .OnDelete(DeleteBehavior.Restrict);
 
             /******************************************************************************/
@@ -261,7 +277,7 @@ namespace SWP391Web.Infrastructure.Context
 
             modelBuilder.Entity<QuoteDetail>()
                 .HasOne(qd => qd.ElectricVehicleVersion)
-                .WithMany(v => v.quoteDetails)
+                .WithMany(v => v.QuoteDetails)
                 .HasForeignKey(qd => qd.VersionId)
                 .OnDelete(DeleteBehavior.Restrict);
 
@@ -276,7 +292,7 @@ namespace SWP391Web.Infrastructure.Context
                 .WithMany(p => p.QuoteDetails)
                 .HasForeignKey(qd => qd.PromotionId)
                 .OnDelete(DeleteBehavior.Restrict);
-            
+
 
             /******************************************************************************/
             // Configure Promotion entity
@@ -309,6 +325,200 @@ namespace SWP391Web.Infrastructure.Context
                 .HasOne(dm => dm.ApplicationUser)
                 .WithMany(au => au.DealerMembers)
                 .HasForeignKey(dm => dm.ApplicationUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure ElectricVehicleTemplate entity
+
+            modelBuilder.Entity<ElectricVehicleTemplate>()
+                .HasOne(evt => evt.Version)
+                .WithMany(vs => vs.ElectricVehicleTemplates)
+                .HasForeignKey(evt => evt.VersionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ElectricVehicleTemplate>()
+                .HasOne(evt => evt.Color)
+                .WithMany(c => c.ElectricVehicleTemplates)
+                .HasForeignKey(evt => evt.ColorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure CustomerOrder entity
+
+            modelBuilder.Entity<CustomerOrder>()
+                .HasOne(co => co.Quote)
+                .WithMany(q => q.CustomerOrders)
+                .HasForeignKey(co => co.QuoteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CustomerOrder>()
+                .HasOne(co => co.Customer)
+                .WithMany(c => c.CustomerOrders)
+                .HasForeignKey(co => co.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CustomerOrder>()
+                .HasOne(co => co.CreatedByUser)
+                .WithMany(u => u.CustomerOrders)
+                .HasForeignKey(co => co.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure OrderDetail entity
+
+            modelBuilder.Entity<OrderDetail>()
+                .HasOne(od => od.CustomerOrder)
+                .WithMany(co => co.OrderDetails)
+                .HasForeignKey(od => od.CustomerOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<OrderDetail>()
+                .HasOne(od => od.ElectricVehicle)
+                .WithMany(v => v.OrderDetails)
+                .HasForeignKey(od => od.ElectricVehicleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure Transaction entity
+
+            modelBuilder.Entity<Transaction>()
+                .HasOne(tr => tr.CustomerOrder)
+                .WithMany(co => co.Transactions)
+                .HasForeignKey(tr => tr.CustomerOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /******************************************************************************/
+            // Configure Appointment entity
+
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.Customer)
+                .WithMany(c => c.Appointments)
+                .HasForeignKey(a => a.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.Dealer)
+                .WithMany(d => d.Appointments)
+                .HasForeignKey(a => a.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.EVTemplate)
+                .WithMany(s => s.Appointments)
+                .HasForeignKey(a => a.EVTemplateId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure AppointmentSetting entity
+
+            modelBuilder.Entity<AppointmentSetting>()
+                .HasOne(ap => ap.Dealer)
+                .WithOne(d => d.AppointmentSetting)
+                .HasForeignKey<AppointmentSetting>(ap => ap.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<AppointmentSetting>()
+                .HasOne(ap => ap.Manager)
+                .WithOne(m => m.AppointmentSetting)
+                .HasForeignKey<AppointmentSetting>(ap => ap.ManagerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<AppointmentSetting>()
+                .HasIndex(ap => ap.DealerId)
+                .IsUnique();
+
+            /*****************************************************************************/
+            // Configure DepositSetting entity
+
+            modelBuilder.Entity<DepositSetting>()
+                .HasIndex(ds => ds.Id)
+                .IsUnique();
+
+            modelBuilder.Entity<DepositSetting>()
+                .HasOne(ds => ds.Dealer)
+                .WithOne(d => d.DepositSetting)
+                .HasForeignKey<DepositSetting>(ds => ds.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DepositSetting>()
+                .HasOne(ds => ds.Manager)
+                .WithOne(m => m.DepositSetting)
+                .HasForeignKey<DepositSetting>(ds => ds.ManagerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure Notification entity
+
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.Dealer)
+                .WithMany(d => d.Notifications)
+                .HasForeignKey(n => n.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure CustomerFeedback entity
+
+            modelBuilder.Entity<CustomerFeedback>()
+                .HasOne(cf => cf.Customer)
+                .WithMany(c => c.CustomerFeedbacks)
+                .HasForeignKey(cf => cf.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CustomerFeedback>()
+                .HasOne(cf => cf.Dealer)
+                .WithMany(d => d.CustomerFeedbacks)
+                .HasForeignKey(cf => cf.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure DealerFeedback entity
+
+            modelBuilder.Entity<DealerFeedback>()
+                .HasOne(df => df.Dealer)
+                .WithMany(d => d.DealerFeedbacks)
+                .HasForeignKey(df => df.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure DealerFBAttachment entity
+
+            modelBuilder.Entity<DealerFBAttachment>()
+                .HasOne(dfba => dfba.DealerFeedback)
+                .WithMany(df => df.DealerFBAttachments)
+                .HasForeignKey(dfba => dfba.DealerFeedBackId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure CustomerFBAttachment entity
+
+            modelBuilder.Entity<CustomerFBAttachment>()
+                .HasOne(cfba => cfba.CustomerFeedback)
+                .WithMany(cf => cf.CustomerFBAttachments)
+                .HasForeignKey(cfba => cfba.CustomerFeedBackId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure VehicleDeliveryDetail entity
+
+            modelBuilder.Entity<VehicleDeliveryDetail>()
+                .HasOne(vdd => vdd.VehicleDelivery)
+                .WithMany(vd => vd.VehicleDeliveryDetails)
+                .HasForeignKey(vdd => vdd.VehicleDeliveryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<VehicleDeliveryDetail>()
+                .HasOne(vdd => vdd.ElectricVehicle)
+                .WithMany(ev => ev.VehicleDeliveryDetails)
+                .HasForeignKey(vdd => vdd.ElectricVehicleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure DealerDebtTransaction entity
+
+            modelBuilder.Entity<DealerDebtTransaction>()
+                .HasOne(ddt => ddt.Dealer)
+                .WithMany(d => d.DealerDebtTransactions)
+                .HasForeignKey(ddt => ddt.DealerId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

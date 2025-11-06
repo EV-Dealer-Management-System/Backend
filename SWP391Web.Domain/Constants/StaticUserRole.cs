@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Domain.Constants
 {
-    public class StaticUserRole
+    public static class StaticUserRole
     {
         public const string Admin = "Admin";
         public const string DealerManager = "DealerManager";

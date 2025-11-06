@@ -24,9 +24,9 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-all-quote")]
-        public async Task<ActionResult<ResponseDTO>> GetAllQuoteAsync()
+        public async Task<ActionResult<ResponseDTO>> GetAllQuoteAsync([FromQuery] QuoteStatus? status)
         {
-            var response = await _quoteService.GetAllAsync(User);
+            var response = await _quoteService.GetAllAsync(User, status);
             return StatusCode(response.StatusCode, response);
         }
 

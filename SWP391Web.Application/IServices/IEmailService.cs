@@ -24,5 +24,6 @@ namespace SWP391Web.Application.IService
         string? supportEmail = null);
         Task<bool> SendDealerStaffAaccountEmail(string to, string fullName, string password, string dealerName);
         Task<bool> NotifyAddedToDealerExistingUser(string to, string fullName, string roleInDealer, string dealerName);
+        Task<bool> NotifyPaymentLinkToCustomer(string to, string customerName, int orderNo, decimal orderAmount, string paymentLink);
     }
 }
