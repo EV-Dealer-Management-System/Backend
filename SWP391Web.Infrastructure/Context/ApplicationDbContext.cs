@@ -519,6 +519,11 @@ namespace SWP391Web.Infrastructure.Context
                 .WithMany(d => d.DealerDebtTransactions)
                 .HasForeignKey(ddt => ddt.DealerId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DealerDebt>(e =>
+            {
+                e.HasIndex(x => new { x.DealerId, x.PeriodFrom, x.PeriodTo }).IsUnique();
+            });
         }
     }
 }
