@@ -2,6 +2,7 @@
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Dashboard;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Entities;
 using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
@@ -139,6 +140,64 @@ namespace SWP391Web.Application.Services
                     StatusCode = 200,
                     Result = revenueByQuarter
                 };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetDealerStaffDashboardAsync(ClaimsPrincipal user, CancellationToken ct)
+        {
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if(userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 401
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, ct);
+                if(dealer == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var totalQuote = await _unitOfWork.QuoteRepository.CountByDealerIdAsync(dealer.Id, ct);
+                var totalVehicle = await _unitOfWork.VehicleDeliveryRepository.CountByDealerIdAsync(dealer.Id, ct);
+                var totalCustomer = await _unitOfWork.CustomerRepository.CountCustomerByDealerId(dealer.Id, ct);
+
+                var dashboard = new GetDealerStaffDBDTO
+                {
+                    DealerName = dealer.Name,
+                    TotalQuotes = totalQuote,
+                    TotalVehicles = totalVehicle,
+                    TotalCustomers = totalCustomer,
+                };
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Get dealer staff dashboard successfully",
+                    StatusCode = 200,
+                    Result = dashboard
+                };
+
             }
             catch (Exception ex)
             {
