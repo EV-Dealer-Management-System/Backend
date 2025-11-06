@@ -93,7 +93,8 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                IEnumerable<ApplicationUser> evmStaffs = await _unitOfWork.UserManagerRepository.GetUsersInRoleAsync(StaticUserRole.EVMStaff);
+                IEnumerable<ApplicationUser> evmStaffs = (await _unitOfWork.UserManagerRepository.GetUsersInRoleAsync(StaticUserRole.EVMStaff))
+                    .OrderByDescending(s => s.LockoutEnabled);
                 if (evmStaffs is null || !evmStaffs.Any())
                 {
                     return new ResponseDTO
@@ -111,17 +112,6 @@ namespace SWP391Web.Application.Services
                         "email" => evmStaffs.Where(u => u.Email != null && u.Email.Contains(filterQuery, StringComparison.OrdinalIgnoreCase)),
                         "fullname" => evmStaffs.Where(u => u.FullName != null && u.FullName.Contains(filterQuery, StringComparison.OrdinalIgnoreCase)),
                         "phonenumber" => evmStaffs.Where(u => u.PhoneNumber != null && u.PhoneNumber.Contains(filterQuery, StringComparison.OrdinalIgnoreCase)),
-
-                        _ => evmStaffs
-                    };
-                }
-
-                if (!string.IsNullOrEmpty(sortBy))
-                {
-                    evmStaffs = sortBy.ToLower().Trim() switch
-                    {
-                        "fullname" => isAcsending is true ? evmStaffs.OrderBy(u => u.FullName) : evmStaffs.OrderByDescending(u => u.FullName),
-                        "createdat" => isAcsending is true ? evmStaffs.OrderBy(u => u.CreatedAt) : evmStaffs.OrderByDescending(u => u.CreatedAt),
 
                         _ => evmStaffs
                     };
@@ -157,6 +147,43 @@ namespace SWP391Web.Application.Services
                     IsSuccess = false,
                     StatusCode = 500,
                     Message = $"Error to get all EVM staffs: {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> UpdateEVCStaffStatus(string evcStaffId, bool isActive, CancellationToken ct)
+        {
+            try
+            {
+                var user = await _unitOfWork.UserManagerRepository.GetByIdAsync(evcStaffId);
+                if (user is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "EVC Staff not found."
+                    };
+                }
+
+                user.LockoutEnabled = isActive;
+                _unitOfWork.UserManagerRepository.Update(user);
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "EVC Staff status updated successfully."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to update EVC staff status: {ex.Message}"
                 };
             }
         }
