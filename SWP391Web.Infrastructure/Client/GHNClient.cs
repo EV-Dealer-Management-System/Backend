@@ -85,5 +85,18 @@ namespace SWP391Web.Infrastructure.Client
             }
             return Task.FromResult(JsonConvert.DeserializeObject<ProvincesOpenGetWardResponse>(json) ?? throw new Exception("Deserialize error"));
         }
+
+        public Task<List<ProvincesOpenGetProvinceResponse>> ProvincesOpenGetProvinceResponse(CancellationToken ct = default)
+        {
+            var request = AbsoluteGet($"https://provinces.open-api.vn/api/v2/p/");
+            var response = _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct).Result;
+
+            var json = response.Content.ReadAsStringAsync(ct).Result;
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"Provinces Open API error: {response.StatusCode} - {json}");
+            }
+            return Task.FromResult(JsonConvert.DeserializeObject<List<ProvincesOpenGetProvinceResponse>>(json) ?? throw new Exception("Deserialize error"));
+        }
     }
 }
