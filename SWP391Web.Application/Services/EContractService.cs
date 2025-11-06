@@ -369,7 +369,7 @@ namespace SWP391Web.Application.Services
                 ReceiveNotificationMethod = 0,
                 SignMethod = 2,
                 SignConfirmationEnabled = true,
-                GenerateSelfSignedCertEnabled = false,
+                GenerateSelfSignedCertEnabled = true,
                 Status = 1,
                 DepartmentIds = departmentIds,
                 RoleIds = roleIds
