@@ -12,5 +12,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<EVCInventory?> GetByIdAsync(Guid evcInventoryId);
         Task<bool> IsEVCInventoryExistsById(Guid evcInventoryId);
         Task<bool> IsEVCInventoryExistsByName(string name);
+        Task<int> GetTotalEVCInventoryAsync(CancellationToken ct);
     }
 }
