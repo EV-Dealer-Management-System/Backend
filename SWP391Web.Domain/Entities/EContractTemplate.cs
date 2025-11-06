@@ -41,7 +41,5 @@ namespace SWP391Web.Domain.Entities
             ContentHtml = contentHtml;
         }
 
-        public ICollection<EContract> EContracts { get; set; } = new List<EContract>();
-
     }
 }
