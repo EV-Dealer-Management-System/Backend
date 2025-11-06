@@ -523,6 +523,7 @@ namespace SWP391Web.Infrastructure.Context
             {
                 e.HasIndex(x => new { x.DealerId, x.PeriodFrom, x.PeriodTo }).IsUnique();
             });
+
         }
     }
 }
