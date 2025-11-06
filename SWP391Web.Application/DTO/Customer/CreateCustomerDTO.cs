@@ -10,6 +10,7 @@ namespace SWP391Web.Application.DTO.Customer
     {
         public string? FullName { get; set; }
         public string? PhoneNumber { get; set; }
+        public string? CitizenID { get; set; } //CCCD 
         public string Email { get; set; } = null!;
         public string? Address { get; set; }
         public string? Note { get; set; }

@@ -30,9 +30,15 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-all-customers")]
-        public async Task<ActionResult<ResponseDTO>> GetAllCustomers([FromQuery] string? search)
+        public async Task<ActionResult<ResponseDTO>> GetAllCustomers([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, string? search = default, CancellationToken ct = default)
         {
-            var response = await _customerService.GetAllCustomerAsync(User, search);
+            var response = await _customerService.GetAllCustomerAsync(User, pageNumber, pageSize, search, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut("update-customer/{customerId}")]
+        public async Task<ActionResult<ResponseDTO>> UpdateCustomerAsync(Guid customerId, [FromBody] UpdateCustomerDTO updateCustomerDTO)
+        {
+            var response = await _customerService.UpdateCustomerAsync(User, customerId, updateCustomerDTO);
             return StatusCode(response.StatusCode, response);
         }
     }
