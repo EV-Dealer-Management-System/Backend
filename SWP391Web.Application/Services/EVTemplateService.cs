@@ -307,6 +307,7 @@ namespace SWP391Web.Application.Services
                     //Remove all photo
                     foreach (var att in template.EVAttachments.ToList())
                     {
+                        await _s3Service.RemoveElectricVehicleFile(att.Key);
                         _unitOfWork.EVAttachmentRepository.Remove(att);
                     }
 

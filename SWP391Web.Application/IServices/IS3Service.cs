@@ -16,5 +16,6 @@ namespace SWP391Web.Application.IServices
         ResponseDTO GenerateUploadElectricVehicle(PreSignedUploadDTO preSignedUploadDTO);
         ResponseDTO GenerateUploadDealerFBAttachment(PreSignedUploadDTO preSignedUploadDTO);
         ResponseDTO GenerateUploadCustomerFBAttachment(PreSignedUploadDTO preSignedUploadDTO);
+        Task RemoveElectricVehicleFile(string key);
     }
 }
