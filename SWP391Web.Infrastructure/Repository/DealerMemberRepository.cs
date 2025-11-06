@@ -46,6 +46,7 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<DealerMember?> GetByApplicationId(string applicationUserId, CancellationToken ct)
         {
             return await _context.DealerMembers
+                .Include(dm => dm.ApplicationUser)
                 .Where(dm => dm.ApplicationUserId == applicationUserId)
                 .FirstOrDefaultAsync(ct);
         }

@@ -22,6 +22,9 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<Dealer?> GetByIdAsync(Guid dealerId, CancellationToken ct)
         {
             return await _context.Dealers
+                .Include(dl => dl.Manager)
+                .Include(dl => dl.DealerMembers)
+                    .ThenInclude(dm => dm.ApplicationUser)
                 .Include(dl => dl.Warehouse)
                 .Include(dl => dl.DealerTier)
                 .Include(dl => dl.PolicyOverrides)
