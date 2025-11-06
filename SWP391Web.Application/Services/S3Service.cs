@@ -13,14 +13,29 @@ namespace SWP391Web.Application.Services
     public class S3Service : IS3Service
     {
         private readonly string _bucketName;
+        private readonly string _accessKey;
+        private readonly string _secretKey;
+        private readonly RegionEndpoint _region;
+
         public S3Service(IConfiguration config)
         {
             _bucketName = config["S3Bucket:bucketName"] ?? throw new ArgumentNullException("S3Bucket:bucketName");
+            _accessKey = config["S3Settings:AccessKey"] ?? throw new ArgumentNullException("S3Settings:AccessKey");
+            _secretKey = config["S3Settings:SecretKey"] ?? throw new ArgumentNullException("S3Settings:SecretKey");
+            _region = RegionEndpoint.APSoutheast1;
+        }
+
+        private AmazonS3Client CreateS3Client()
+        {
+            if (!string.IsNullOrEmpty(_accessKey) && !string.IsNullOrEmpty(_secretKey))
+                return new AmazonS3Client(_accessKey, _secretKey, _region);
+
+            return new AmazonS3Client(_region);
         }
 
         public string GenerateDownloadUrl(string objectKey)
         {
-            var s3Client = new AmazonS3Client(RegionEndpoint.APSoutheast1);
+            var s3Client = CreateS3Client();
 
             var request = new GetPreSignedUrlRequest
             {
@@ -37,7 +52,7 @@ namespace SWP391Web.Application.Services
 
         public ResponseDTO GenerateUploadUrl(string objectKey, string contentType)
         {
-            var s3Client = new AmazonS3Client(RegionEndpoint.APSoutheast1);
+            var s3Client = CreateS3Client();
 
             var request = new GetPreSignedUrlRequest
             {
@@ -60,6 +75,23 @@ namespace SWP391Web.Application.Services
                     ObjectKey = objectKey
                 }
             };
+        }
+
+        public async Task RemoveFile(string objectKey)
+        {
+            var s3Client = CreateS3Client();
+            var deleteObjectRequest = new DeleteObjectRequest
+            {
+                BucketName = _bucketName,
+                Key = objectKey,
+            };
+            await s3Client.DeleteObjectAsync(deleteObjectRequest);
+        }
+
+        public async Task RemoveElectricVehicleFile(string key)
+        {
+            var objectKey = $"{StaticBucketName.ElectricVehicleBucket}/{key}";
+            await RemoveFile(objectKey);
         }
 
         // Generate Upload Url for ElectricVehicle
