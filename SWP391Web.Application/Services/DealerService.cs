@@ -147,11 +147,16 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetAllDealerAsync(string? filterOn, string? filterQuery, string? sortBy, bool? isAcsending, int pageNumber, int PageSize, CancellationToken ct)
+        public async Task<ResponseDTO> GetAllDealerAsync(string? filterOn, string? filterQuery, string? sortBy, DealerStatus? status, bool? isAcsending, int pageNumber, int PageSize, CancellationToken ct)
         {
             try
             {
+
                 Expression<Func<Dealer, bool>>? baseFilter = null;
+                if (status is not null)
+                {
+                    baseFilter = d => d.DealerStatus == status;
+                }
 
                 if (!string.IsNullOrWhiteSpace(filterOn) && (!string.IsNullOrWhiteSpace(filterQuery)))
                 {
@@ -161,7 +166,7 @@ namespace SWP391Web.Application.Services
                         "name" => d => d.Name != null &&
                                        d.Name.ToLower().Contains(query),
 
-                        _ => d => d.DealerStatus == DealerStatus.Active
+                        _ => baseFilter
                     };
                 }
 

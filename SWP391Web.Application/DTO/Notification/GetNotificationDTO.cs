@@ -8,6 +8,7 @@ namespace SWP391Web.Application.DTO.Notification
 {
     public class GetNotificationDTO
     {
+        public Guid Id { get; set; }
         public string Title { get; set; } = null!;
         public string Message { get; set; } = null!;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
