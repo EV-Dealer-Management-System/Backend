@@ -1,4 +1,5 @@
-﻿using SWP391Web.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore;
+using SWP391Web.Domain.Entities;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.IRepository;
 using System;
@@ -15,6 +16,18 @@ namespace SWP391Web.Infrastructure.Repository
         public NotificationRepository(ApplicationDbContext context) : base(context)
         {
             _context = context;
+        }
+
+        public async Task<Notification?> GetByIdAsync(Guid id, CancellationToken ct)
+        {
+            return await _context.Notifications.FirstOrDefaultAsync(n => n.Id == id, ct);
+        }
+
+        public async Task MarkAllAsReadAsync(Guid dealerId, string targetRole, CancellationToken ct)
+        {
+            await _context.Notifications
+               .Where(n => n.DealerId == dealerId && n.TargetRole == targetRole && !n.IsRead)
+               .ForEachAsync(n => n.IsRead = true, ct);
         }
     }
 }
