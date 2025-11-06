@@ -29,5 +29,6 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> CreateBookingEContractAsync(ClaimsPrincipal userClaim, Guid bookingId, CancellationToken ct);
         Task<ResponseDTO> DeleteEContractDraft(Guid EContractId, CancellationToken ct);
         Task<VnptResult<DeleteSmartCAResponse>> DeleteSmartCA(DeleteSmartCARequest deleteSmartCARequest);
+        Task<ResponseDTO> CreateDepositEContractConfirm(Guid customerOderId, CancellationToken ct);
     }
 }

@@ -26,8 +26,9 @@ namespace SWP391Web.Application.Services
         private readonly IDepositSettingService _depositSetting;
         private readonly IDealerDebtService _dealerDebtService;
         private readonly IDealerDebtTransactionService _dealerDebtTransactionService;
+        private readonly IEContractService _eContractService;
         public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService, IDepositSettingService depositSetting,
-            IDealerDebtService dealerDebtService, IDealerDebtTransactionService dealerDebtTransactionService)
+            IDealerDebtService dealerDebtService, IDealerDebtTransactionService dealerDebtTransactionService, IEContractService eContractService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -35,6 +36,7 @@ namespace SWP391Web.Application.Services
             _depositSetting = depositSetting;
             _dealerDebtService = dealerDebtService;
             _dealerDebtTransactionService = dealerDebtTransactionService;
+            _eContractService = eContractService;
         }
         public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
         {
@@ -78,7 +80,7 @@ namespace SWP391Web.Application.Services
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Quote is not accepted yet . Cann't create order.",
+                        Message = "Quote is not accepted yet. Cann't create order.",
                         StatusCode = 400,
                     };
                 }
@@ -154,6 +156,11 @@ namespace SWP391Web.Application.Services
                 if (!createCustomerOrderDTO.IsCash)
                 {
                     await _paymentService.CreateVNPayLink(customerOrder.Id, ct);
+                }
+
+                if(!createCustomerOrderDTO.IsPayFull && createCustomerOrderDTO.IsCash)
+                {
+                    await _eContractService.CreateDepositEContractConfirm(customerOrder.Id, ct);
                 }
 
                 return new ResponseDTO

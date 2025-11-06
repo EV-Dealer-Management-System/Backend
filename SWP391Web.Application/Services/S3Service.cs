@@ -13,15 +13,15 @@ namespace SWP391Web.Application.Services
     public class S3Service : IS3Service
     {
         private readonly string _bucketName;
-        private readonly string _accessKey;
-        private readonly string _secretKey;
+        private readonly string? _accessKey;
+        private readonly string? _secretKey;
         private readonly RegionEndpoint _region;
 
         public S3Service(IConfiguration config)
         {
             _bucketName = config["S3Bucket:bucketName"] ?? throw new ArgumentNullException("S3Bucket:bucketName");
-            _accessKey = config["S3Settings:AccessKey"] ?? throw new ArgumentNullException("S3Settings:AccessKey");
-            _secretKey = config["S3Settings:SecretKey"] ?? throw new ArgumentNullException("S3Settings:SecretKey");
+            _accessKey = config["S3Settings:AccessKey"];
+            _secretKey = config["S3Settings:SecretKey"];
             _region = RegionEndpoint.APSoutheast1;
         }
 

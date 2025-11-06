@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using StackExchange.Redis;
 using SWP391Web.Application.DTO;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.EContract;
@@ -158,7 +159,7 @@ namespace SWP391Web.Application.Services
 
                 var access = await GetAccessTokenAsync();
 
-                var created = await CreateDocumentBookingAsync(bookingId, access.Data.AccessToken, dealer, ct);
+                var created = await CreateDocumentBookingAsync(bookingId, access.Data!.AccessToken, dealer, ct);
 
                 return new ResponseDTO
                 {
@@ -176,6 +177,235 @@ namespace SWP391Web.Application.Services
                     StatusCode = 500,
                     Message = $"Error to create EContract: {ex.Message}"
                 };
+            }
+        }
+
+        public async Task<ResponseDTO> CreateDepositEContractConfirm(Guid customerOderId, CancellationToken ct)
+        {
+            try
+            {
+                var customerOrder = await _unitOfWork.CustomerOrderRepository.GetByIdAsync(customerOderId);
+                if (customerOrder is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Customer order is not exist"
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetByIdAsync(customerOrder.Quote.DealerId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer is not exist"
+                    };
+                }
+
+                var access = await GetAccessTokenAsync();
+                var created = await CreateDepositDocumentAsync(access.Data!.AccessToken, dealer, customerOrder, ct);
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 201,
+                    Message = "PDF is created",
+                    Result = created
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to create EContract: {ex.Message}"
+                };
+            }
+        }
+
+        private async Task<VnptResult<VnptDocumentDto>> CreateDepositDocumentAsync(string token, Dealer dealer, CustomerOrder customerOrder, CancellationToken ct)
+        {
+            var templateCode = StaticEContractName.EContractDepositCustomerOrder;
+            var template = await _unitOfWork.EContractTemplateRepository.GetbyCodeAsync(templateCode, ct);
+            if (template is null) throw new Exception($"Template with code '{templateCode}' is not exist");
+
+            string BuildBookingRowsHtml(IEnumerable<QuoteDetail> items)
+            {
+                var sb = new StringBuilder();
+                int i = 1;
+                sb.AppendLine($@"
+                        <tr>
+                        <td class=""right"">Số thứ tự</td>
+                        <td>Tên Model – Version</td>
+                        <td>Màu</td>
+                        <td class=""right"">Số lượng</td>
+                        </tr>");
+                foreach (var item in items)
+                {
+                    var modelName = item.ElectricVehicleVersion?.Model?.ModelName ?? "(Mẫu)";
+                    var versionName = item.ElectricVehicleVersion?.VersionName ?? "(Phiên bản)";
+                    var colorName = item.ElectricVehicleColor?.ColorName ?? "(Màu)";
+                    var quantity = item.Quantity;
+
+                    sb.AppendLine($@"
+                        <tr>
+                        <td class=""right"">{i}</td>
+                        <td>{modelName} – {versionName}</td>
+                        <td>{colorName}</td>
+                        <td class=""right"">{quantity}</td>
+                        </tr>");
+                    i++;
+                }
+                return sb.ToString();
+            }
+
+            var rowsHtml = BuildBookingRowsHtml(customerOrder.Quote.QuoteDetails);
+            var transaction = await _unitOfWork.TransactionRepository.GetByCustomerOrderIdAsync(customerOrder.Id, ct);
+            var quote = customerOrder.Quote;
+            var data = new Dictionary<string, object?>
+            {
+                ["order.no"] = customerOrder.OrderNo.ToString(),
+                ["order.date"] = ToGmt7String(DateTime.UtcNow, "dd/MM/yyyy"),
+                ["order.paymentMethod"] = transaction.Provider ?? "",
+
+                ["dealer.name"] = quote.Dealer?.Name ?? "",
+                ["dealer.address"] = quote.Dealer?.Address ?? "",
+                ["dealer.taxNo"] = quote.Dealer?.TaxNo ?? "",
+                ["dealer.phone"] = quote.Dealer?.Manager.PhoneNumber ?? "",
+                ["dealer.email"] = quote.Dealer?.Manager.Email ?? "",
+                ["dealer.bankAccount"] = quote.Dealer?.BankAccount ?? "",
+                ["dealer.bankName"] = quote.Dealer?.BankName ?? "",
+
+                ["customer.fullName"] = customerOrder.Customer?.FullName ?? "",
+                ["customer.phone"] = customerOrder.Customer?.PhoneNumber ?? "",
+                ["customer.email"] = customerOrder.Customer?.Email ?? "",
+                ["customer.idNo"] = customerOrder.Customer?.CitizenID ?? "",
+                ["customer.address"] = customerOrder.Customer?.Address ?? "",
+
+                ["money.orderTotal"] = ((int)customerOrder.TotalAmount).ToString(),
+                ["money.deposit"] = customerOrder.DepositAmount.ToString() ?? "",
+                ["money.remaining"] = (customerOrder.TotalAmount - customerOrder.DepositAmount).ToString(),
+
+                ["policy.holdDays"] = "15",
+                ["policy.lateDays"] = "7",
+                ["logistics.place"] = quote.Dealer?.Warehouse?.WarehouseName ?? "Kho Đại lý",
+                ["logistics.eta"] = "Theo lịch điều phối",
+                ["order.vehicleRows"] = rowsHtml,
+
+                ["roles.A.representative"] = quote.Dealer?.Manager.FullName ?? "",
+                ["roles.A.title"] = "Đại diện đại lý" ?? "",
+                ["roles.A.signatureAnchor"] = "ĐẠI_DIỆN_BÊN_A",
+                ["roles.B.signatureAnchor"] = "ĐẠI_DIỆN_BÊN_B"
+            };
+
+            var html = EContractPdf.ReplacePlaceholders(template.ContentHtml, data, htmlEncode: false);
+
+            var pdfBytes = await EContractPdf.RenderAsync(html);
+            var anchors = EContractPdf.FindAnchors(pdfBytes, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
+
+            var positionA = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
+            var positionB = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_B"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: 0);
+
+            var documentTypeId = int.Parse(_cfg["EContract:DocumentTypeId"] ?? throw new NullReferenceException("EContract:DocumentTypeId is not exist"));
+            var departmentId = int.Parse(_cfg["EContract:DepartmentId"] ?? throw new NullReferenceException("EContract:DepartmentId is not exist"));
+
+            var randomText = Guid.NewGuid().ToString().ToUpper();
+
+            var request = new CreateDocumentDTO
+            {
+                TypeId = documentTypeId,
+                DepartmentId = departmentId,
+                No = $"EContract-{randomText}",
+                Subject = $"Booking Confirm EContract",
+                Description = "EContract confirm customer deposited"
+            };
+
+            request.FileInfo.File = pdfBytes;
+            var fileName = $"Booking_E-Contract_{randomText}_{dealer.Name}.pdf".Trim();
+            request.FileInfo.FileName = fileName;
+
+            var createResult = await _vnpt.CreateDocumentAsync(token, request);
+
+            if (!Enum.IsDefined(typeof(EContractStatus), createResult.Data.Status.Value))
+            {
+                throw new Exception("Invalid EContract status value.");
+            }
+
+            createResult.Data!.PositionA = positionA.Item1;
+            createResult.Data.PositionB = positionB.Item1;
+            createResult.Data.PageSign = positionA.Item2;
+            createResult.Data.FileName = request.FileInfo.FileName;
+
+            if (customerOrder.Customer is null)
+            {
+                throw new Exception("Customer is not exist");
+            }
+
+            var customer = customerOrder.Customer;
+
+            var roleIds = new List<Guid>
+                {
+                    Guid.Parse(_cfg["EContract:RoleId"] ?? throw new Exception("EContract:RoleId is not exist"))
+                };
+
+            var departmentIds = new List<int>
+                {
+                    int.Parse(_cfg["EContract:DepartmentId"] ?? throw new Exception("EContract:DepartmentId is not exist"))
+                };
+
+            var vnptUser = new VnptUserUpsert
+            {
+                Code = customer.Id.ToString(),
+                UserName = customer.Email,
+                Name = customer.FullName,
+                Email = customer.Email,
+                Phone = customer.PhoneNumber,
+                ReceiveOtpMethod = 1,
+                ReceiveNotificationMethod = 0,
+                SignMethod = 2,
+                SignConfirmationEnabled = true,
+                GenerateSelfSignedCertEnabled = true,
+                Status = 1,
+                DepartmentIds = departmentIds,
+                RoleIds = roleIds
+
+            };
+
+            var vnptUserList = new[] { vnptUser };
+
+            var upsert = await CreateOrUpdateUsersAsync(token, vnptUserList);
+
+            var userCode = customer.Id.ToString();
+            await UpdateProcessAsync(token, createResult.Data.Id, dealer.ManagerId!, userCode, createResult.Data.PositionA, createResult.Data.PositionB, createResult.Data.PageSign);
+
+            var result = await SendProcessAsync(token, createResult.Data.Id);
+            var status = (EContractStatus)result.Data!.Status!.Value;
+
+            var vnptEContractId = Guid.Parse(createResult.Data.Id);
+            var eContract = new EContract(vnptEContractId, html, fileName, "System", dealer.ManagerId!, customer.Id, status, EcontractType.CustomerContract);
+
+            await _unitOfWork.EContractRepository.AddAsync(eContract, ct);
+            await _unitOfWork.SaveAsync();
+
+            return createResult;
+        }
+
+        private static string ToGmt7String(DateTime utc, string format)
+        {
+            try
+            {
+                var tz = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                return TimeZoneInfo.ConvertTimeFromUtc(utc, tz).ToString(format);
+            }
+            catch
+            {
+                var tz = TimeZoneInfo.FindSystemTimeZoneById("Asia/Bangkok");
+                return TimeZoneInfo.ConvertTimeFromUtc(utc, tz).ToString(format);
             }
         }
 
@@ -559,7 +789,7 @@ namespace SWP391Web.Application.Services
                 ["dealer.tier.createdAt"] = (dealerTier?.CreatedAt ?? DateTime.UtcNow).ToString("dd/MM/yyyy"),
                 ["dealer.tier.updatedAt"] = dealerTier?.UpdatedAt?.ToString("dd/MM/yyyy") ?? "",
 
-                ["roles.A.representative"] = "Đại diện Bên A",
+                ["roles.A.representative"] = "Trần Đức Hiệu", // Placeholder for company representative
                 ["roles.A.title"] = "Giám đốc",
                 ["roles.A.signatureAnchor"] = "ĐẠI_DIỆN_BÊN_A",
 
@@ -771,7 +1001,6 @@ namespace SWP391Web.Application.Services
             if (addToRoleResult is null) throw new Exception($"Cannot add dealer manager to role '{StaticUserRole.DealerManager}'");
 
             await _unitOfWork.UserManagerRepository.SetPassword(dealerManager, password);
-            await _unitOfWork.SaveAsync();
             var data = new Dictionary<string, string>
             {
                 ["{FullName}"] = dealerManager.FullName,

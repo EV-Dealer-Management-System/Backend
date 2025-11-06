@@ -8,5 +8,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<decimal> GetDealerRevenueAsync(Guid dealerId, CancellationToken ct);
         Task<List<Transaction>> GetDealerTransactionsByYearAsync(Guid dealerId, int year, CancellationToken ct);
 
+        Task<Transaction?> GetByCustomerOrderIdAsync(Guid customerOrderId, CancellationToken ct);
     }
 }

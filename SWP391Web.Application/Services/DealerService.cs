@@ -68,7 +68,8 @@ namespace SWP391Web.Application.Services
                         FullName = createDealerStaffDTO.FullName,
                         PhoneNumber = createDealerStaffDTO.PhoneNumber,
                         EmailConfirmed = true,
-                        PhoneNumberConfirmed = true
+                        PhoneNumberConfirmed = true,
+                        LockoutEnabled = false
                     };
 
                     var randomPassword = "Staff@" + Guid.NewGuid().ToString()[..6].ToUpper();
@@ -112,7 +113,8 @@ namespace SWP391Web.Application.Services
                     }
 
                     user = staff;
-                    await _emailService.NotifyAddedToDealerExistingUser(createDealerStaffDTO.Email, createDealerStaffDTO.FullName, $"Nhân viên đại lý", dealer.Name); // After can open more role
+                    await _emailService.NotifyAddedToDealerExistingUser(createDealerStaffDTO.Email, createDealerStaffDTO.FullName, $"Nhân viên đại lý", dealer.Name);
+                    user.LockoutEnabled = false;
                 }
 
                 await _unitOfWork.UserManagerRepository.AddToRoleAsync(user, StaticUserRole.DealerStaff);
@@ -145,22 +147,26 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetAllDealerAsync(string? filterOn, string? filterQuery, string? sortBy, bool? isAcsending, int pageNumber, int PageSize, CancellationToken ct)
+        public async Task<ResponseDTO> GetAllDealerAsync(string? filterOn, string? filterQuery, string? sortBy, DealerStatus? status, bool? isAcsending, int pageNumber, int PageSize, CancellationToken ct)
         {
             try
             {
-                Expression<Func<Dealer, bool>> baseFilter = d => d.DealerStatus == DealerStatus.Active;
+
+                Expression<Func<Dealer, bool>>? baseFilter = null;
+                if (status is not null)
+                {
+                    baseFilter = d => d.DealerStatus == status;
+                }
 
                 if (!string.IsNullOrWhiteSpace(filterOn) && (!string.IsNullOrWhiteSpace(filterQuery)))
                 {
                     var query = filterQuery.Trim().ToLower();
                     baseFilter = filterOn.Trim().ToLower() switch
                     {
-                        "name" => d => d.DealerStatus == DealerStatus.Active &&
-                                       d.Name != null &&
+                        "name" => d => d.Name != null &&
                                        d.Name.ToLower().Contains(query),
 
-                        _ => d => d.DealerStatus == DealerStatus.Active
+                        _ => baseFilter
                     };
                 }
 
@@ -168,7 +174,10 @@ namespace SWP391Web.Application.Services
                 bool asc = isAcsending ?? true;
 
                 (IReadOnlyList<Dealer> items, int total) result = (new List<Dealer>(), 0);
-                Func<IQueryable<Dealer>, IQueryable<Dealer>> includes = q => q.Include(dm => dm.Manager);
+                Func<IQueryable<Dealer>, IQueryable<Dealer>> includes = q => q
+                    .Include(dm => dm.Manager)
+                    .Include(dm => dm.DealerTier);
+
 
                 switch (sortField)
                 {
@@ -422,12 +431,12 @@ namespace SWP391Web.Application.Services
                 dealer.DealerStatus = status;
                 _unitOfWork.DealerRepository.Update(dealer);
 
-                if(status.Equals(DealerStatus.Inactive))
+                if (status.Equals(DealerStatus.Inactive))
                 {
                     dealer.Manager!.LockoutEnabled = true;
                     _unitOfWork.UserManagerRepository.Update(dealer.Manager);
 
-                    foreach(var staff in dealer.DealerMembers)
+                    foreach (var staff in dealer.DealerMembers)
                     {
                         staff.ApplicationUser.LockoutEnabled = true;
                         _unitOfWork.DealerMemberRepository.Update(staff);
@@ -440,7 +449,7 @@ namespace SWP391Web.Application.Services
                     _unitOfWork.UserManagerRepository.Update(dealer.Manager);
                     foreach (var staff in dealer.DealerMembers)
                     {
-                        if(staff.IsActive)
+                        if (staff.IsActive)
                         {
                             staff.ApplicationUser.LockoutEnabled = false;
                             _unitOfWork.UserManagerRepository.Update(staff.ApplicationUser);
@@ -517,7 +526,15 @@ namespace SWP391Web.Application.Services
                 }
 
                 dealerStaff.IsActive = isActive;
-                dealerStaff.ApplicationUser.LockoutEnabled = true;
+
+                if (isActive)
+                {
+                    dealerStaff.ApplicationUser.LockoutEnabled = false;
+                }
+                else
+                {
+                    dealerStaff.ApplicationUser.LockoutEnabled = true;
+                }
 
                 _unitOfWork.DealerMemberRepository.Update(dealerStaff);
                 _unitOfWork.UserManagerRepository.Update(dealerStaff.ApplicationUser);

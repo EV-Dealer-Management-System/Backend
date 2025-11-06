@@ -40,6 +40,10 @@ namespace SWP391Web.Infrastructure.Repository
                                 && t.Status == TransactionStatus.Success
                                 && t.CreatedAt.Year == year)
                     .ToListAsync(ct);
+        public async Task<Transaction?> GetByCustomerOrderIdAsync(Guid customerOrderId, CancellationToken ct)
+        {
+            return await _context.Transactions
+                .FirstOrDefaultAsync(t => t.CustomerOrderId == customerOrderId, ct);
         }
 
         public async Task<bool> IsExistTransactionAsync(string method, string orderRef, CancellationToken ct)
