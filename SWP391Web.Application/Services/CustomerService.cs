@@ -1,6 +1,7 @@
 ﻿    using Amazon.Runtime.Internal.UserAgent;
     using AutoMapper;
-    using SWP391Web.Application.DTO.Auth;
+using Microsoft.EntityFrameworkCore;
+using SWP391Web.Application.DTO.Auth;
     using SWP391Web.Application.DTO.Customer;
     using SWP391Web.Application.IService;
     using SWP391Web.Application.IServices;
@@ -63,6 +64,7 @@ using System.Security.Claims;
                     {
                         FullName = createCustomerDTO.FullName,
                         PhoneNumber = createCustomerDTO.PhoneNumber,
+                        CitizenID = createCustomerDTO.CitizenID,
                         Email = createCustomerDTO.Email,
                         Address = createCustomerDTO.Address,
                         Note = createCustomerDTO.Note
@@ -95,7 +97,7 @@ using System.Security.Claims;
             }
 
 
-            public async Task<ResponseDTO> GetAllCustomerAsync(ClaimsPrincipal user, string? search)
+            public async Task<ResponseDTO> GetAllCustomerAsync(ClaimsPrincipal user, int pageNumber, int pageSize ,string? search, CancellationToken ct)
             {
                 try
                 {
@@ -131,28 +133,47 @@ using System.Security.Claims;
                                          (c.PhoneNumber != null && c.PhoneNumber.Trim().ToLower().Contains(loweredSearch))
                                      );
                     }
+                    Func<IQueryable<Customer>, IQueryable<Customer>>? includes = q => q
+                        .Include(c => c.Dealers);
 
-                    // FIFO
-                    var customers = await _unitOfWork.CustomerRepository.GetAllAsync(
-                        filter: filter,
-                        orderBy: q => q.OrderBy(c => c.CreatedAt));
+                    (IReadOnlyList<Customer> items, int total) result =
+                        await _unitOfWork.CustomerRepository.GetPagedAsync(
+                            filter: filter,
+                            includes: includes,
+                            orderBy: c => c.CreatedAt,
+                            ascending: true, // FIFO
+                            pageNumber: pageNumber,
+                            pageSize: pageSize,
+                            ct: ct
+                        );
 
-                    if(customers == null || !customers.Any())
+                    if (result.items == null || !result.items.Any())
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
-                            Message = "customer list not found",
-                            StatusCode = 404
+                            StatusCode = 404,
+                            Message = "No customers found."
                         };
                     }
-                    var getCustomers = _mapper.Map<List<GetCustomerDTO>>(customers);
+                    var getCustomers = _mapper.Map<List<GetCustomerDTO>>(result.items);
+
                     return new ResponseDTO
                     {
                         IsSuccess = true,
                         StatusCode = 200,
                         Message = "Customers retrieved successfully",
-                        Result = getCustomers
+                        Result = new
+                        {
+                            data = getCustomers,
+                            Pagination = new
+                            {
+                                PageNumber = pageNumber,
+                                PageSize = pageSize,
+                                TotalItems = result.total,
+                                TotalPages = (int)Math.Ceiling((double)result.total/pageSize)
+                            }
+                        }
                     };
 
                 }
@@ -273,8 +294,9 @@ using System.Security.Claims;
 
                     if (!string.IsNullOrWhiteSpace(updateCustomerDTO.PhoneNumber))
                     {
+                        var phone = updateCustomerDTO.PhoneNumber.Trim();
                         var existPhone = dealer.Customers
-                            .FirstOrDefault(c => c.PhoneNumber == updateCustomerDTO.PhoneNumber && c.Id != customer.Id);
+                            .FirstOrDefault(c => c.PhoneNumber == phone && c.Id != customer.Id);
 
                         if (existPhone != null)
                         {
@@ -286,8 +308,57 @@ using System.Security.Claims;
                             };
                         }
 
-                        customer.PhoneNumber = updateCustomerDTO.PhoneNumber.Trim();
+                        customer.PhoneNumber = phone;
                     }
+                    if (!string.IsNullOrWhiteSpace(updateCustomerDTO.Email))
+                    {
+                        var email = updateCustomerDTO.Email.Trim().ToLower();
+                        var existEmail = dealer.Customers
+                            .FirstOrDefault(c => c.Email != null && c.Email.ToLower() == email && c.Id != customer.Id);
+
+                        if (existEmail != null)
+                        {
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                StatusCode = 400,
+                                Message = "This email already exists for another customer in your dealer."
+                            };
+                        }
+
+                        customer.Email = email;
+                    }
+                    if (!string.IsNullOrWhiteSpace(updateCustomerDTO.CitizenID))
+                    {
+                        var citizenId = updateCustomerDTO.CitizenID.Trim();
+
+                        // Optional: Check CCCD must have at least 9-12 digitals
+                        if (!System.Text.RegularExpressions.Regex.IsMatch(citizenId, @"^\d{9,12}$"))
+                        {
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                StatusCode = 400,
+                                Message = "Invalid CCCD format. Must be 9–12 digits."
+                            };
+                        }
+
+                        var existCitizen = dealer.Customers
+                            .FirstOrDefault(c => c.CitizenID == citizenId && c.Id != customer.Id);
+
+                        if (existCitizen != null)
+                        {
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                StatusCode = 400,
+                                Message = "This CCCD already exists for another customer in your dealer."
+                            };
+                        }
+
+                        customer.CitizenID = citizenId;
+                    }
+
                     if (!string.IsNullOrWhiteSpace(updateCustomerDTO.FullName))
                     {
                         customer.FullName = updateCustomerDTO.FullName;
