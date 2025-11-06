@@ -14,5 +14,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<List<BookingEV>> GetAllBookingWithDetailAsync();
         Task<List<ElectricVehicle?>> GetVehiclesByBookingIdAsync(Guid bookingId);
         Task<int> CountByDealerIdAsync(Guid dealerId, CancellationToken ct);
+        Task<int> GetTotalBookingsAsync(CancellationToken ct);
     }
 }

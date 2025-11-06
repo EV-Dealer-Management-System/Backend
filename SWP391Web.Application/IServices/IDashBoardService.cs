@@ -14,5 +14,6 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> GetDealerDashboardAsync(ClaimsPrincipal user, CancellationToken ct);
         Task<ResponseDTO> GetDealerStaffDashboardAsync(ClaimsPrincipal user, CancellationToken ct);
         Task<ResponseDTO> GetDealerRevenueByQuarterAsync(ClaimsPrincipal user, int year, CancellationToken ct);
+        Task<ResponseDTO> GetAdminDashboardAsync(CancellationToken ct);
     }
 }

@@ -2,7 +2,9 @@
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Dashboard;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
@@ -200,6 +202,46 @@ namespace SWP391Web.Application.Services
 
             }
             catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetAdminDashboardAsync(CancellationToken ct)
+        {
+            try
+            {
+                var totalInventory = await _unitOfWork.EVCInventoryRepository.GetTotalEVCInventoryAsync(ct);
+                var totalDealers = await _unitOfWork.DealerRepository.GetTotalDealersAsync(ct);
+                var totalBookings = await _unitOfWork.BookingEVRepository.GetTotalBookingsAsync(ct);
+                var totalDeliveries = await _unitOfWork.VehicleDeliveryRepository.GetTotalDeliveriesAsync(ct);
+                var totalVehicles = await _unitOfWork.ElectricVehicleRepository.GetTotalVehiclesInEVCAsync(ct);
+                var totalEVMStaff = await _unitOfWork.UserManagerRepository.GetTotalEVMStaffAsync(ct);
+
+                var dashboard = new GetAdminDashboardDTO
+                {
+                    TotalEVCInventory = totalInventory,
+                    TotalDealers = totalDealers,
+                    TotalBookings = totalBookings,
+                    TotalDeliveries = totalDeliveries,
+                    TotalVehicles = totalVehicles,
+                    TotalEVMStaff = totalEVMStaff
+                };
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Get admin dashboard successfully",
+                    StatusCode = 200,
+                    Result = dashboard
+                };
+            }
+            catch(Exception ex)
             {
                 return new ResponseDTO
                 {

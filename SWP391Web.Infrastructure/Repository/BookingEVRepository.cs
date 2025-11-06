@@ -51,6 +51,12 @@ namespace SWP391Web.Infrastructure.Repository
                     .ThenInclude(ec => ec.Owner)
                 .FirstOrDefaultAsync(b => b.Id == bookingId);
         }
+
+        public async Task<int> GetTotalBookingsAsync(CancellationToken ct)
+        {
+            return await _context.BookingEVs.CountAsync(ct);
+        }
+
         public async Task<List<ElectricVehicle?>> GetVehiclesByBookingIdAsync(Guid bookingId)
         {
             var bookingDetails = await _context.BookingEVDetails

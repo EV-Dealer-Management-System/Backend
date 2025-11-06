@@ -270,5 +270,12 @@ namespace SWP391Web.Infrastructure.Repository
         .Where(ev => ev.Warehouse.DealerId == dealerId && ev.Status == ElectricVehicleStatus.AtDealer)
         .CountAsync(ct);
         }
+
+        public async Task<int> GetTotalVehiclesInEVCAsync(CancellationToken ct)
+        {
+            return await _context.ElectricVehicles
+                .Include(ev => ev.Warehouse)
+                .CountAsync(ev => ev.Warehouse.WarehouseType == WarehouseType.EVInventory, ct);
+        }
     }
 }

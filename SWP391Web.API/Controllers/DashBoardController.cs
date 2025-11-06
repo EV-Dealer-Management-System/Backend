@@ -38,5 +38,11 @@ namespace SWP391Web.API.Controllers
             var response = await _dashBoardService.GetDealerStaffDashboardAsync(User, ct);
             return StatusCode(response.StatusCode, response);
         }
+        [HttpGet("get-admin-dashboard")]
+        public async Task<ActionResult<ResponseDTO>> GetAdminDashboard(CancellationToken ct)
+        {
+            var response = await _dashBoardService.GetAdminDashboardAsync(ct);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

@@ -52,5 +52,10 @@ namespace SWP391Web.Infrastructure.Repository
                .Where(vd => vd.BookingEV.DealerId == dealerId)
                .CountAsync(ct);
         }
+
+        public async Task<int> GetTotalDeliveriesAsync(CancellationToken ct)
+        {
+            return await _context.VehicleDeliveries.CountAsync(ct);
+        }
     }
 }

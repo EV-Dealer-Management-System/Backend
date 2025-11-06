@@ -23,6 +23,11 @@ namespace SWP391Web.Infrastructure.Repository
                 .FirstOrDefaultAsync(evc => evc.Id == evcInventoryId);
         }
 
+        public async Task<int> GetTotalEVCInventoryAsync(CancellationToken ct)
+        {
+            return await _context.EVCInventories.CountAsync(ct);
+        }
+
         public async Task<bool> IsEVCInventoryExistsById(Guid evcInventoryId)
         {
             return await _context.EVCInventories
