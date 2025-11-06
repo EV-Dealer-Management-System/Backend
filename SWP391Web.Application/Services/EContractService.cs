@@ -771,7 +771,6 @@ namespace SWP391Web.Application.Services
             if (addToRoleResult is null) throw new Exception($"Cannot add dealer manager to role '{StaticUserRole.DealerManager}'");
 
             await _unitOfWork.UserManagerRepository.SetPassword(dealerManager, password);
-            await _unitOfWork.SaveAsync();
             var data = new Dictionary<string, string>
             {
                 ["{FullName}"] = dealerManager.FullName,

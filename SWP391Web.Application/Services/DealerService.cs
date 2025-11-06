@@ -68,7 +68,8 @@ namespace SWP391Web.Application.Services
                         FullName = createDealerStaffDTO.FullName,
                         PhoneNumber = createDealerStaffDTO.PhoneNumber,
                         EmailConfirmed = true,
-                        PhoneNumberConfirmed = true
+                        PhoneNumberConfirmed = true,
+                        LockoutEnabled = false
                     };
 
                     var randomPassword = "Staff@" + Guid.NewGuid().ToString()[..6].ToUpper();
@@ -112,7 +113,7 @@ namespace SWP391Web.Application.Services
                     }
 
                     user = staff;
-                    await _emailService.NotifyAddedToDealerExistingUser(createDealerStaffDTO.Email, createDealerStaffDTO.FullName, $"Nhân viên đại lý", dealer.Name); // After can open more role
+                    await _emailService.NotifyAddedToDealerExistingUser(createDealerStaffDTO.Email, createDealerStaffDTO.FullName, $"Nhân viên đại lý", dealer.Name); 
                 }
 
                 await _unitOfWork.UserManagerRepository.AddToRoleAsync(user, StaticUserRole.DealerStaff);
@@ -149,15 +150,14 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                Expression<Func<Dealer, bool>> baseFilter = d => d.DealerStatus == DealerStatus.Active;
+                Expression<Func<Dealer, bool>>? baseFilter = null;
 
                 if (!string.IsNullOrWhiteSpace(filterOn) && (!string.IsNullOrWhiteSpace(filterQuery)))
                 {
                     var query = filterQuery.Trim().ToLower();
                     baseFilter = filterOn.Trim().ToLower() switch
                     {
-                        "name" => d => d.DealerStatus == DealerStatus.Active &&
-                                       d.Name != null &&
+                        "name" => d => d.Name != null &&
                                        d.Name.ToLower().Contains(query),
 
                         _ => d => d.DealerStatus == DealerStatus.Active
@@ -168,7 +168,10 @@ namespace SWP391Web.Application.Services
                 bool asc = isAcsending ?? true;
 
                 (IReadOnlyList<Dealer> items, int total) result = (new List<Dealer>(), 0);
-                Func<IQueryable<Dealer>, IQueryable<Dealer>> includes = q => q.Include(dm => dm.Manager);
+                Func<IQueryable<Dealer>, IQueryable<Dealer>> includes = q => q
+                    .Include(dm => dm.Manager)
+                    .Include(dm => dm.DealerTier);
+
 
                 switch (sortField)
                 {
