@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using SWP391Web.Application.DTO;
@@ -159,15 +160,12 @@ namespace SWP391Web.Application.Services
 
                 var created = await CreateDocumentBookingAsync(bookingId, access.Data.AccessToken, dealer, ct);
 
-                var companyApproverUserCode = _cfg["EContractClient:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
-                await UpdateProcessAsync(access.Data.AccessToken, created.Data.Id, userId, companyApproverUserCode, created.Data.PositionA, created.Data.PositionB, created.Data.PageSign);
-                var result = await SendProcessAsync(access.Data.AccessToken, created.Data.Id);
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     StatusCode = 201,
                     Message = "PDF is created",
-                    Result = result
+                    Result = created
                 };
             }
             catch (Exception ex)
@@ -355,18 +353,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(eContractId, ct);
-                if (econtract is null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        StatusCode = 404,
-                        Message = "EContract not found.",
-                    };
-                }
-
-                econtract.UpdateStatus((EContractStatus)sent.Data.Status.Value);
+                eContract.UpdateStatus((EContractStatus)sent.Data.Status.Value);
 
                 await _unitOfWork.SaveAsync();
                 return new ResponseDTO
@@ -494,24 +481,9 @@ namespace SWP391Web.Application.Services
 
             var createResult = await _vnpt.CreateDocumentAsync(token, request);
 
-
             if (!Enum.IsDefined(typeof(EContractStatus), createResult.Data.Status.Value))
             {
                 throw new Exception("Invalid EContract status value.");
-            }
-
-            var status = (EContractStatus)createResult.Data.Status.Value;
-
-            if (status is EContractStatus.Draft)
-            {
-                var vnptEContractId = Guid.Parse(createResult.Data.Id);
-                var eContract = new EContract(vnptEContractId, html, fileName, "System", dealer.ManagerId!, status, EcontractType.BookingContract);
-                booking.EContractId = vnptEContractId;
-                booking.Status = BookingStatus.WaitingDealerSign;
-
-                await _unitOfWork.EContractRepository.AddAsync(eContract, ct);
-                _unitOfWork.BookingEVRepository.Update(booking);
-                await _unitOfWork.SaveAsync();
             }
 
             createResult.Data!.PositionA = positionA.Item1;
@@ -519,7 +491,22 @@ namespace SWP391Web.Application.Services
             createResult.Data.PageSign = positionA.Item2;
             createResult.Data.FileName = request.FileInfo.FileName;
 
-            return createResult;
+            var companyApproverUserCode = _cfg["EContractClient:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
+            await UpdateProcessAsync(token, createResult.Data.Id, dealer.ManagerId!, companyApproverUserCode, createResult.Data.PositionA, createResult.Data.PositionB, createResult.Data.PageSign);
+
+            var result = await SendProcessAsync(token, createResult.Data.Id);
+            var status = (EContractStatus)result.Data!.Status!.Value;
+
+            var vnptEContractId = Guid.Parse(createResult.Data.Id);
+            var eContract = new EContract(vnptEContractId, html, fileName, "System", dealer.ManagerId!, status, EcontractType.BookingContract);
+            booking.EContractId = vnptEContractId;
+            booking.Status = BookingStatus.WaitingDealerSign;
+
+            await _unitOfWork.EContractRepository.AddAsync(eContract, ct);
+            _unitOfWork.BookingEVRepository.Update(booking);
+            await _unitOfWork.SaveAsync();
+
+            return result;
         }
 
         private async Task<VnptResult<VnptDocumentDto>> CreateDocumentDealerAsync(ClaimsPrincipal userClaim, string token, Dealer dealer, DealerTier dealerTier, ApplicationUser user, CancellationToken ct)
@@ -732,12 +719,17 @@ namespace SWP391Web.Application.Services
                 }
                 else if (signResult.Data.Status.Value is (int)EContractStatus.Completed && econtract.Type is EcontractType.BookingContract)
                 {
-                    econtract.BookingEV!.Status = BookingStatus.SignedByAdmin;
-                    await UpdateBookingStatusAfterSignAsync(econtract.BookingEV.Id);
+                    await UpdateBookingStatusAfterSignAsync(econtract.BookingEV!.Id, ct);
+                    econtract.BookingEV.Status = BookingStatus.SignedByAdmin;
                 }
 
                 econtract.UpdateStatus((EContractStatus)signResult.Data.Status.Value);
                 _unitOfWork.EContractRepository.Update(econtract);
+
+                if (econtract.BookingEV is not null && econtract.Type is EcontractType.BookingContract)
+                {
+                    _unitOfWork.BookingEVRepository.Update(econtract.BookingEV);
+                }
 
                 await _unitOfWork.SaveAsync();
 
@@ -1241,7 +1233,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        private async Task UpdateBookingStatusAfterSignAsync(Guid bookingId)
+        private async Task UpdateBookingStatusAfterSignAsync(Guid bookingId, CancellationToken ct)
         {
             var bookingEV = await _unitOfWork.BookingEVRepository.GetBookingWithIdAsync(bookingId);
             if (bookingEV == null)
@@ -1254,10 +1246,10 @@ namespace SWP391Web.Application.Services
                 throw new Exception("Can only sign an approved booking.");
             }
 
-            await CreateVehicleDeliveryAsync(bookingEV);
+            await CreateVehicleDeliveryAsync(bookingEV, ct);
         }
 
-        private async Task<ResponseDTO> CreateVehicleDeliveryAsync(BookingEV bookingEV)
+        private async Task<ResponseDTO> CreateVehicleDeliveryAsync(BookingEV bookingEV, CancellationToken ct)
         {
             var vehicleDelivery = new VehicleDelivery
             {
@@ -1268,7 +1260,7 @@ namespace SWP391Web.Application.Services
                 UpdateAt = DateTime.UtcNow,
             };
 
-            await _unitOfWork.VehicleDeliveryRepository.AddAsync(vehicleDelivery, CancellationToken.None);
+            await _unitOfWork.VehicleDeliveryRepository.AddAsync(vehicleDelivery, ct);
             await _unitOfWork.SaveAsync();
             foreach (var dt in bookingEV.BookingEVDetails)
             {
@@ -1300,13 +1292,9 @@ namespace SWP391Web.Application.Services
                         Status = DeliveryVehicleStatus.Preparing,
                         Note = "Vehicle is being prepared for shipment"
                     };
-                    await _unitOfWork.VehicleDeliveryDetailRepository.AddAsync(deliveryDetail, CancellationToken.None);
+                    await _unitOfWork.VehicleDeliveryDetailRepository.AddAsync(deliveryDetail, ct);
                 }
             }
-
-            var delivery = await _unitOfWork.VehicleDeliveryRepository.GetVehicleDeliveryById(vehicleDelivery.Id, CancellationToken.None);
-
-            var getDelivery = _mapper.Map<GetVehicleDeliveryDTO>(delivery);
             return new ResponseDTO
             {
                 IsSuccess = true,

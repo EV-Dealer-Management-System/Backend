@@ -425,12 +425,13 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                await _paymentService.CreateVNPayLink(customerOrder.Id, ct);
+                var link = await _paymentService.CreateVNPayLink(customerOrder.Id, ct);
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     Message = "VNPay link for deposit payment created successfully.",
                     StatusCode = 200,
+                    Result = link
                 };
             }
             catch (Exception ex)

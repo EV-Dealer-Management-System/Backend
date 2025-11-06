@@ -124,7 +124,7 @@ public static class WebApplicationBuilderExtensions
                 builder.Configuration["EContractClient:BaseUrl"]
                 ?? throw new Exception("Cannot find base url in EContractClient"));
 
-            client.Timeout = TimeSpan.FromSeconds(30);
+            client.Timeout = TimeSpan.FromSeconds(300);
 
             client.DefaultRequestHeaders.Accept.Add(
                 new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
