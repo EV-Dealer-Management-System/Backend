@@ -19,5 +19,6 @@ namespace SWP391Web.Application.DTO.EContract
         public string? CreatedName { get; set; }
         public string OwnerBy { get; private set; } = null!;
         public string? OwnerName { get; private set; }
+        public Guid? CustomerOrderId { get; private set; }
     }
 }

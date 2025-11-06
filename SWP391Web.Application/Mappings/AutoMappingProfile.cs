@@ -45,7 +45,8 @@ namespace SWP391Web.Application.Mappings
             .ForMember(d => d.QuoteDetails,
                 opt => opt.MapFrom(s => s.Quote != null ? s.Quote.QuoteDetails : new List<QuoteDetail>()))
             .ForMember(d => d.Customer, opt => opt.MapFrom(s => s.Customer))
-            .ForMember(d => d.OrderDetails, opt => opt.MapFrom(s => s.OrderDetails)).ReverseMap();
+            .ForMember(d => d.OrderDetails, opt => opt.MapFrom(s => s.OrderDetails))
+            .ForMember(d => d.Econtracts, opt => opt.MapFrom(s => s.EContracts)).ReverseMap();
 
             CreateMap<OrderDetail, GetOrderDetailDTO>()
             .ForMember(d => d.ElectricVehicle, opt => opt.MapFrom(s => s.ElectricVehicle)).ReverseMap();

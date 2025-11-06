@@ -10,6 +10,6 @@ namespace SWP391Web.Domain.Enums
     {
         DealerContract = 1,
         BookingContract = 2,
-        CustomerContract = 3
+        CustomerOrderDepositContract = 3
     }
 }

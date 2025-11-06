@@ -291,7 +291,8 @@ namespace SWP391Web.Application.Services
                                 .ThenInclude(v => v.Model)
                             .Include(co => co.OrderDetails)
                                 .ThenInclude(od => od.ElectricVehicle)
-                                .ThenInclude(ev => ev.Warehouse);
+                                .ThenInclude(ev => ev.Warehouse)
+                            .Include(co => co.EContracts);
 
                 Expression<Func<CustomerOrder, bool>> filter = co => co.Quote.DealerId == dealer.Id;
 
