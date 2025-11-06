@@ -421,6 +421,33 @@ namespace SWP391Web.Application.Services
                 }
                 dealer.DealerStatus = status;
                 _unitOfWork.DealerRepository.Update(dealer);
+
+                if(status.Equals(DealerStatus.Inactive))
+                {
+                    dealer.Manager!.LockoutEnabled = true;
+                    _unitOfWork.UserManagerRepository.Update(dealer.Manager);
+
+                    foreach(var staff in dealer.DealerMembers)
+                    {
+                        staff.ApplicationUser.LockoutEnabled = true;
+                        _unitOfWork.DealerMemberRepository.Update(staff);
+                        _unitOfWork.UserManagerRepository.Update(staff.ApplicationUser);
+                    }
+                }
+                else if (status.Equals(DealerStatus.Active))
+                {
+                    dealer.Manager!.LockoutEnabled = false;
+                    _unitOfWork.UserManagerRepository.Update(dealer.Manager);
+                    foreach (var staff in dealer.DealerMembers)
+                    {
+                        if(staff.IsActive)
+                        {
+                            staff.ApplicationUser.LockoutEnabled = false;
+                            _unitOfWork.UserManagerRepository.Update(staff.ApplicationUser);
+                        }
+                    }
+                }
+
                 await _unitOfWork.SaveAsync();
 
                 return new ResponseDTO
@@ -490,7 +517,11 @@ namespace SWP391Web.Application.Services
                 }
 
                 dealerStaff.IsActive = isActive;
+                dealerStaff.ApplicationUser.LockoutEnabled = true;
+
                 _unitOfWork.DealerMemberRepository.Update(dealerStaff);
+                _unitOfWork.UserManagerRepository.Update(dealerStaff.ApplicationUser);
+
                 await _unitOfWork.SaveAsync();
 
                 return new ResponseDTO
