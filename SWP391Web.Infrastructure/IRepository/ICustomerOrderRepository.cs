@@ -1,4 +1,5 @@
 ﻿using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 
 namespace SWP391Web.Infrastructure.IRepository
 {
@@ -8,5 +9,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<bool>? IsExistByIdAsync(Guid id);
         Task<CustomerOrder?> GetByOrderNoAsync(int customerOrderNo);
         int GenerateOrderNumber();
+        Task<CustomerOrder?> GetByEContractId(Guid eContractId, CancellationToken ct);
     }
 }

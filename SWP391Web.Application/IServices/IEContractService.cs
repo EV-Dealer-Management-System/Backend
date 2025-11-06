@@ -30,5 +30,6 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> DeleteEContractDraft(Guid EContractId, CancellationToken ct);
         Task<VnptResult<DeleteSmartCAResponse>> DeleteSmartCA(DeleteSmartCARequest deleteSmartCARequest);
         Task<ResponseDTO> CreateDepositEContractConfirm(Guid customerOderId, CancellationToken ct);
+        Task<ResponseDTO> ReadyCustomerOrderEcontract(Guid eContractId, CancellationToken ct);
     }
 }

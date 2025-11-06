@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Playwright;
 using StackExchange.Redis;
 using SWP391Web.Application.DTO;
 using SWP391Web.Application.DTO.Auth;
@@ -18,6 +20,7 @@ using SWP391Web.Domain.Enums;
 using SWP391Web.Domain.ValueObjects;
 using SWP391Web.Infrastructure.IClient;
 using SWP391Web.Infrastructure.IRepository;
+using System.Diagnostics.Contracts;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -238,13 +241,6 @@ namespace SWP391Web.Application.Services
             {
                 var sb = new StringBuilder();
                 int i = 1;
-                sb.AppendLine($@"
-                        <tr>
-                        <td class=""right"">Số thứ tự</td>
-                        <td>Tên Model – Version</td>
-                        <td>Màu</td>
-                        <td class=""right"">Số lượng</td>
-                        </tr>");
                 foreach (var item in items)
                 {
                     var modelName = item.ElectricVehicleVersion?.Model?.ModelName ?? "(Mẫu)";
@@ -267,11 +263,12 @@ namespace SWP391Web.Application.Services
             var rowsHtml = BuildBookingRowsHtml(customerOrder.Quote.QuoteDetails);
             var transaction = await _unitOfWork.TransactionRepository.GetByCustomerOrderIdAsync(customerOrder.Id, ct);
             var quote = customerOrder.Quote;
+            var method = transaction.Provider == "Cash" ? "Tiền mặt" : "Chuyển khoản";
             var data = new Dictionary<string, object?>
             {
                 ["order.no"] = customerOrder.OrderNo.ToString(),
                 ["order.date"] = ToGmt7String(DateTime.UtcNow, "dd/MM/yyyy"),
-                ["order.paymentMethod"] = transaction.Provider ?? "",
+                ["order.paymentMethod"] = method ?? "",
 
                 ["dealer.name"] = quote.Dealer?.Name ?? "",
                 ["dealer.address"] = quote.Dealer?.Address ?? "",
@@ -287,9 +284,9 @@ namespace SWP391Web.Application.Services
                 ["customer.idNo"] = customerOrder.Customer?.CitizenID ?? "",
                 ["customer.address"] = customerOrder.Customer?.Address ?? "",
 
-                ["money.orderTotal"] = ((int)customerOrder.TotalAmount).ToString(),
-                ["money.deposit"] = customerOrder.DepositAmount.ToString() ?? "",
-                ["money.remaining"] = (customerOrder.TotalAmount - customerOrder.DepositAmount).ToString(),
+                ["money.orderTotal"] = ((int)customerOrder.TotalAmount).ToString() + " VND",
+                ["money.deposit"] = customerOrder.DepositAmount.ToString() + " VND" ?? "",
+                ["money.remaining"] = (customerOrder.TotalAmount - customerOrder.DepositAmount).ToString() + " VND",
 
                 ["policy.holdDays"] = "15",
                 ["policy.lateDays"] = "7",
@@ -314,7 +311,7 @@ namespace SWP391Web.Application.Services
             var documentTypeId = int.Parse(_cfg["EContract:DocumentTypeId"] ?? throw new NullReferenceException("EContract:DocumentTypeId is not exist"));
             var departmentId = int.Parse(_cfg["EContract:DepartmentId"] ?? throw new NullReferenceException("EContract:DepartmentId is not exist"));
 
-            var randomText = Guid.NewGuid().ToString().ToUpper();
+            var randomText = Guid.NewGuid().ToString()[..20].ToUpper();
 
             var request = new CreateDocumentDTO
             {
@@ -341,58 +338,129 @@ namespace SWP391Web.Application.Services
             createResult.Data.PageSign = positionA.Item2;
             createResult.Data.FileName = request.FileInfo.FileName;
 
-            if (customerOrder.Customer is null)
-            {
-                throw new Exception("Customer is not exist");
-            }
-
-            var customer = customerOrder.Customer;
-
-            var roleIds = new List<Guid>
-                {
-                    Guid.Parse(_cfg["EContract:RoleId"] ?? throw new Exception("EContract:RoleId is not exist"))
-                };
-
-            var departmentIds = new List<int>
-                {
-                    int.Parse(_cfg["EContract:DepartmentId"] ?? throw new Exception("EContract:DepartmentId is not exist"))
-                };
-
-            var vnptUser = new VnptUserUpsert
-            {
-                Code = customer.Id.ToString(),
-                UserName = customer.Email,
-                Name = customer.FullName,
-                Email = customer.Email,
-                Phone = customer.PhoneNumber,
-                ReceiveOtpMethod = 1,
-                ReceiveNotificationMethod = 0,
-                SignMethod = 2,
-                SignConfirmationEnabled = true,
-                GenerateSelfSignedCertEnabled = true,
-                Status = 1,
-                DepartmentIds = departmentIds,
-                RoleIds = roleIds
-
-            };
-
-            var vnptUserList = new[] { vnptUser };
-
-            var upsert = await CreateOrUpdateUsersAsync(token, vnptUserList);
-
-            var userCode = customer.Id.ToString();
-            await UpdateProcessAsync(token, createResult.Data.Id, dealer.ManagerId!, userCode, createResult.Data.PositionA, createResult.Data.PositionB, createResult.Data.PageSign);
-
-            var result = await SendProcessAsync(token, createResult.Data.Id);
-            var status = (EContractStatus)result.Data!.Status!.Value;
-
             var vnptEContractId = Guid.Parse(createResult.Data.Id);
-            var eContract = new EContract(vnptEContractId, html, fileName, "System", dealer.ManagerId!, customer.Id, status, EcontractType.CustomerContract);
+            var eContract = new EContract(vnptEContractId, html, fileName, "System", dealer.ManagerId!, customerOrder.Id, EContractStatus.Draft, EcontractType.CustomerOrderDepositContract);
 
             await _unitOfWork.EContractRepository.AddAsync(eContract, ct);
             await _unitOfWork.SaveAsync();
 
             return createResult;
+        }
+
+        public async Task<ResponseDTO> ReadyCustomerOrderEcontract(Guid eContractId, CancellationToken ct)
+        {
+            try
+            {
+                var eContract = await _unitOfWork.EContractRepository.GetByIdAsync(eContractId, ct);
+                if (eContract is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "EContract is not exist"
+                    };
+                }
+                var access = await GetAccessTokenAsync();
+                var customerOrder = await _unitOfWork.CustomerOrderRepository.GetByEContractId(eContractId, ct);
+                if (customerOrder is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Customer order is not exist"
+                    };
+                }
+
+                if (customerOrder.Customer is null)
+                {
+                    throw new Exception("Customer is not exist");
+                }
+
+                var customer = customerOrder.Customer;
+
+                var roleIds = new List<Guid>
+                {
+                    Guid.Parse(_cfg["EContract:RoleId"] ?? throw new Exception("EContract:RoleId is not exist"))
+                };
+
+                var departmentIds = new List<int>
+                {
+                    int.Parse(_cfg["EContract:DepartmentId"] ?? throw new Exception("EContract:DepartmentId is not exist"))
+                };
+
+                var vnptUser = new VnptUserUpsert
+                {
+                    Code = customer.Id.ToString(),
+                    UserName = customer.Email,
+                    Name = customer.FullName,
+                    Email = customer.Email,
+                    Phone = customer.PhoneNumber,
+                    ReceiveOtpMethod = 1,
+                    ReceiveNotificationMethod = 0,
+                    SignMethod = 2,
+                    SignConfirmationEnabled = true,
+                    GenerateSelfSignedCertEnabled = true,
+                    Status = 1,
+                    DepartmentIds = departmentIds,
+                    RoleIds = roleIds
+
+                };
+
+                var vnptUserList = new[] { vnptUser };
+                var token = access.Data!.AccessToken;
+                var upsert = await CreateOrUpdateUsersAsync(token, vnptUserList);
+                var userCode = customer.Id.ToString();
+
+                var dealer = await _unitOfWork.DealerRepository.GetByIdAsync(customerOrder.Quote.DealerId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer is not exist"
+                    };
+                }
+
+                var draftEContract = await GetVnptEContractByIdAsync(eContractId.ToString(), ct);
+
+                await UpdateProcessOrderCustomerAsync(token, eContractId.ToString(), dealer.ManagerId!, userCode, draftEContract.Data!.PositionA!, draftEContract.Data.PositionB!, draftEContract.Data.PageSign);
+
+                var sent = await SendProcessAsync(access.Data!.AccessToken, eContractId.ToString());
+
+
+                if (!Enum.IsDefined(typeof(EContractStatus), sent.Data.Status.Value))
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 400,
+                        Message = "Invalid EContract status value.",
+                    };
+                }
+
+                eContract.UpdateStatus((EContractStatus)sent.Data.Status.Value);
+
+                await _unitOfWork.SaveAsync();
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 201,
+                    Message = "Econtract ready to sign",
+                    Result = sent
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to create EContract: {ex.Message}"
+                };
+            }
         }
 
         private static string ToGmt7String(DateTime utc, string format)
@@ -845,6 +913,23 @@ namespace SWP391Web.Application.Services
             createResult.Data.FileName = request.FileInfo.FileName;
 
             return createResult;
+        }
+
+        private async Task<VnptResult<VnptDocumentDto>> UpdateProcessOrderCustomerAsync(string token, string documentId, string userCodeFirst, string userCodeSeccond, string positionA, string positionB, int pageSign)
+        {
+            var request = new VnptUpdateProcessDTO
+            {
+                Id = documentId,
+                ProcessInOrder = true,
+                Processes =
+                [
+                    new (orderNo:1, processedByUserCode:userCodeFirst, accessPermissionCode:"D", position: positionA, pageSign: pageSign),
+                        new (orderNo:2, processedByUserCode:userCodeSeccond, accessPermissionCode:"E", position: positionB, pageSign: pageSign)
+                ]
+            };
+
+            var uProcessResult = await _vnpt.UpdateProcessAsync(token, request);
+            return uProcessResult;
         }
 
         private async Task<VnptResult<VnptDocumentDto>> UpdateProcessAsync(string token, string documentId, string userCodeFirst, string userCodeSeccond, string positionA, string positionB, int pageSign)

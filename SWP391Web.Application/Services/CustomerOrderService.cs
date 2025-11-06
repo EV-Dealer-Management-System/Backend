@@ -97,7 +97,7 @@ namespace SWP391Web.Application.Services
                 else if (createCustomerOrderDTO.IsPayFull && createCustomerOrderDTO.IsCash)
                 {
                     status = OrderStatus.Completed;
-                    
+
                     var recordPayment = new RecordPaymentDTO
                     {
                         PaidAtUtc = DateTime.UtcNow,
@@ -149,19 +149,33 @@ namespace SWP391Web.Application.Services
 
                 await HandleOrderDetail(customerOrder, ct);
 
-                await _unitOfWork.SaveAsync();
-
                 var getCustomerOrder = _mapper.Map<GetCustomerOrderDTO>(customerOrder);
 
                 if (!createCustomerOrderDTO.IsCash)
                 {
                     await _paymentService.CreateVNPayLink(customerOrder.Id, ct);
                 }
-
-                if(!createCustomerOrderDTO.IsPayFull && createCustomerOrderDTO.IsCash)
+                else
                 {
-                    await _eContractService.CreateDepositEContractConfirm(customerOrder.Id, ct);
+                    var transaction = new Transaction
+                    {
+                        Amount = createCustomerOrderDTO.IsPayFull ? amount : deposit.Value,
+                        CustomerOrderId = customerOrder.Id,
+                        Status = TransactionStatus.Success,
+                        OrderRef = customerOrder.OrderNo.ToString(),
+                        Currency = "VND",
+                        Note = createCustomerOrderDTO.IsPayFull ? $"Full payment for order {customerOrder.OrderNo}" : $"Deposit payment for order {customerOrder.OrderNo}",
+                        Provider = "Cash",
+                    };
+                    await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
+                    await _unitOfWork.SaveAsync();
+
+                    if (!createCustomerOrderDTO.IsPayFull)
+                    {
+                        await _eContractService.CreateDepositEContractConfirm(customerOrder.Id, ct);
+                    }
                 }
+                await _unitOfWork.SaveAsync();
 
                 return new ResponseDTO
                 {
@@ -277,7 +291,8 @@ namespace SWP391Web.Application.Services
                                 .ThenInclude(v => v.Model)
                             .Include(co => co.OrderDetails)
                                 .ThenInclude(od => od.ElectricVehicle)
-                                .ThenInclude(ev => ev.Warehouse);
+                                .ThenInclude(ev => ev.Warehouse)
+                            .Include(co => co.EContracts);
 
                 Expression<Func<CustomerOrder, bool>> filter = co => co.Quote.DealerId == dealer.Id;
 
@@ -416,7 +431,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if(isCash)
+                if (isCash)
                 {
                     customerOrder.Status = OrderStatus.Completed;
                     _unitOfWork.CustomerOrderRepository.Update(customerOrder);

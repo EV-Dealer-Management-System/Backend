@@ -20,5 +20,6 @@ namespace SWP391Web.Domain.Entities
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
         public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
         public ApplicationUser? CreatedByUser { get; set; }
+        public ICollection<EContract>? EContracts { get; set; } = new List<EContract>();
     }
 }

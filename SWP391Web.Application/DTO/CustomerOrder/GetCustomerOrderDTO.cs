@@ -1,4 +1,5 @@
 ﻿using SWP391Web.Application.DTO.Customer;
+using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.DTO.OrderDetail;
 using SWP391Web.Application.DTO.QuoteDetail;
 using SWP391Web.Domain.Enums;
@@ -23,6 +24,6 @@ namespace SWP391Web.Application.DTO.CustomerOrder
         public List<GetQuoteDetailDTO> QuoteDetails { get; set; } = new();
         public List<GetOrderDetailDTO> OrderDetails {  get; set; } = new();
         public GetCustomerDTO Customer { get; set; } = new();
-
+        public List<GetEContractDTO> Econtracts { get; set; } = new();
     }
 }
