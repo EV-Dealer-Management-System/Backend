@@ -36,7 +36,6 @@ namespace SWP391Web.Infrastructure.Repository
                         .ThenInclude(v => v.Model)
                 .Include(ev => ev.ElectricVehicleTemplate.Color)
                 .Include(ev => ev.Warehouse)
-                .Where(ev => ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
                 .ToListAsync();
         }
 
