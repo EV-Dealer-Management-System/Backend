@@ -36,8 +36,9 @@ namespace SWP391Web.Application.Services
         private readonly IDealerDebtService _dealerDebtService;
         private readonly IDealerTierService _dealerTierService;
         private readonly IMapper _mapper;
+        private readonly IEContractService _eContractService;
         public PaymentService(IConfiguration cfg, IUnitOfWork unitOfWork, IHttpContextAccessor httpContext, IEmailService emailService, IHubContext<NotificationHub> hubContext, IDealerDebtService dealerDebtService
-            , IDealerTierService dealerTierService, IMapper mapper)
+            ,IDealerTierService dealerTierService, IMapper mapper, IEContractService eContractService)
         {
             _baseUrl = cfg["VNPay:BaseUrl"] ?? throw new Exception("Cannot find VNPay:BaseUrl");
             _tmnCode = cfg["VNPay:TmnCode"] ?? throw new Exception("Cannot find VNPay:TmnCode");
@@ -50,6 +51,7 @@ namespace SWP391Web.Application.Services
             _dealerDebtService = dealerDebtService;
             _dealerTierService = dealerTierService;
             _mapper = mapper;
+            _eContractService = eContractService;
         }
         public async Task<ResponseDTO> CreateVNPayLink(Guid customerOrderId, CancellationToken ct)
         {
@@ -425,6 +427,7 @@ namespace SWP391Web.Application.Services
             else
             {
                 customerOrder.Status = OrderStatus.Depositing;
+                await _eContractService.CreateDepositEContractConfirm(customerOrder.Id, ct);
             }
             _unitOfWork.CustomerOrderRepository.Update(customerOrder);
         }

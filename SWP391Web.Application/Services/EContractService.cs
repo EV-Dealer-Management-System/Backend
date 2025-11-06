@@ -238,13 +238,6 @@ namespace SWP391Web.Application.Services
             {
                 var sb = new StringBuilder();
                 int i = 1;
-                sb.AppendLine($@"
-                        <tr>
-                        <td class=""right"">Số thứ tự</td>
-                        <td>Tên Model – Version</td>
-                        <td>Màu</td>
-                        <td class=""right"">Số lượng</td>
-                        </tr>");
                 foreach (var item in items)
                 {
                     var modelName = item.ElectricVehicleVersion?.Model?.ModelName ?? "(Mẫu)";
@@ -267,11 +260,12 @@ namespace SWP391Web.Application.Services
             var rowsHtml = BuildBookingRowsHtml(customerOrder.Quote.QuoteDetails);
             var transaction = await _unitOfWork.TransactionRepository.GetByCustomerOrderIdAsync(customerOrder.Id, ct);
             var quote = customerOrder.Quote;
+            var method = transaction.Provider == "Cash" ? "Tiền mặt" : "Chuyển khoản";
             var data = new Dictionary<string, object?>
             {
                 ["order.no"] = customerOrder.OrderNo.ToString(),
                 ["order.date"] = ToGmt7String(DateTime.UtcNow, "dd/MM/yyyy"),
-                ["order.paymentMethod"] = transaction.Provider ?? "",
+                ["order.paymentMethod"] = method ?? "",
 
                 ["dealer.name"] = quote.Dealer?.Name ?? "",
                 ["dealer.address"] = quote.Dealer?.Address ?? "",
@@ -287,9 +281,9 @@ namespace SWP391Web.Application.Services
                 ["customer.idNo"] = customerOrder.Customer?.CitizenID ?? "",
                 ["customer.address"] = customerOrder.Customer?.Address ?? "",
 
-                ["money.orderTotal"] = ((int)customerOrder.TotalAmount).ToString(),
-                ["money.deposit"] = customerOrder.DepositAmount.ToString() ?? "",
-                ["money.remaining"] = (customerOrder.TotalAmount - customerOrder.DepositAmount).ToString(),
+                ["money.orderTotal"] = ((int)customerOrder.TotalAmount).ToString() + " VND",
+                ["money.deposit"] = customerOrder.DepositAmount.ToString() + " VND" ?? "",
+                ["money.remaining"] = (customerOrder.TotalAmount - customerOrder.DepositAmount).ToString() + " VND",
 
                 ["policy.holdDays"] = "15",
                 ["policy.lateDays"] = "7",
@@ -314,7 +308,7 @@ namespace SWP391Web.Application.Services
             var documentTypeId = int.Parse(_cfg["EContract:DocumentTypeId"] ?? throw new NullReferenceException("EContract:DocumentTypeId is not exist"));
             var departmentId = int.Parse(_cfg["EContract:DepartmentId"] ?? throw new NullReferenceException("EContract:DepartmentId is not exist"));
 
-            var randomText = Guid.NewGuid().ToString().ToUpper();
+            var randomText = Guid.NewGuid().ToString()[..20].ToUpper();
 
             var request = new CreateDocumentDTO
             {
@@ -953,7 +947,7 @@ namespace SWP391Web.Application.Services
                     econtract.BookingEV.Status = BookingStatus.SignedByAdmin;
                 }
 
-                econtract.UpdateStatus((EContractStatus)signResult.Data.Status.Value);
+                    econtract.UpdateStatus((EContractStatus)signResult.Data.Status.Value);
                 _unitOfWork.EContractRepository.Update(econtract);
 
                 if (econtract.BookingEV is not null && econtract.Type is EcontractType.BookingContract)

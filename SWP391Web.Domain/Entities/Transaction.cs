@@ -16,7 +16,7 @@ namespace SWP391Web.Domain.Entities
         public decimal Amount { get; set; }
         public string Currency { get; set; } = null!;
         public TransactionStatus Status { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public string? Note { get; set; }
         public CustomerOrder CustomerOrder { get; set; } = null!;
     }
