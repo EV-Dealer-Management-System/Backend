@@ -113,7 +113,8 @@ namespace SWP391Web.Application.Services
                     }
 
                     user = staff;
-                    await _emailService.NotifyAddedToDealerExistingUser(createDealerStaffDTO.Email, createDealerStaffDTO.FullName, $"Nhân viên đại lý", dealer.Name); 
+                    await _emailService.NotifyAddedToDealerExistingUser(createDealerStaffDTO.Email, createDealerStaffDTO.FullName, $"Nhân viên đại lý", dealer.Name);
+                    user.LockoutEnabled = false;
                 }
 
                 await _unitOfWork.UserManagerRepository.AddToRoleAsync(user, StaticUserRole.DealerStaff);
@@ -425,12 +426,12 @@ namespace SWP391Web.Application.Services
                 dealer.DealerStatus = status;
                 _unitOfWork.DealerRepository.Update(dealer);
 
-                if(status.Equals(DealerStatus.Inactive))
+                if (status.Equals(DealerStatus.Inactive))
                 {
                     dealer.Manager!.LockoutEnabled = true;
                     _unitOfWork.UserManagerRepository.Update(dealer.Manager);
 
-                    foreach(var staff in dealer.DealerMembers)
+                    foreach (var staff in dealer.DealerMembers)
                     {
                         staff.ApplicationUser.LockoutEnabled = true;
                         _unitOfWork.DealerMemberRepository.Update(staff);
@@ -443,7 +444,7 @@ namespace SWP391Web.Application.Services
                     _unitOfWork.UserManagerRepository.Update(dealer.Manager);
                     foreach (var staff in dealer.DealerMembers)
                     {
-                        if(staff.IsActive)
+                        if (staff.IsActive)
                         {
                             staff.ApplicationUser.LockoutEnabled = false;
                             _unitOfWork.UserManagerRepository.Update(staff.ApplicationUser);
@@ -520,7 +521,15 @@ namespace SWP391Web.Application.Services
                 }
 
                 dealerStaff.IsActive = isActive;
-                dealerStaff.ApplicationUser.LockoutEnabled = true;
+
+                if (isActive)
+                {
+                    dealerStaff.ApplicationUser.LockoutEnabled = false;
+                }
+                else
+                {
+                    dealerStaff.ApplicationUser.LockoutEnabled = true;
+                }
 
                 _unitOfWork.DealerMemberRepository.Update(dealerStaff);
                 _unitOfWork.UserManagerRepository.Update(dealerStaff.ApplicationUser);

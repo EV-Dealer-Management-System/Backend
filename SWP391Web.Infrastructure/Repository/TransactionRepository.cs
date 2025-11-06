@@ -18,6 +18,12 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context;
         }
 
+        public async Task<Transaction?> GetByCustomerOrderIdAsync(Guid customerOrderId, CancellationToken ct)
+        {
+            return await _context.Transactions
+                .FirstOrDefaultAsync(t => t.CustomerOrderId == customerOrderId, ct);
+        }
+
         public async Task<bool> IsExistTransactionAsync(string method, string orderRef, CancellationToken ct)
         {
             return await _context.Transactions

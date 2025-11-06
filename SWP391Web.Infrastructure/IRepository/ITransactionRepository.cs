@@ -5,5 +5,6 @@ namespace SWP391Web.Infrastructure.IRepository
     public interface ITransactionRepository : IRepository<Transaction>
     {
         Task<bool> IsExistTransactionAsync(string method, string orderRef, CancellationToken ct);
+        Task<Transaction?> GetByCustomerOrderIdAsync(Guid customerOrderId, CancellationToken ct);
     }
 }

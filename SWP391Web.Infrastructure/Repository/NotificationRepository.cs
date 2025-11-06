@@ -11,10 +11,10 @@ namespace SWP391Web.Infrastructure.Repository
 {
     public class NotificationRepository : Repository<Notification>, INotificationRepository
     {
-        private readonly ApplicationDbContext _dbContext;
-        public NotificationRepository(ApplicationDbContext dbContext) : base(dbContext)
+        private readonly ApplicationDbContext _context;
+        public NotificationRepository(ApplicationDbContext context) : base(context)
         {
-            _dbContext = dbContext;
+            _context = context;
         }
     }
 }
