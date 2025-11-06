@@ -151,6 +151,15 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPost]
+        [Route("delete-smartca")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ResponseDTO>> DeleteSmartCA([FromBody] DeleteSmartCARequest dto)
+        {
+            var r = await _econtractService.DeleteSmartCA(dto);
+            return Ok(r);
+        }
+
+        [HttpPost]
         [Route("update-econtract")]
         [Consumes("application/json")]
         [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
@@ -195,13 +204,13 @@ namespace SWP391Web.API.Controllers
             return StatusCode((int)r.StatusCode, r);
         }
 
-        [HttpPost]
-        [Route("create-booking-confirm-econtract")]
-        public async Task<ActionResult<ResponseDTO>> CreateBookingConfirmEcontract([FromQuery] Guid bookingId, CancellationToken ct)
-        {
-            var response = await _econtractService.CreateBookingEContractAsync(User, bookingId, ct);
-            return StatusCode(response.StatusCode, response);
-        }
+        //[HttpPost]
+        //[Route("create-booking-confirm-econtract")]
+        //public async Task<ActionResult<ResponseDTO>> CreateBookingConfirmEcontract([FromQuery] Guid bookingId, CancellationToken ct)
+        //{
+        //    var response = await _econtractService.CreateBookingEContractAsync(User, bookingId, ct);
+        //    return StatusCode(response.StatusCode, response);
+        //}
 
         [HttpDelete]
         [Route("delete-econtract-draft/{econtractId}")]

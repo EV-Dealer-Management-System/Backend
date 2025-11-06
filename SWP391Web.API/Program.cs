@@ -69,7 +69,8 @@ var allowedOrigins = new[] {
     "https://metrohcmc.xyz",
     "https://electricvehiclesystem.click",
     "https://api.electricvehiclesystem.click",
-    "https://localhost:5173"
+    "https://localhost:5173",
+    "https://www.electricvehiclesystem.click"
 };
 
 builder.Services.AddCors(opt =>
@@ -136,6 +137,9 @@ app.UseCookiePolicy(new CookiePolicyOptions
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHub<NotificationHub>("/api/notificationHub")
+   .RequireCors("FrontEnd");
+
 app.MapGet("/api/me", (HttpContext ctx) =>
 {
     if (!ctx.User.Identity?.IsAuthenticated ?? true) return Results.Unauthorized();
@@ -163,7 +167,5 @@ using (var scope = app.Services.CreateScope())
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     await RoleSeeder.SeedRolesAsync(roleManager);
 }
-
-app.MapHub<NotificationHub>("/api/notificationHub");
 
 app.Run();

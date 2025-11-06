@@ -12,9 +12,11 @@ namespace SWP391Web.API.Controllers
     public class DealerController : ControllerBase
     {
         private readonly IDealerService _dealerService;
-        public DealerController(IDealerService dealerService)
+        private readonly IDealerTierService _dealerTierService;
+        public DealerController(IDealerService dealerService, IDealerTierService dealerTierService)
         {
             _dealerService = dealerService;
+            _dealerTierService = dealerTierService;
         }
 
         [HttpPost]
@@ -46,6 +48,42 @@ namespace SWP391Web.API.Controllers
         {
             var response = await _dealerService.GetAllDealerAsync(filterOn, filterQuery, sortBy, isAcsending, pageNumber, pageSize, ct);
             return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPut]
+        [Route("update-dealer-tier/{dealerTierId}")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> UpdateDealerTier([FromRoute] Guid dealerTierId, [FromBody] UpdateDealerTierDTO updateDealer, CancellationToken ct)
+        {
+            var response = await _dealerTierService.UpdateDealerTier(dealerTierId, updateDealer, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpGet]
+        [Route("get-all-dealer-tiers")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> GetAllDealerTiers(CancellationToken ct)
+        {
+            var response = await _dealerTierService.GetAllDealerTiers(ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost]
+        [Route("create-dealer-policy-override/{dealerId}")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> CreateDealerPolicyOverride([FromRoute] Guid dealerId, [FromBody] CreateDealerPolicyOverrideDTO createDealerPolicy, CancellationToken ct)
+        {
+            var response = await _dealerTierService.CreateDealerPolicyOverrideAsync(dealerId, createDealerPolicy, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpGet]
+        [Route("get-effective-policy")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> GetEffectivePolicy([FromQuery] Guid dealerId, CancellationToken ct)
+        {
+            var response = await _dealerTierService.GetEffectivePolicyAsync(dealerId, ct);
+            return StatusCode(200, response);
         }
     }
 }

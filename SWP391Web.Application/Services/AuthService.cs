@@ -26,7 +26,7 @@ namespace SWP391Web.Application.Service
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         }
 
-        public async Task<ResponseDTO> LoginUser(LoginUserDTO loginUserDTO)
+        public async Task<ResponseDTO> LoginUser(LoginUserDTO loginUserDTO, CancellationToken ct)
         {
             try
             {
@@ -74,10 +74,12 @@ namespace SWP391Web.Application.Service
                     };
                 }
 
-                var accessToken = await _tokenService.GenerateJwtAccessTokenAysnc(user);
+                var accessToken = await _tokenService.GenerateJwtAccessTokenAysnc(user, ct);
                 var refreshToken = await _tokenService.GenerateJwtRefreshTokenAsync(user, loginUserDTO.RememberMe);
 
                 var getUser = _mapper.Map<GetApplicationUserDTO>(user);
+
+                await _unitOfWork.UserManagerRepository.ResetAccessFailedAsync(user);
 
                 return new ResponseDTO
                 {
@@ -264,7 +266,7 @@ namespace SWP391Web.Application.Service
             }
         }
 
-        public async Task<ResponseDTO> HandleGoogleCallbackAsync(ClaimsPrincipal userClaims)
+        public async Task<ResponseDTO> HandleGoogleCallbackAsync(ClaimsPrincipal userClaims, CancellationToken ct)
         {
             try
             {
@@ -320,7 +322,7 @@ namespace SWP391Web.Application.Service
                     }
                 }
 
-                var accessToken = await _tokenService.GenerateJwtAccessTokenAysnc(user);
+                var accessToken = await _tokenService.GenerateJwtAccessTokenAysnc(user, ct);
                 var refreshToken = await _tokenService.GenerateJwtRefreshTokenAsync(user, rememberMe: true);
 
                 await _unitOfWork.SaveAsync();

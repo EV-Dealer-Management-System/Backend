@@ -33,6 +33,16 @@ namespace SWP391Web.Infrastructure.Repository
         public IAppointmentRepository AppointmentRepository { get; private set; }
         public ITransactionRepository TransactionRepository { get; private set; }
         public IDepositSettingRepository DepositSettingRepository { get; private set; }
+        public INotificationRepository NotificationRepository { get; private set; }
+        public IOrderDetailRepository OrderDetailRepository { get; private set; }
+        public IDealerFeedbackRepository DealerFeedbackRepository { get; private set; }
+        public IDealerFBAttachmentRepository DealerFBAttachmentRepository { get; private set; }
+        public ICustomerFeedbackRepository CustomerFeedbackRepository { get; private set; }
+        public ICustomerFBAttachRepository CustomerFBAttachRepository { get; private set; }
+        public IDealerTierRepository DealerTierRepository { get; private set; }
+        public IDealerPolicyOverrideRepository DealerPolicyOverrideRepository { get; private set; }
+        public IDealerDebtRepository DealerDebtRepository { get; private set; }
+        public IVehicleDeliveryRepository VehicleDeliveryRepository { get; private set; }
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -59,10 +69,19 @@ namespace SWP391Web.Infrastructure.Repository
             BookingDetailRepository = new BookingDetailRepository(_context);
             CustomerRepository = new CustomerRepository(_context);
             AppointmentSettingRepository = new AppointmentSettingRepository(_context);
+            AppointmentRepository = new AppointmentRepository(_context);
             TransactionRepository = new TransactionRepository(_context);
             DepositSettingRepository = new DepositSettingRepository(_context);
-            //AppointmentSettingRepository = new AppointmentSettingRepository(_context);
-            //AppointmentRepository = new AppointmentRepository(_context);
+            NotificationRepository = new NotificationRepository(_context);
+            OrderDetailRepository = new OrderDetailRepository(_context);
+            DealerFeedbackRepository = new DealerFeedbackRepository(_context);
+            DealerFBAttachmentRepository = new DealerFBAttachmentRepository(_context);
+            CustomerFeedbackRepository = new CustomerFeedbackRepository(_context);
+            CustomerFBAttachRepository = new CustomerFBAttachRepository(_context);
+            DealerTierRepository = new DealerTierRepository(_context);
+            DealerPolicyOverrideRepository = new DealerPolicyOverrideRepository(_context);
+            DealerDebtRepository = new DealerDebtRepository(_context);
+            VehicleDeliveryRepository = new VehicleDeliveryRepository(_context);
         }
         public async Task<int> SaveAsync()
         {

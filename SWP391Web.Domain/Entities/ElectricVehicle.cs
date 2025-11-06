@@ -23,5 +23,6 @@ namespace SWP391Web.Domain.Entities
         public Warehouse Warehouse { get; set; } = null!;
         public ElectricVehicleTemplate ElectricVehicleTemplate { get; set; } = null!;
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
+        public ICollection<VehicleDeliveryDetail> VehicleDeliveryDetails { get; set; } = new List<VehicleDeliveryDetail>();
     }
 }

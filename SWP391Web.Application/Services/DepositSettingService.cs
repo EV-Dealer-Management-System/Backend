@@ -82,14 +82,14 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetDepositSetting(ClaimsPrincipal userClaim, CancellationToken ct)
+        public async Task<ResponseDTO<GetDepositSettingDTO>> GetDepositSetting(ClaimsPrincipal userClaim, CancellationToken ct)
         {
             try
             {
                 var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (userId is null)
                 {
-                    return new ResponseDTO
+                    return new ResponseDTO<GetDepositSettingDTO>
                     {
                         IsSuccess = false,
                         StatusCode = 401,
@@ -100,7 +100,7 @@ namespace SWP391Web.Application.Services
                 var userRole = userClaim.FindFirst(ClaimTypes.Role)?.Value;
                 if (userRole is null)
                 {
-                    return new ResponseDTO
+                    return new ResponseDTO<GetDepositSettingDTO>
                     {
                         IsSuccess = false,
                         StatusCode = 403,
@@ -119,7 +119,7 @@ namespace SWP391Web.Application.Services
                     var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
                     if (dealer is null)
                     {
-                        return new ResponseDTO
+                        return new ResponseDTO<GetDepositSettingDTO>
                         {
                             IsSuccess = false,
                             StatusCode = 404,
@@ -138,7 +138,7 @@ namespace SWP391Web.Application.Services
                     var dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId, ct);
                     if (dealer is null)
                     {
-                        return new ResponseDTO
+                        return new ResponseDTO<GetDepositSettingDTO>
                         {
                             IsSuccess = false,
                             StatusCode = 404,
@@ -155,7 +155,7 @@ namespace SWP391Web.Application.Services
 
                 if (depositSetting is null)
                 {
-                    return new ResponseDTO
+                    return new ResponseDTO<GetDepositSettingDTO>
                     {
                         IsSuccess = false,
                         StatusCode = 404,
@@ -165,17 +165,17 @@ namespace SWP391Web.Application.Services
 
                 var getDeposit = _mapper.Map<GetDepositSettingDTO>(depositSetting);
 
-                return new ResponseDTO
+                return new ResponseDTO<GetDepositSettingDTO>
                 {
                     IsSuccess = true,
                     StatusCode = 200,
                     Message = "Deposit setting retrieved successfully.",
-                    Result = getDeposit
+                    Data = getDeposit
                 };
             }
             catch (Exception ex)
             {
-                return new ResponseDTO
+                return new ResponseDTO<GetDepositSettingDTO>
                 {
                     IsSuccess = false,
                     StatusCode = 500,

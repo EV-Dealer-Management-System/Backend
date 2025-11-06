@@ -31,8 +31,19 @@ namespace SWP391Web.Infrastructure.IRepository
         public ICustomerRepository CustomerRepository { get; }
         public IAppointmentSettingRepository AppointmentSettingRepository { get; }
         public IAppointmentRepository AppointmentRepository { get; }
+        public IDealerFeedbackRepository DealerFeedbackRepository { get; }
         public ITransactionRepository TransactionRepository { get; }
         public IDepositSettingRepository DepositSettingRepository { get; }
+        public INotificationRepository NotificationRepository { get; }
+        public IOrderDetailRepository OrderDetailRepository { get; }
+        public IDealerFBAttachmentRepository DealerFBAttachmentRepository { get; }
+        public ICustomerFeedbackRepository CustomerFeedbackRepository { get; }
+        public ICustomerFBAttachRepository CustomerFBAttachRepository { get; }
+        public IDealerTierRepository DealerTierRepository { get; }
+        public IDealerPolicyOverrideRepository DealerPolicyOverrideRepository { get; }
+        public IDealerDebtRepository DealerDebtRepository { get; }
+        public IVehicleDeliveryRepository VehicleDeliveryRepository { get; }
+
         Task<int> SaveAsync();
     }
 }

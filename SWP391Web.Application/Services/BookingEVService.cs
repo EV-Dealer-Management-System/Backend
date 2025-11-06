@@ -1,22 +1,20 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.BookingEV;
 using SWP391Web.Application.DTO.BookingEVDetail;
+using SWP391Web.Application.DTO.VehicleDelivery;
+using SWP391Web.Application.DTO.Dealer;
+using SWP391Web.Application.DTO.DealerDebt;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
-using SWP391Web.Infrastructure.Repository;
 using SWP391Web.Infrastructure.SignlR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Linq.Expressions;
 using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
-using UglyToad.PdfPig.Outline;
 
 namespace SWP391Web.Application.Services
 {
@@ -25,15 +23,158 @@ namespace SWP391Web.Application.Services
         public readonly IUnitOfWork _unitOfWork;
         public readonly IMapper _mapper;
         private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly IDealerDebtService _dealerDebt;
+        private readonly IEContractService _eContractService;
 
-        public BookingEVService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext)
+        public BookingEVService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IDealerDebtService dealerDebt, IEContractService eContractService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
+            _dealerDebt = dealerDebt ?? throw new ArgumentNullException(nameof(dealerDebt));
+            _eContractService = eContractService ?? throw new ArgumentNullException(nameof(eContractService));
+
         }
 
-        public async Task<ResponseDTO> CreateBookingEVAsync(ClaimsPrincipal user, CreateBookingEVDTO createBookingEVDTO)
+        public async Task<ResponseDTO> ConfirmBookingDeliveryAsync(ClaimsPrincipal user, Guid bookingId, CancellationToken ct)
+        {
+            try
+            {
+                var bookingEV = await _unitOfWork.BookingEVRepository.GetBookingWithIdAsync(bookingId);
+                if (bookingEV is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Booking not found.",
+                        StatusCode = 404
+                    };
+                }
+
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not login yet.",
+                        StatusCode = 401
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found.",
+                        StatusCode = 404
+                    };
+                }
+
+                if (bookingEV.Dealer.Id != dealer.Id)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Unauthorized to confirm this booking.",
+                        StatusCode = 403
+                    };
+                }
+
+                if (bookingEV.Status != BookingStatus.SignedByAdmin)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Can only complete an signedByAdmin booking.",
+                        StatusCode = 400
+                    };
+                }
+
+                var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(bookingEV.DealerId);
+                if (warehouse == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer's warehouse not found.",
+                        StatusCode = 404
+                    };
+                }
+
+                foreach (var dt in bookingEV.BookingEVDetails)
+                {
+                    var inTransitVehicles = await _unitOfWork.ElectricVehicleRepository
+                        .GetInTransitVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+                    if (inTransitVehicles is null || !inTransitVehicles.Any())
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "No vehicles in in-transit status.",
+                            StatusCode = 404
+                        };
+                    }
+                    var selectedVehicles = inTransitVehicles
+                        .OrderBy(ev => ev.ImportDate)
+                        .Take(dt.Quantity)
+                        .ToList();
+                    foreach (var ev in selectedVehicles)
+                    {
+                        ev.Status = ElectricVehicleStatus.AtDealer;
+                        ev.WarehouseId = warehouse.Id;
+                        _unitOfWork.ElectricVehicleRepository.Update(ev);
+                    }
+                }
+
+                var amount = await CalPriceBookingEV(bookingEV);
+                var newPurchase = new RecordDebtDTO
+                {
+                    ReferenceNo = $"Booking_{bookingEV.Id}",
+                    Amount = amount,
+                    ConfirmDateUtc = DateTime.UtcNow
+                };
+                await _dealerDebt.AddPurchaseForDealerAsync(dealer.Id, newPurchase, ct);
+
+                bookingEV.Status = BookingStatus.Completed;
+                _unitOfWork.BookingEVRepository.Update(bookingEV);
+                await _unitOfWork.SaveAsync();
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Booking delivery confirmed successfully.",
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"Fail to confirm booking: {ex.Message}",
+                    StatusCode = 500
+                };
+            }
+        }
+
+        private async Task<decimal> CalPriceBookingEV(BookingEV bookingEV)
+        {
+            decimal amount = 0;
+            foreach (var detail in bookingEV.BookingEVDetails)
+            {
+                var vehicle = await _unitOfWork.EVTemplateRepository.GetTemplatesByVersionAndColorAsync(detail.VersionId, detail.ColorId);
+                if (vehicle != null)
+                {
+                    amount += vehicle.Price * detail.Quantity;
+                }
+            }
+
+            return amount;
+        }
+
+        public async Task<ResponseDTO> CreateBookingEVAsync(ClaimsPrincipal user, CreateBookingEVDTO createBookingEVDTO, CancellationToken ct)
         {
             try
             {
@@ -65,7 +206,7 @@ namespace SWP391Web.Application.Services
                     DealerId = dealer.Id,
                     Note = createBookingEVDTO.Note,
                     BookingDate = DateTime.UtcNow,
-                    Status = BookingStatus.Draft,
+                    Status = BookingStatus.WaitingDealerSign,
                     CreatedBy = dealer.Name,
                     TotalQuantity = createBookingEVDTO.BookingDetails.Sum(d => d.Quantity),
                 };
@@ -76,24 +217,26 @@ namespace SWP391Web.Application.Services
                     Quantity = detail.Quantity,
                 }).ToList();
                 // change status to pending
-                foreach(var dt in bookingEV.BookingEVDetails)
+                foreach (var dt in bookingEV.BookingEVDetails)
                 {
                     var version = await _unitOfWork.ElectricVehicleVersionRepository.GetByIdsAsync(dt.VersionId);
-                    if (version == null)
+                    if ( version == null)
                     {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = " Version not found ",
-                            StatusCode = 404
+                        return new ResponseDTO 
+                        { 
+                            IsSuccess = false, 
+                            Message = " Version not found ", 
+                            StatusCode = 404 
                         };
                     }
 
                     var availableVehicles = (await _unitOfWork.ElectricVehicleRepository
                         .GetAvailableVehicleByModelVersionColorAsync(version.ModelId, dt.VersionId, dt.ColorId))
                         .Where(ev => ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
+                        .OrderBy(ev => ev.ImportDate)
                         .ToList();
-                    if(availableVehicles == null || !availableVehicles.Any())
+
+                    if (availableVehicles == null || !availableVehicles.Any())
                     {
                         return new ResponseDTO
                         {
@@ -103,7 +246,7 @@ namespace SWP391Web.Application.Services
                         };
                     }
 
-                    if(availableVehicles.Count() < dt.Quantity)
+                    if (availableVehicles.Count < dt.Quantity)
                     {
                         return new ResponseDTO
                         {
@@ -118,7 +261,7 @@ namespace SWP391Web.Application.Services
                         .Take(dt.Quantity)
                         .ToList();
 
-                    foreach( var ev in selectedVehicles)
+                    foreach (var ev in selectedVehicles)
                     {
                         ev.Status = ElectricVehicleStatus.Pending;
                         _unitOfWork.ElectricVehicleRepository.Update(ev);
@@ -126,7 +269,10 @@ namespace SWP391Web.Application.Services
                 }
 
                 await _unitOfWork.BookingEVRepository.AddAsync(bookingEV, CancellationToken.None);
+
                 await _unitOfWork.SaveAsync();
+
+                await _eContractService.CreateBookingEContractAsync(user, bookingEV.Id, ct);
 
                 var bookingWithDetails = await _unitOfWork.BookingEVRepository.GetBookingWithIdAsync(bookingEV.Id);
 
@@ -158,13 +304,13 @@ namespace SWP391Web.Application.Services
 
         }
 
-        public async Task<ResponseDTO> GetAllBookingEVsAsync(ClaimsPrincipal user)
+        public async Task<ResponseDTO> GetAllBookingEVsAsync(ClaimsPrincipal user, int pageNumber, int pageSize, BookingStatus? bookingStatus, CancellationToken ct)
         {
             try
             {
                 var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-                if(userId == null)
+                if (userId == null)
                 {
                     return new ResponseDTO()
                     {
@@ -177,35 +323,92 @@ namespace SWP391Web.Application.Services
                 var role = user.FindFirst(ClaimTypes.Role)?.Value;
 
                 var bookingEVs = new List<BookingEV>();
+                Func<IQueryable<BookingEV>, IQueryable<BookingEV>> includes = q =>
+                    q.Include(b => b.BookingEVDetails)
+                        .ThenInclude(d => d.Color)
+                    .Include(b => b.BookingEVDetails)
+                        .ThenInclude(d => d.Version)
+                    .Include(b => b.EContract)
+                        .ThenInclude(ec => ec.Owner)
+                    .AsNoTracking();
+
+                (IReadOnlyList<BookingEV> items, int total) result;
+                Expression<Func<BookingEV, bool>>? filter;
                 if (role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
                 {
-                     bookingEVs = (await _unitOfWork.BookingEVRepository.GetAllBookingWithDetailAsync()).ToList();
+                    filter = null;
+                    if (bookingStatus is not null)
+                    {
+                        filter = b => b.Status == bookingStatus;
+                    }
+                    result = await _unitOfWork.BookingEVRepository.GetPagedAsync(
+                            filter: filter,
+                            includes: includes,
+                            orderBy: dm => dm.BookingDate,
+                            ascending: false,
+                            pageNumber: pageNumber,
+                            pageSize: pageSize,
+                            ct: ct);
                 }
                 else
                 {
-                    var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+                    var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, ct);
 
-                    if (dealer == null)
+                    if (dealer is null)
                     {
-                        return new ResponseDTO()
+                        dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId, ct);
+                        if (dealer is null)
                         {
-                            IsSuccess = false,
-                            Message = "Dealer not found",
-                            StatusCode = 404
-                        };
+                            return new ResponseDTO()
+                            {
+                                IsSuccess = false,
+                                Message = "Dealer not found",
+                                StatusCode = 404
+                            };
+                        }
                     }
-                    bookingEVs = (await _unitOfWork.BookingEVRepository.GetAllBookingWithDetailAsync())
-                                    .Where(b => b.DealerId == dealer.Id)
-                                    .ToList();
+
+                    filter = b => b.DealerId == dealer.Id;
+                    if (bookingStatus is not null)
+                    {
+                        var dealerId = dealer.Id;
+                        filter = b => b.DealerId == dealerId && b.Status == bookingStatus;
+                    }
+
+                    result = await _unitOfWork.BookingEVRepository.GetPagedAsync(
+                            filter: filter,
+                            includes: includes,
+                            orderBy: dm => dm.BookingDate,
+                            ascending: false,
+                            pageNumber: pageNumber,
+                            pageSize: pageSize,
+                            ct: ct);
                 }
 
-                var getBookingEVs = _mapper.Map<List<GetBookingEVDTO>>(bookingEVs);
+                var getBookingEVs = _mapper.Map<List<GetBookingEVDTO>>(result.items);
+                foreach (var booking in getBookingEVs)
+                {
+                    if (booking.EContract != null)
+                    {
+                        booking.EContract.CreatedName = (await _unitOfWork.UserManagerRepository.GetByIdAsync(booking.EContract.CreatedBy))?.FullName;
+                    }
+                }
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     Message = "Get all bookings successfully",
                     StatusCode = 200,
-                    Result = getBookingEVs
+                    Result = new
+                    {
+                        data = getBookingEVs,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = pageSize,
+                            TotalItems = result.total,
+                            TotalPages = (int)Math.Ceiling((double)result.total / pageSize)
+                        }
+                    }
                 };
             }
             catch (Exception ex)
@@ -219,25 +422,12 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetBookingEVByIdAsync(ClaimsPrincipal user , Guid bookingId)
+        public async Task<ResponseDTO> GetBookingEVByIdAsync(Guid bookingId)
         {
             try
             {
-                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (userId == null)
-                {
-                    return new ResponseDTO()
-                    {
-                        IsSuccess = false,
-                        Message = "User not found",
-                        StatusCode = 404
-                    };
-                }
-
-                var role = user.FindFirst(ClaimTypes.Role)?.Value;
-
                 var bookingEV = await _unitOfWork.BookingEVRepository.GetBookingWithIdAsync(bookingId);
-                if(bookingEV == null)
+                if (bookingEV is null)
                 {
                     return new ResponseDTO
                     {
@@ -247,26 +437,12 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if (role == StaticUserRole.Admin || role == StaticUserRole.EVMStaff)
-                {
-                    
-                }
-                else
-                {
-                    var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
-
-                    if (dealer == null)
-                    {
-                        return new ResponseDTO()
-                        {
-                            IsSuccess = false,
-                            Message = "Dealer not found",
-                            StatusCode = 404
-                        };
-                    }
-                }
-
                 var getBookingEV = _mapper.Map<GetBookingEVDTO>(bookingEV);
+
+                if (getBookingEV.EContract is not null)
+                {
+                    getBookingEV.EContract.CreatedName = (await _unitOfWork.UserManagerRepository.GetByIdAsync(getBookingEV.EContract.CreatedBy))?.FullName;
+                }
 
                 return new ResponseDTO
                 {
@@ -360,23 +536,22 @@ namespace SWP391Web.Application.Services
                 }
 
                 if (bookingEV.Status == BookingStatus.Cancelled ||
-                    bookingEV.Status == BookingStatus.Approved ||
                     bookingEV.Status == BookingStatus.Rejected)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Cannot update status of a cancelled, approved, or rejected booking.",
+                        Message = "Cannot update status of a cancelled,rejected booking.",
                         StatusCode = 400
                     };
                 }
 
-                if (newStatus == BookingStatus.Pending && bookingEV.Status != BookingStatus.Draft)
+                if (newStatus == BookingStatus.Pending && bookingEV.Status != BookingStatus.WaitingDealerSign)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Can only change to pending from draft",
+                        Message = "Can only change to pending from waititingDealerSign",
                         StatusCode = 400
                     };
                 }
@@ -406,12 +581,12 @@ namespace SWP391Web.Application.Services
                         };
                     }
 
-                    if (bookingEV.Status != BookingStatus.Draft && bookingEV.Status != BookingStatus.Pending)
+                    if (bookingEV.Status != BookingStatus.WaitingDealerSign && bookingEV.Status != BookingStatus.Pending)
                     {
                         return new ResponseDTO
                         {
                             IsSuccess = false,
-                            Message = "Can only cancel a pending or draft booking.",
+                            Message = "Can only cancel a pending or waitting booking.",
                             StatusCode = 400
                         };
                     }
@@ -434,16 +609,6 @@ namespace SWP391Web.Application.Services
 
                 if (newStatus == BookingStatus.Approved)
                 {
-                    var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(bookingEV.DealerId);
-                    if (warehouse == null)
-                    {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "Dealer's warehouse not found.",
-                            StatusCode = 404
-                        };
-                    }
 
                     foreach (var dt in bookingEV.BookingEVDetails)
                     {
@@ -478,7 +643,6 @@ namespace SWP391Web.Application.Services
                         foreach (var ev in selectedVehicles)
                         {
                             ev.Status = ElectricVehicleStatus.Booked;
-                            ev.WarehouseId = warehouse.Id;
                             _unitOfWork.ElectricVehicleRepository.Update(ev);
                         }
                     }
@@ -514,7 +678,32 @@ namespace SWP391Web.Application.Services
                     }
                 }
 
-                if (bookingEV.Status == BookingStatus.Draft && newStatus == BookingStatus.Pending)
+                if(newStatus == BookingStatus.SignedByAdmin)
+                {
+                    if (role != StaticUserRole.Admin)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Only Admin can sign the booking.",
+                            StatusCode = 403
+                        };
+                    }
+
+                    if (bookingEV.Status != BookingStatus.Approved)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Booking must be approved by EVM Staff before Admin can sign.",
+                            StatusCode = 400
+                        };
+                    }
+
+                    await CreateVehicleDeliveryAsync(bookingEV);
+                }
+
+                if (bookingEV.Status == BookingStatus.WaitingDealerSign && newStatus == BookingStatus.Pending)
                 {
                     foreach (var dt in bookingEV.BookingEVDetails)
                     {
@@ -528,7 +717,7 @@ namespace SWP391Web.Application.Services
                                 Message = "Not enough vehicles for booking.",
                                 StatusCode = 400,
                             };
-                                
+
                         foreach (var ev in availableVehicles.Take(dt.Quantity))
                         {
                             ev.Status = ElectricVehicleStatus.Pending;
@@ -547,6 +736,7 @@ namespace SWP391Web.Application.Services
                     BookingStatus.Approved => "Booking approved successfully.",
                     BookingStatus.Rejected => "Booking rejected successfully.",
                     BookingStatus.Cancelled => "Booking cancelled successfully.",
+                    BookingStatus.Completed => "Booking completed successfully.",
                     _ => "Booking status updated successfully."
                 };
 
@@ -566,6 +756,39 @@ namespace SWP391Web.Application.Services
                     StatusCode = 500
                 };
             }
+        }
+
+        private async Task<ResponseDTO> CreateVehicleDeliveryAsync(BookingEV bookingEV)
+        {
+            var vehicleDelivery = new VehicleDelivery
+            {
+                BookingEVId = bookingEV.Id,
+                Description = "Preparing vehicles to delivery",
+                CreatedDate = DateTime.UtcNow,
+                Status = DeliveryStatus.Preparing,
+                UpdateAt = DateTime.UtcNow,
+            };
+
+            await _unitOfWork.VehicleDeliveryRepository.AddAsync(vehicleDelivery,CancellationToken.None);
+
+            foreach(var dt in bookingEV.BookingEVDetails)
+            {
+                var bookedVehicles = await _unitOfWork.ElectricVehicleRepository
+                    .GetBookedVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+
+                foreach(var ev in bookedVehicles.Take(dt.Quantity))
+                {
+                    ev.Status = ElectricVehicleStatus.InTransit;
+                    _unitOfWork.ElectricVehicleRepository.Update(ev);
+                }
+            }
+            await _unitOfWork.SaveAsync();
+            return new ResponseDTO
+            {
+                IsSuccess = true,
+                Message = "Create Vehicle Delivery successfully",
+                StatusCode = 200
+            };
         }
 
 

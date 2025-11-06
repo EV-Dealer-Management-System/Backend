@@ -35,7 +35,7 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return _context.AppointmentSettings
                 .AsNoTracking()
-                .FirstOrDefaultAsync(a => a.DealerId == null);
+                .FirstOrDefaultAsync(a => a.DealerId == null && a.ManagerId == null);
         }
     }
 }

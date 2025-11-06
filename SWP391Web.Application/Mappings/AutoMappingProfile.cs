@@ -1,12 +1,15 @@
 ﻿using Aspose.Words.XAttr;
 using AutoMapper;
+using SWP391Web.Application.DTO.Appointment;
 using SWP391Web.Application.DTO.AppointmentSetting;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.BookingEV;
 using SWP391Web.Application.DTO.BookingEVDetail;
 using SWP391Web.Application.DTO.Customer;
+using SWP391Web.Application.DTO.CustomerFeedback;
 using SWP391Web.Application.DTO.CustomerOrder;
 using SWP391Web.Application.DTO.Dealer;
+using SWP391Web.Application.DTO.DealerFeedBackDTO;
 using SWP391Web.Application.DTO.DepositSetting;
 using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.DTO.EContractTemplate;
@@ -16,9 +19,12 @@ using SWP391Web.Application.DTO.ElectricVehicleModel;
 using SWP391Web.Application.DTO.ElectricVehicleVersion;
 using SWP391Web.Application.DTO.EVCInventory;
 using SWP391Web.Application.DTO.EVTemplate;
+using SWP391Web.Application.DTO.Notification;
+using SWP391Web.Application.DTO.OrderDetail;
 using SWP391Web.Application.DTO.Promotion;
 using SWP391Web.Application.DTO.Quote;
 using SWP391Web.Application.DTO.QuoteDetail;
+using SWP391Web.Application.DTO.VehicleDelivery;
 using SWP391Web.Application.DTO.Warehouse;
 using SWP391Web.Domain.Entities;
 
@@ -29,12 +35,24 @@ namespace SWP391Web.Application.Mappings
         public AutoMappingProfile()
         {
             CreateMap<ApplicationUser, GetApplicationUserDTO>().ReverseMap();
+
             CreateMap<Customer, GetCustomerDTO>().ReverseMap();
+
             CreateMap<CustomerOrder, GetCustomerOrderDTO>()
-                .ForMember(dest => dest.QuoteDetails, opt => opt.MapFrom(src => src.Quote.QuoteDetails)).ReverseMap();
+            .ForMember(d => d.QuoteDetails,
+                opt => opt.MapFrom(s => s.Quote != null ? s.Quote.QuoteDetails : new List<QuoteDetail>()))
+            .ForMember(d => d.Customer, opt => opt.MapFrom(s => s.Customer))
+            .ForMember(d => d.OrderDetails, opt => opt.MapFrom(s => s.OrderDetails)).ReverseMap();
+
+            CreateMap<OrderDetail, GetOrderDetailDTO>()
+            .ForMember(d => d.ElectricVehicle, opt => opt.MapFrom(s => s.ElectricVehicle)).ReverseMap();
+
             CreateMap<ElectricVehicleColor, GetElectricVehicleColorDTO>().ReverseMap();
+
             CreateMap<ElectricVehicleModel, GetElectricVehicleModelDTO>().ReverseMap();
+
             CreateMap<ElectricVehicleVersion, GetElectricVehicleVersionDTO>().ReverseMap();
+
             CreateMap<ElectricVehicle, GetElecticVehicleDTO>()
                 .ForMember(dest => dest.ElectricVehicleTemplate, opt => opt.MapFrom(src => new ViewTemplate
                 {
@@ -49,22 +67,30 @@ namespace SWP391Web.Application.Mappings
                     WarehouseId = src.Warehouse.Id,
                     Name = src.Warehouse.WarehouseName,
                 }));
+
             CreateMap<BookingEV, GetBookingEVDTO>()
-                .ForMember(dest => dest.BookingEVDetails, opt => opt.MapFrom(src => src.BookingEVDetails)).ReverseMap();
+                .ForMember(dest => dest.BookingEVDetails, opt => opt.MapFrom(src => src.BookingEVDetails))
+                .ForMember(dest => dest.EContract, opt => opt.MapFrom(src => src.EContract)).ReverseMap();
+
             CreateMap<BookingEVDetail, GetBookingEVDetailDTO>()
                 .ForMember(dest => dest.Version, opt => opt.MapFrom(src => new VersionDTO
                 {
                     VersionId = src.VersionId,
                     ModelId = src.Version.ModelId
                 }));
+
             CreateMap<EVCInventory, GetEVCInventoryDTO>().ReverseMap();
+
             CreateMap<Warehouse, GetWarehouseDTO>().ReverseMap();
+
             CreateMap<EContract, GetEContractDTO>()
                 .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FullName)).ReverseMap();
 
             CreateMap<EContractTemplate, GetEContractTemplateDTO>().ReverseMap();
-            CreateMap<Quote,GetQuoteDTO>()
+
+            CreateMap<Quote, GetQuoteDTO>()
                 .ForMember(dest => dest.QuoteDetails, opt => opt.MapFrom(src => src.QuoteDetails)).ReverseMap();
+
             CreateMap<QuoteDetail, GetQuoteDetailDTO>()
                 .ForMember(dest => dest.Color, opt => opt.MapFrom(src => new ViewColorName
                 {
@@ -83,11 +109,14 @@ namespace SWP391Web.Application.Mappings
                     PromotionId = src.PromotionId,
                     PromotionName = src.Promotion.Name,
                 }));
-            CreateMap<Promotion,GetPromotionDTO>().ReverseMap();
+
+            CreateMap<Promotion, GetPromotionDTO>().ReverseMap();
+
             CreateMap<DealerMember, GetDealerStaffDTO>()
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.ApplicationUser.Email))
                 .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.ApplicationUser.FullName))
                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.ApplicationUser.PhoneNumber)).ReverseMap();
+
             CreateMap<ElectricVehicleTemplate, GetEVTemplateDTO>()
                 .ForMember(dest => dest.Color, opt => opt.MapFrom(src => new ViewColorName
                 {
@@ -101,7 +130,7 @@ namespace SWP391Web.Application.Mappings
                     ModelId = src.Version.Model.Id,
                     ModelName = src.Version.Model.ModelName,
                 }));
-                //.ForMember(dest => dest.ImgUrl, opt => opt.MapFrom(src => src.EVAttachments.Select(a => a.Key).ToList()));
+
             CreateMap<ElectricVehicle, GetVehicleByBookingDTO>()
                 .ForMember(dest => dest.ElectricVehicleId, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.Color, opt => opt.MapFrom(src => new ViewColorName
@@ -125,11 +154,51 @@ namespace SWP391Web.Application.Mappings
             CreateMap<Dealer, GetDealerDTO>()
                 .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager.FullName))
                 .ForMember(dest => dest.ManagerEmail, opt => opt.MapFrom(src => src.Manager.Email)).ReverseMap();
+
             CreateMap<AppointmentSetting, GetAppointSettingDTO>().ReverseMap();
+
+            CreateMap<Appointment, GetCreateAppointmentDTO>().ReverseMap();
+
+            CreateMap<Appointment, GetAppointmentDTO>()
+                .ForMember(dest => dest.EVTemplate, opt => opt.MapFrom(src => new ViewTemplate
+                {
+                    EVTemplateId = src.EVTemplate.Id,
+                    VersionId = src.EVTemplate.VersionId,
+                    VersionName = src.EVTemplate.Version.VersionName,
+                    ModelId = src.EVTemplate.Version.ModelId,
+                    ModelName = src.EVTemplate.Version.Model.ModelName,
+                    ColorId = src.EVTemplate.ColorId,
+                    ColorName = src.EVTemplate.Color.ColorName
+                }))
+                .ForMember(dest => dest.Dealer, opt => opt.MapFrom(src => new ViewDealerName
+                {
+                    DealerId = src.Dealer.Id,
+                    DealerName = src.Dealer.Name
+                }))
+                .ForMember(dest => dest.Customer, opt => opt.MapFrom(src => new ViewCustomerName
+                {
+                    CustomerId = src.Customer.Id,
+                    CustomerName = src.Customer.FullName
+                }))
+                .ReverseMap();
 
             CreateMap<DepositSetting, GetDepositSettingDTO>()
                 .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager.FullName))
                 .ForMember(dest => dest.DealerName, opt => opt.MapFrom(src => src.Dealer.Name)).ReverseMap();
+
+            CreateMap<DealerFeedback, GetDealerFeedBackDTO>()
+                .ForMember(dest => dest.DealerName, opt => opt.MapFrom(src => src.Dealer.Name)).ReverseMap();
+
+            CreateMap<CustomerFeedback, GetCustomerFeedbackDTO>()
+                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.Customer.FullName))
+                .ForMember(dest => dest.CustomerEmail, opt => opt.MapFrom(src => src.Customer.Email))
+                .ForMember(dest => dest.CustomerPhone, opt => opt.MapFrom(src => src.Customer.PhoneNumber))
+                .ReverseMap();
+
+            CreateMap<Notification, GetNotificationDTO>().ReverseMap();
+
+            CreateMap<DealerTier, GetDealerTierDTO>().ReverseMap();
+            CreateMap<VehicleDelivery, GetVehicleDeliveryDTO>().ReverseMap();
         }
     }
 }

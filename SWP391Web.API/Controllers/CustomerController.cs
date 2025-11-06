@@ -30,9 +30,9 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-all-customers")]
-        public async Task<ActionResult<ResponseDTO>> GetAllCustomers()
+        public async Task<ActionResult<ResponseDTO>> GetAllCustomers([FromQuery] string? search)
         {
-            var response = await _customerService.GetAllCustomerAsync(User);
+            var response = await _customerService.GetAllCustomerAsync(User, search);
             return StatusCode(response.StatusCode, response);
         }
     }

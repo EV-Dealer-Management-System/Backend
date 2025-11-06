@@ -24,20 +24,25 @@ namespace SWP391Web.API.Controllers
             var response = await _appointmentSettingService.CreateAppointmentAsync(User, createAppointmentDTO);
             return StatusCode(response.StatusCode, response);
         }
-
-        [HttpGet("get-all-appointment-setting")]
-        public async Task<IActionResult> GetAll()
+        [HttpGet("get-appointment-setting-by-id/{appointmentId}")]
+        public async Task<ActionResult<ResponseDTO>> GetAppointmentSettingByIdAsync([FromRoute]Guid appointmentId)
         {
-            var response = await _appointmentSettingService.GetAllAppointmentAsync(User);
+            var response = await _appointmentSettingService.GetAppointmentByIdAsync(appointmentId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet("get-current-setting")]
+        public async Task<ActionResult<ResponseDTO>> GetCurrentSettingAsync()
+        {
+            var response = await _appointmentSettingService.GetCurrentUserSettingAsync(User);
             return StatusCode(response.StatusCode, response);
         }
 
-        [HttpGet("get-appointment-setting-by-dealer-id/{dealerId}")]
-        public async Task<ActionResult<ResponseDTO>> GetByDealerIdAsync()
-        {
-            var response = await _appointmentSettingService.GetAppointmentByDealerIdAsync(User);
-            return StatusCode(response.StatusCode, response);
-        }
+        //[HttpGet("get-all-appointment-setting")]
+        //public async Task<IActionResult> GetAll()
+        //{
+        //    var response = await _appointmentSettingService.GetAllAppointmentAsync(User);
+        //    return StatusCode(response.StatusCode, response);
+        //}
 
         [HttpPut("update-appointment-setting-by-id/{appointmentId}")]
         public async Task<ActionResult<ResponseDTO>> UpdateAppointmentSettingAsync([FromRoute]Guid appointmentId, [FromBody]UpdateAppointSettingDTO updateAppointmentDTO)
@@ -52,5 +57,12 @@ namespace SWP391Web.API.Controllers
         //    var result = await _appointmentSettingService.DeleteAppointmentAsync(appointmentId);
         //    return StatusCode(result.StatusCode, result);
         //}
+
+        [HttpGet("get-available-slot-appointments")]
+        public async Task<ActionResult<ResponseDTO>> GetAvailableSlotAppointmentsAsync([FromQuery]DateTime? targetDate = null)
+        {
+            var response = await _appointmentSettingService.GenerateTimeSlotAsync(User,targetDate);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

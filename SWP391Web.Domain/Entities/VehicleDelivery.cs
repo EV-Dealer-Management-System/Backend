@@ -13,7 +13,10 @@ namespace SWP391Web.Domain.Entities
         public Guid BookingEVId { get; set; }
         public string? Description { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
-        public DeliveryStatus Status { get; set; } // enum: Preparing, Packing, InTransit, Arrived, Confirmed, Accident
+        public DeliveryStatus Status { get; set; }
         public DateTime? UpdateAt { get; set; } = DateTime.UtcNow;
+
+        public BookingEV BookingEV { get; set; } = null!;
+        public ICollection<VehicleDeliveryDetail> VehicleDeliveryDetails { get; set; } = new List<VehicleDeliveryDetail>();
     }
 }

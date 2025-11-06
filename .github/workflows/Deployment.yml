@@ -2,8 +2,7 @@ name: Backend CI/CD (No Artifact)
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 env:
   PROJECT_NAME: EV_Dealer_Management_System
@@ -14,7 +13,6 @@ env:
 
 jobs:
   build-and-deploy:
-    name: Build and Deploy ASP.NET Core
     runs-on: ubuntu-latest
     environment: SWP391
 
@@ -36,8 +34,12 @@ jobs:
       - name: Publish project (framework-dependent)
         run: dotnet publish -c Release -o ./publish
 
-      - name: Zip publish folder
-        run: zip -r publish.zip ./publish
+      - name: Pack publish folder (tar.gz) + checksum
+        run: |
+          tar -C ./publish -czf publish.tgz .
+          sha256sum publish.tgz > publish.tgz.sha256
+          ls -lah
+          ls -lah publish.tgz*
 
       - name: Setup SSH
         run: |
@@ -48,38 +50,31 @@ jobs:
 
       - name: Upload & deploy to EC2
         run: |
-          HOST="${{ secrets.EC2_HOST_PUBLIC }}"; USER="${{ secrets.EC2_USER }}"
-          [ -n "$HOST" ] && [ -n "$USER" ] || { echo "Thiếu EC2_HOST_PUBLIC/EC2_USER (ở Environment SWP391)"; exit 1; }
+          set -euo pipefail
+          test -f ./publish.tgz && test -f ./publish.tgz.sha256
 
-          scp publish.zip "$USER@$HOST:/home/$USER/"
-          ssh -o StrictHostKeyChecking=no "$USER@$HOST" "set -e
-          PROJECT='EV_Dealer_Management_System'
-          DEPLOY_DIR='/var/www/'\"\$PROJECT\"
-          SERVICE='kestrel-'\"\$PROJECT\"'.service'
+          HOST="${{ secrets.EC2_HOST_PUBLIC }}"
+          USER="${{ secrets.EC2_USER }}"
 
-          # kiểm tra unit có tồn tại trên host này không
-          if ! sudo systemctl list-unit-files | grep -q \"\$SERVICE\"; then
-          echo 'Service '\$SERVICE' chưa tồn tại trên host này.'
-          echo '>> Kiểm tra lại: secrets EC2_HOST_PUBLIC có đúng IP của máy đã tạo service chưa?'
-          echo '>> Hoặc vào máy này tạo service 1 lần: /etc/systemd/system/'\$SERVICE
-          exit 5
-          fi
+          scp ./publish.tgz ./publish.tgz.sha256 "$USER@$HOST:/home/$USER/"
 
-          sudo mkdir -p \"\$DEPLOY_DIR\"
-          (sudo dnf -y install unzip >/dev/null 2>&1 || sudo yum -y install unzip >/dev/null 2>&1 || true)
+          ssh -o StrictHostKeyChecking=no "$USER@$HOST" "set -euo pipefail
+            PROJECT='${{ env.PROJECT_NAME }}'
+            DEPLOY_DIR='/var/www/'\"\$PROJECT\"
+            SERVICE='kestrel-'\"\$PROJECT\"'.service'
 
-          rm -rf ~/deploy_temp && mkdir -p ~/deploy_temp
-          unzip -o ~/publish.zip -d ~/deploy_temp >/dev/null
+            sudo systemctl cat \"\$SERVICE\" >/dev/null 2>&1
 
-          sudo systemctl stop \"\$SERVICE\" || true
-          sudo rm -rf \"\${DEPLOY_DIR:?}\"/*
-          sudo cp -r ~/deploy_temp/* \"\$DEPLOY_DIR\"/
-          sudo chown -R ec2-user:ec2-user \"\$DEPLOY_DIR\"
-          sudo systemctl daemon-reload
-          sudo systemctl start \"\$SERVICE\"
+            cd /home/$USER
+            sha256sum -c publish.tgz.sha256
 
-          rm -rf ~/deploy_temp ~/publish.zip
+            sudo mkdir -p \"\$DEPLOY_DIR/publish\"
+            sudo systemctl stop \"\$SERVICE\" || true
+            sudo rm -rf \"\$DEPLOY_DIR/publish\"/*
+            tar -xzf publish.tgz -C \"\$DEPLOY_DIR/publish\"
+            sudo chown -R ec2-user:ec2-user \"\$DEPLOY_DIR\"
+            sudo systemctl daemon-reload
+            sudo systemctl start \"\$SERVICE\"
+
+            rm -f publish.tgz publish.tgz.sha256
           "
-
-            # Dọn dẹp
-            rm -rf ~/deploy_temp ~/publish.zip

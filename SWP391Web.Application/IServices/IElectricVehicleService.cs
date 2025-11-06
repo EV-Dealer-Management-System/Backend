@@ -20,7 +20,6 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> UpdateVehicleStatusAsync(Guid vehicleId, ElectricVehicleStatus newStatus);
         Task<ResponseDTO> GetAvailableQuantityByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId);
         Task<ResponseDTO> GetDealerInventoryAsync(ClaimsPrincipal user);
-        Task<ResponseDTO> GetSampleVehiclesAsync(ClaimsPrincipal user);
-
+        Task<ResponseDTO> GetEVCInventoryAsync(ClaimsPrincipal user);
     }
 }

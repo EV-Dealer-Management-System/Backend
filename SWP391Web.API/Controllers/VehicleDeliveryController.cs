@@ -1,0 +1,42 @@
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Application.IServices;
+using SWP391Web.Application.Services;
+using SWP391Web.Domain.Enums;
+
+namespace SWP391Web.API.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class VehicleDeliveryController : ControllerBase
+    {
+        public readonly IVehicleDeliveryService _vehicleDeliveryService;
+        public VehicleDeliveryController(IVehicleDeliveryService vehicleDeliveryService)
+        {
+            _vehicleDeliveryService = vehicleDeliveryService ?? throw new ArgumentNullException(nameof(vehicleDeliveryService));
+        }
+        [HttpGet("Get-all-deliveries/")]
+        public async Task<ActionResult<ResponseDTO>> GetAllVehicleDeliveries([FromQuery] DeliveryStatus? status)
+        {
+            var response = await _vehicleDeliveryService.GetAllVehicleDelivery(status);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet("Get-by-id/{deliveryId}")]
+        public async Task<ActionResult<ResponseDTO>> GetDeliveryByIdAsync(Guid deliveryId, CancellationToken ct)
+        {
+            var response = await _vehicleDeliveryService.GetVehicleDeliveryById(deliveryId, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut("update-status/{deliveryId}")]
+        public async Task<ActionResult<ResponseDTO>> UpdateDeliveryStatus(
+        Guid deliveryId,
+        [FromQuery] DeliveryStatus newStatus,
+        [FromBody] string? description,
+        CancellationToken ct)
+        {
+            var response = await _vehicleDeliveryService.UpdateVehicleDeliveryStatus(User, deliveryId, newStatus, ct, description);
+            return StatusCode(response.StatusCode, response);
+        }
+    }
+}

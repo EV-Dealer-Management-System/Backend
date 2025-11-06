@@ -18,22 +18,23 @@ namespace SWP391Web.API.Controllers
             _bookingEVService = bookingEVService ?? throw new ArgumentNullException(nameof(bookingEVService));
         }
         [HttpPost("create-booking")]
-        public  async Task<ActionResult<ResponseDTO>> CreateBookingEV([FromBody] CreateBookingEVDTO createBookingEVDTO)
+        public  async Task<ActionResult<ResponseDTO>> CreateBookingEV([FromBody] CreateBookingEVDTO createBookingEVDTO, CancellationToken ct)
         {
-            var response = await _bookingEVService.CreateBookingEVAsync(User, createBookingEVDTO);
+            var response = await _bookingEVService.CreateBookingEVAsync(User, createBookingEVDTO, ct);
             return StatusCode(response.StatusCode, response);
         }
 
         [HttpGet("get-all-bookings")]
-        public async Task<ActionResult<ResponseDTO>> GetAllBookingEVs()
+        public async Task<ActionResult<ResponseDTO>> GetAllBookingEVs([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, BookingStatus? bookingStatus = default, CancellationToken ct = default)
         {
-            var response = await _bookingEVService.GetAllBookingEVsAsync(User);
+            var response = await _bookingEVService.GetAllBookingEVsAsync(User, pageNumber, pageSize, bookingStatus, ct);
             return StatusCode(response.StatusCode, response);
         }
+
         [HttpGet("get-booking-by-id/{bookingId}")]
         public async Task<ActionResult<ResponseDTO>> GetBookingEVById([FromRoute] Guid bookingId)
         {
-            var response = await _bookingEVService.GetBookingEVByIdAsync(User,bookingId);
+            var response = await _bookingEVService.GetBookingEVByIdAsync(bookingId);
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut("update-booking-status/{bookingId}")]

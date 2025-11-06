@@ -1,4 +1,5 @@
-﻿using SWP391Web.Application.DTO.OrderDetail;
+﻿using SWP391Web.Application.DTO.Customer;
+using SWP391Web.Application.DTO.OrderDetail;
 using SWP391Web.Application.DTO.QuoteDetail;
 using SWP391Web.Domain.Enums;
 using System;
@@ -17,7 +18,11 @@ namespace SWP391Web.Application.DTO.CustomerOrder
         public int OrderNo { get; set; }
         public DateTime CreatedAt { get; set; }
         public decimal TotalAmount { get; set; }
+        public decimal DepositAmount { get; set; }
         public OrderStatus Status { get; set; }
         public List<GetQuoteDetailDTO> QuoteDetails { get; set; } = new();
+        public List<GetOrderDetailDTO> OrderDetails {  get; set; } = new();
+        public GetCustomerDTO Customer { get; set; } = new();
+
     }
 }

@@ -1,14 +1,21 @@
-
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authentication.OAuth;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Configuration;
 using StackExchange.Redis;
 using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Application.DTO.DealerDebt;
 using SWP391Web.Application.DTO.Payment;
 using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
+using SWP391Web.Infrastructure.SignlR;
+using System;
 using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
@@ -23,7 +30,11 @@ namespace SWP391Web.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IHttpContextAccessor _http;
         private readonly IEmailService _emailService;
-        public PaymentService(IConfiguration cfg, IUnitOfWork unitOfWork, IHttpContextAccessor httpContext, IEmailService emailService)
+        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly IDealerDebtService _dealerDebtService;
+        private readonly IDealerTierService _dealerTierService;
+        public PaymentService(IConfiguration cfg, IUnitOfWork unitOfWork, IHttpContextAccessor httpContext, IEmailService emailService, IHubContext<NotificationHub> hubContext, IDealerDebtService dealerDebtService
+            , IDealerTierService dealerTierService)
         {
             _baseUrl = cfg["VNPay:BaseUrl"] ?? throw new Exception("Cannot find VNPay:BaseUrl");
             _tmnCode = cfg["VNPay:TmnCode"] ?? throw new Exception("Cannot find VNPay:TmnCode");
@@ -32,6 +43,9 @@ namespace SWP391Web.Application.Services
             _unitOfWork = unitOfWork;
             _http = httpContext;
             _emailService = emailService;
+            _hubContext = hubContext;
+            _dealerDebtService = dealerDebtService;
+            _dealerTierService = dealerTierService;
         }
         public async Task<ResponseDTO> CreateVNPayLink(Guid customerOrderId, CancellationToken ct)
         {
@@ -49,24 +63,26 @@ namespace SWP391Web.Application.Services
                 }
 
                 decimal? amount;
-                if (order.Status.Equals(OrderStatus.FullPending) && order.DepositAmount is not null)
+                var orderNo = order.OrderNo.ToString();
+
+                if (order.Status.Equals(OrderStatus.DepositPending) && order.DepositAmount is not null)
                 {
                     amount = order.DepositAmount;
                 }
-                else if (order.Status.Equals(OrderStatus.DepositPending) && order.DepositAmount is not null)
+                else if (order.Status.Equals(OrderStatus.Depositing) && order.DepositAmount is not null)
                 {
                     amount = (order.TotalAmount - order.DepositAmount);
+                    orderNo = orderNo + "|" + Guid.NewGuid().ToString()[..6];
                 }
                 else
                 {
                     amount = order.TotalAmount;
                 }
 
-                amount = (amount * 100);
+                amount = amount * 100;
                 var createDate = ToGmt7(DateTime.UtcNow);
-                var OrderInfo = $"CodeNo-{order.OrderNo}-Price-{amount}";
+                var OrderInfo = $"ORDER|{order.OrderNo}";
                 var expireDate = ToGmt7(DateTime.UtcNow.AddMinutes(15));
-                var orderNo = order.OrderNo.ToString();
                 var clientIp = ResolveClientIp();
 
                 var data = new SortedDictionary<string, string>(StringComparer.Ordinal)
@@ -93,7 +109,7 @@ namespace SWP391Web.Application.Services
                 var queryString = signData + $"&vnp_SecureHashType=HMACSHA512&vnp_SecureHash={secureHash}";
                 var paymentUrl = _baseUrl + "?" + queryString;
 
-                await _emailService.NotifyPaymentLinkToCustomer(order.Customer.Email!, order.Customer.FullName!, order.OrderNo, amount.Value/100, paymentUrl);
+                await _emailService.NotifyPaymentLinkToCustomer(order.Customer.Email!, order.Customer.FullName!, order.OrderNo, amount.Value / 100, paymentUrl);
                 return new ResponseDTO()
                 {
                     Message = "VNPay link created successfully",
@@ -211,7 +227,12 @@ namespace SWP391Web.Application.Services
 
                 if (ipnDTO.vnp_ResponseCode == "00" && ipnDTO.vnp_TransactionStatus == "00")
                 {
-                    var order = await _unitOfWork.CustomerOrderRepository.GetByOrderNoAsync(int.Parse(ipnDTO.vnp_TxnRef));
+                    var orderNo = ipnDTO.vnp_TxnRef;
+                    if(orderNo.Contains("|"))
+                    {
+                        orderNo = orderNo[..^7];
+                    }
+                    var order = await _unitOfWork.CustomerOrderRepository.GetByOrderNoAsync(int.Parse(orderNo));
                     if (order is null)
                     {
                         return new ResponseDTO
@@ -226,41 +247,87 @@ namespace SWP391Web.Application.Services
                             }
                         };
                     }
-                    await HandleVNPayCustomerOrder(order, decimal.Parse(ipnDTO.vnp_Amount) / 100);
 
-                    DateTime dateTime = DateTime.ParseExact(ipnDTO.vnp_PayDate, "yyyyMMddHHmmss", CultureInfo.InvariantCulture);
+                    if (order.Status.Equals(OrderStatus.Completed))
+                    {
+                        return new ResponseDTO
+                        {
+                            StatusCode = 200,
+                            Message = "Already processed",
+                            Result = new
+                            {
+                                RspCode = "00",
+                                Message = "Confirm success"
+                            }
+                        };
+                    }
+
+                    var paidAmount = decimal.Parse(ipnDTO.vnp_Amount) / 100;
+                    await HandleVNPayCustomerOrder(order, paidAmount, ct);
+
                     var Transaction = new Transaction
                     {
                         CustomerOrderId = order.Id,
-                        Amount = decimal.Parse(ipnDTO.vnp_Amount) / 100,
+                        Amount = paidAmount,
                         Provider = "VNPay",
                         OrderRef = ipnDTO.vnp_TxnRef,
                         Currency = "VND",
                         Status = TransactionStatus.Success,
-                        CreatedAt = dateTime
+                        CreatedAt = DateTime.UtcNow
                     };
 
                     await _unitOfWork.TransactionRepository.AddAsync(Transaction, ct);
-                    try
+
+                    var orderInfo = ipnDTO.vnp_OrderInfo ?? string.Empty;
+
+                    if (orderInfo.StartsWith("DEALERPAY|", StringComparison.OrdinalIgnoreCase))
                     {
-                        await _unitOfWork.SaveAsync();
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("Transaction save failed: " + e.Message);
+                        var parts = orderInfo.Split('|', StringSplitOptions.RemoveEmptyEntries);
+
+                        if (parts.Length < 2)
+                        {
+                            return new ResponseDTO
+                            {
+                                StatusCode = 200,
+                                Message = "Invalid DEALERPAY format",
+                                Result = new
+                                {
+                                    RspCode = "00",
+                                    Message = "Confirm success (but format invalid)"
+                                }
+                            };
+                        }
+
+                        await HandleRecordCommission(parts, ipnDTO.vnp_TxnRef, paidAmount, ct);
                     }
 
-                    return new ResponseDTO()
+                    if (order.Status.Equals(OrderStatus.Completed))
                     {
-                        StatusCode = 200,
-                        Message = "Payment successful",
-                        Result = new
+                        var dealerId = order.Quote.DealerId;
+
+                        var effectivePolicy = await _dealerTierService.GetEffectivePolicyAsync(dealerId, ct);
+                        if (effectivePolicy is null)
                         {
-                            RspCode = "00",
-                            Message = "Confirm success"
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                Message = "Cannot find effective dealer tier policy",
+                                StatusCode = 404
+                            };
                         }
-                    };
+                        var commissionRate = effectivePolicy.CommissionPercent;
+                        var commissionAmount = order.TotalAmount * (commissionRate / 100);
+
+                        await _dealerDebtService.AddCommissionForDealerAsync(dealerId, new RecordCommissionDTO
+                        {
+                            Amount = commissionAmount!.Value,
+                            ReferenceNo = $"COMMISSION-{order.OrderNo}",
+                            AtUtc = DateTime.UtcNow
+                        }, ct);
+                    }
                 }
+
+                await _unitOfWork.SaveAsync();
                 return new ResponseDTO()
                 {
                     StatusCode = 200,
@@ -288,23 +355,56 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        private async Task HandleVNPayCustomerOrder(CustomerOrder customerOrder, decimal amount)
+        private async Task HandleRecordCommission(string[] parts, string vnp_TxnRef, decimal paidAmount, CancellationToken ct)
         {
-            if (amount == customerOrder.TotalAmount || amount == (customerOrder.TotalAmount - customerOrder.DepositAmount))
+
+            var dealerId = Guid.Parse(parts[1]);
+            var refNo = parts.Length >= 3 ? parts[2] : vnp_TxnRef;
+
+            await _dealerDebtService.AddPaymentForDealerAsync(dealerId, new RecordPaymentDTO
             {
-                await HandleVehicleInOrder(customerOrder);
+                Amount = paidAmount,
+                ReferenceNo = $"VNPay-{refNo}",
+                PaidAtUtc = DateTime.UtcNow,
+                Method = "Transfer"
+            }, ct);
+
+            var dealerTransaction = new Transaction
+            {
+                CustomerOrderId = null,
+                Amount = paidAmount,
+                Provider = "VNPay",
+                OrderRef = vnp_TxnRef,
+                Currency = "VND",
+                Status = TransactionStatus.Success,
+                CreatedAt = DateTime.UtcNow,
+                Note = $"Dealer payment|{dealerId}"
+            };
+            await _unitOfWork.TransactionRepository.AddAsync(dealerTransaction, ct);
+        }
+
+        private async Task HandleVNPayCustomerOrder(CustomerOrder customerOrder, decimal amount, CancellationToken ct)
+        {
+            if (amount == customerOrder.TotalAmount || (customerOrder.DepositAmount != null && amount == (customerOrder.TotalAmount - customerOrder.DepositAmount)))
+            {
+                await HandleVehicleInOrder(customerOrder, ct);
                 customerOrder.Status = OrderStatus.Completed;
             }
             else
             {
                 customerOrder.Status = OrderStatus.Depositing;
             }
-
-            await _unitOfWork.SaveAsync();
+            _unitOfWork.CustomerOrderRepository.Update(customerOrder);
         }
 
-        private async Task HandleVehicleInOrder(CustomerOrder customerOrder)
+        private async Task HandleVehicleInOrder(CustomerOrder customerOrder, CancellationToken ct)
         {
+            var outOfStock = new List<(string modelName, string versionName, string colorName, int quantity)>();
+            var warehouse = await _unitOfWork.WarehouseRepository.GetWarehouseByDealerIdAsync(customerOrder.Quote.DealerId);
+            if (warehouse is null)
+            {
+                throw new Exception($"Cannot find warehouse for dealerId {customerOrder.Quote.DealerId}");
+            }
             foreach (var detail in customerOrder.OrderDetails)
             {
                 var ev = await _unitOfWork.ElectricVehicleRepository.GetByIdsAsync(detail.ElectricVehicleId);
@@ -312,8 +412,57 @@ namespace SWP391Web.Application.Services
                 {
                     throw new Exception($"Cannot find the electric vehicle in orderNo {customerOrder.OrderNo}");
                 }
-                ev.Status = ElectricVehicleStatus.Booked;
+                ev.Status = ElectricVehicleStatus.Sold;
+                _unitOfWork.ElectricVehicleRepository.Update(ev);
+                var quantityCurrent = await _unitOfWork.ElectricVehicleRepository.CountDealerAvailableByVersionColorAsync(customerOrder.Quote.DealerId, ev.ElectricVehicleTemplate.VersionId,
+                    ev.ElectricVehicleTemplate.ColorId, ct);
+
+                var template = ev.ElectricVehicleTemplate;
+                var version = template.Version;
+                var model = version.Model;
+                var color = template.Color;
+
+                if (quantityCurrent <= warehouse.AlertNumber && !outOfStock.Any(o => o.modelName == model.ModelName && o.versionName == version.VersionName &&
+                    o.colorName == color.ColorName))
+                {
+                    outOfStock.Add((modelName: model.ModelName ?? string.Empty,
+                        versionName: version.VersionName ?? string.Empty,
+                        colorName: color.ColorName ?? string.Empty,
+                        quantity: quantityCurrent));
+                }
             }
+
+            if (outOfStock.Count > 0)
+            {
+                await CreateAggregationOutOfStockAsync(customerOrder.Quote.DealerId, outOfStock, ct);
+            }
+        }
+
+        private async Task CreateAggregationOutOfStockAsync(Guid dealerId, List<(string modelName, string versionName, string colorName, int quantity)> outOfStock, CancellationToken ct)
+        {
+            if (outOfStock == null || outOfStock.Count == 0)
+            {
+                return;
+            }
+
+            var items = String.Join(", ", outOfStock.Select(i => $"{i.modelName} - {i.versionName} - {i.colorName} còn {i.quantity} xe"));
+
+            var title = "Cảnh báo số lượng xe";
+            var message = $"Lưu ý: {items}";
+
+            var notification = new Notification
+            {
+                DealerId = dealerId,
+                Title = title,
+                Message = message,
+                TargetRole = StaticUserRole.DealerManager,
+                CreatedAt = DateTime.UtcNow,
+                IsRead = false
+            };
+
+            await _unitOfWork.NotificationRepository.AddAsync(notification, ct);
+
+            await _hubContext.Clients.Group($"Dealer_{dealerId}_{StaticUserRole.DealerManager}").SendAsync("NotificationChanged");
         }
     }
 }

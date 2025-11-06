@@ -190,7 +190,7 @@ namespace SWP391Web.Application.Services
                 
 
                 var templates = await _unitOfWork.EVTemplateRepository.GetTemplatesByVersionAndColorAsync(versionId, colorId);
-                if ( templates == null || !templates.Any())
+                if ( templates == null)
                 {
                     return new ResponseDTO
                     {
@@ -200,18 +200,18 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var getTemplates = _mapper.Map<List<GetEVTemplateDTO>>(templates);
-                foreach (var template in getTemplates)
+                var getTemplates = _mapper.Map<GetEVTemplateDTO>(templates);
+
+                var attachments = _unitOfWork.EVAttachmentRepository.GetAttachmentsByElectricVehicleTemplateId(templates.Id);
+
+                var urlLists = new List<string>();
+                foreach (var att in attachments)
                 {
-                    var attachments = _unitOfWork.EVAttachmentRepository.GetAttachmentsByElectricVehicleTemplateId(template.Id);
-                    var urlList = new List<string>();
-                    foreach (var att in attachments)
-                    {
-                        var url = _s3Service.GenerateDownloadUrl(att.Key);
-                        urlList.Add(url);
-                    }
-                    template.ImgUrl = urlList;
+                    var url = _s3Service.GenerateDownloadUrl(att.Key);
+                    urlLists.Add(url);
                 }
+                getTemplates.ImgUrl = urlLists;
+
 
                 return new ResponseDTO
                 {

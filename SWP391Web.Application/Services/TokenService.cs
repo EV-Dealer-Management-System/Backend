@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Infrastructure.IRepository;
 using System.IdentityModel.Tokens.Jwt;
@@ -21,15 +22,28 @@ namespace SWP391Web.Application.Service
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _redisService = redisService ?? throw new ArgumentNullException(nameof(redisService));
         }
-        public async Task<string> GenerateJwtAccessTokenAysnc(ApplicationUser user)
+        public async Task<string> GenerateJwtAccessTokenAysnc(ApplicationUser user, CancellationToken ct)
         {
             var roles = await _unitOfWork.UserManagerRepository.GetRoleAsync(user);
+
             var authClaims = new List<Claim>()
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim("Email", user.Email ?? string.Empty),
-                new Claim ("FullName", user.FullName ?? string.Empty)
+                new Claim("FullName", user.FullName ?? string.Empty),
             };
+
+            var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(user.Id, ct);
+            if (dealer is null)
+            {
+                dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(user.Id, ct);
+            }
+
+            if (dealer is not null)
+            {
+                authClaims.Add(new Claim("DealerId", dealer.Id.ToString()));
+                authClaims.Add(new Claim("DealerName", dealer.Name));
+            }
 
             foreach (var role in roles)
             {
@@ -89,7 +103,7 @@ namespace SWP391Web.Application.Service
 
         private async Task<bool> StoreRefreshToken(string userId, string refreshToken, TimeSpan expiration)
         {
-            string redisKey = $"refresh_token-UserId:{userId}";
+            string redisKey = $"{StaticRedisKey.RefreshToken}:{userId}";
             var result = await _redisService.StoreKeyAsync(redisKey, refreshToken, expiration);
 
             return result;

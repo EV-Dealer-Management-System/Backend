@@ -33,7 +33,9 @@ namespace SWP391Web.Application.Services
         private readonly IMapper _mapper;
         private readonly IS3Service _s3Service;
         private readonly IWarehouseService _warehouseService;
-        public EContractService(IWarehouseService warehouseService, IConfiguration cfg, HttpClient http, IUnitOfWork unitOfWork, IVnptEContractClient vnpt, IEmailService emailService, IMapper mapper, IS3Service s3Service)
+        private readonly IRedisService _redisService;
+        public EContractService(IWarehouseService warehouseService, IConfiguration cfg, HttpClient http, IUnitOfWork unitOfWork, IVnptEContractClient vnpt,
+            IEmailService emailService, IMapper mapper, IS3Service s3Service, IRedisService redisService)
         {
             _cfg = cfg;
             _http = http;
@@ -43,66 +45,87 @@ namespace SWP391Web.Application.Services
             _mapper = mapper;
             _s3Service = s3Service;
             _warehouseService = warehouseService;
+            _redisService = redisService;
         }
 
         public async Task<ResponseDTO<GetAccessTokenDTO>> GetAccessTokenAsync()
         {
-            var username = _cfg["EContractClient:Username"] ?? throw new Exception("Cannot find username in EContractClient");
-            var password = _cfg["EContractClient:Password"] ?? throw new Exception("Cannot find password in EContractClient");
-            int? companyId = _cfg["EContractClient:CompanyId"] is not null ? int.Parse(_cfg["EContractClient:CompanyId"]!) : throw new Exception("Cannot find company ID in EContractClient");
-
-            var payload = new { username, password, companyId };
-            var jsonPayload = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+            try
             {
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-            });
+                var accessToken = await _redisService.RetrieveString(StaticRedisKey.AccessTokenEVC);
+                if (accessToken is null)
+                {
+                    var username = _cfg["EContractClient:Username"] ?? throw new Exception("Cannot find username in EContractClient");
+                    var password = _cfg["EContractClient:Password"] ?? throw new Exception("Cannot find password in EContractClient");
+                    int? companyId = _cfg["EContractClient:CompanyId"] is not null ? int.Parse(_cfg["EContractClient:CompanyId"]!) : throw new Exception("Cannot find company ID in EContractClient");
 
-            var urlGetToken = $"{_cfg["EContractClient:BaseUrl"]}/api/auth/password-login";
-            using var req = new HttpRequestMessage(HttpMethod.Post, urlGetToken);
-            req.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                    var payload = new { username, password, companyId };
+                    var jsonPayload = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+                    {
+                        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+                    });
 
-            var res = await _http.SendAsync(req);
-            res.EnsureSuccessStatusCode();
-            var body = await res.Content.ReadAsStringAsync();
+                    var urlGetToken = $"{_cfg["EContractClient:BaseUrl"]}/api/auth/password-login";
+                    using var req = new HttpRequestMessage(HttpMethod.Post, urlGetToken);
+                    req.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-            if (!res.IsSuccessStatusCode)
+                    var res = await _http.SendAsync(req);
+                    res.EnsureSuccessStatusCode();
+                    var body = await res.Content.ReadAsStringAsync();
+
+                    if (!res.IsSuccessStatusCode)
+                        return new ResponseDTO<GetAccessTokenDTO>
+                        {
+                            IsSuccess = false,
+                            StatusCode = (int)res.StatusCode,
+                            Message = $"Cannot get access token from EContract: {body}"
+                        };
+
+                    using var doc = JsonDocument.Parse(body);
+                    var root = doc.RootElement;
+
+                    var dataEl = root.GetProperty("data");
+                    accessToken = dataEl.ValueKind == JsonValueKind.String ? dataEl.GetString() :
+                    (dataEl.ValueKind == JsonValueKind.Object && dataEl.TryGetProperty("access", out var t1)) ? t1.GetString() :
+                    (dataEl.ValueKind == JsonValueKind.Object && dataEl.TryGetProperty("accessToken", out var t2)) ? t2.GetString() :
+                    null;
+
+                    if (string.IsNullOrWhiteSpace(accessToken))
+                    {
+                        return new ResponseDTO<GetAccessTokenDTO>
+                        {
+                            IsSuccess = false,
+                            StatusCode = 500,
+                            Message = "Cannot find access token in EContract response"
+                        };
+                    }
+                    var expiration = TimeSpan.FromDays(1) - TimeSpan.FromHours(1);
+                    await _redisService.StoreKeyAsync(StaticRedisKey.AccessTokenEVC, accessToken, expiration);
+                }
+
+                var userId = int.Parse(_cfg["EContractClient:UserId"] ?? throw new Exception("Cannot find user ID in EContractClient"));
+
                 return new ResponseDTO<GetAccessTokenDTO>
                 {
-                    IsSuccess = false,
-                    StatusCode = (int)res.StatusCode,
-                    Message = $"Cannot get access token from EContract: {body}"
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Get access token successfully",
+                    Data = new GetAccessTokenDTO
+                    {
+                        AccessToken = accessToken,
+                        UserId = userId
+                    }
                 };
-
-            using var doc = JsonDocument.Parse(body);
-            var root = doc.RootElement;
-
-            var dataEl = root.GetProperty("data");
-            string? accessToken = dataEl.ValueKind == JsonValueKind.String ? dataEl.GetString() :
-            (dataEl.ValueKind == JsonValueKind.Object && dataEl.TryGetProperty("access", out var t1)) ? t1.GetString() :
-            (dataEl.ValueKind == JsonValueKind.Object && dataEl.TryGetProperty("accessToken", out var t2)) ? t2.GetString() :
-            null;
-
-            if (string.IsNullOrWhiteSpace(accessToken))
+            }
+            catch (Exception ex)
+            {
                 return new ResponseDTO<GetAccessTokenDTO>
                 {
                     IsSuccess = false,
                     StatusCode = 500,
-                    Message = "Cannot find access token in EContract response"
+                    Message = $"Error to get access token: {ex.Message}"
                 };
-
-            var userId = int.Parse(_cfg["EContractClient:UserId"] ?? throw new Exception("Cannot find user ID in EContractClient"));
-
-            return new ResponseDTO<GetAccessTokenDTO>
-            {
-                IsSuccess = true,
-                StatusCode = 200,
-                Message = "Get access token successfully",
-                Data = new GetAccessTokenDTO
-                {
-                    AccessToken = accessToken,
-                    UserId = userId
-                }
-            };
+            }
         }
 
         public async Task<ResponseDTO> CreateBookingEContractAsync(ClaimsPrincipal userClaim, Guid bookingId, CancellationToken ct)
@@ -134,11 +157,6 @@ namespace SWP391Web.Application.Services
                 var access = await GetAccessTokenAsync();
 
                 var created = await CreateDocumentBookingAsync(bookingId, access.Data.AccessToken, dealer, ct);
-
-                var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(created.Data!.Id), ct);
-
-                var companyName = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist");
-                var supportEmail = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist");
 
                 var companyApproverUserCode = _cfg["EContractClient:CompanyApproverUserCode"] ?? throw new ArgumentNullException("SmartCA:CompanyApproverUserCode is not exist");
                 await UpdateProcessAsync(access.Data.AccessToken, created.Data.Id, userId, companyApproverUserCode, created.Data.PositionA, created.Data.PositionB, created.Data.PageSign);
@@ -187,27 +205,40 @@ namespace SWP391Web.Application.Services
                         PhoneNumber = createDealerDTO.PhoneNumberManager,
                         LockoutEnabled = true
                     };
+
+                    await _unitOfWork.UserManagerRepository.CreateAsync(user, "ChangeMe@" + Guid.NewGuid().ToString()[..5]);
+                }
+
+                var dealerTier = await _unitOfWork.DealerTierRepository.GetByLevelAsync(createDealerDTO.DealerLevel, ct);
+                if (dealerTier is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer tier is not exist"
+                    };
                 }
 
                 var dealer = new Dealer
                 {
                     Id = Guid.NewGuid(),
-                    DealerLevel = createDealerDTO.DealerLevel,
                     ManagerId = user.Id,
                     Name = createDealerDTO.DealerName,
                     Address = createDealerDTO.DealerAddress,
                     TaxNo = createDealerDTO.TaxNo,
-
+                    DealerTierId = dealerTier.Id,
+                    BankAccount = createDealerDTO.BankAccount,
+                    BankName = createDealerDTO.BankName,
                     Manager = user
                 };
 
                 var access = await GetAccessTokenAsync();
 
-                var created = await CreateDocumentDealerAsync(userClaim, access.Data!.AccessToken, dealer, user, createDealerDTO.AdditionalTerm, createDealerDTO.RegionDealer, ct);
+                var created = await CreateDocumentDealerAsync(userClaim, access.Data!.AccessToken, dealer, dealerTier, user, ct);
 
                 var econtract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(created.Data!.Id), ct);
 
-                await _unitOfWork.UserManagerRepository.CreateAsync(user, "ChangeMe@" + Guid.NewGuid().ToString()[..5]);
                 await _unitOfWork.DealerRepository.AddAsync(dealer, ct);
 
                 var companyName = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist");
@@ -303,7 +334,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var uProcess = await UpdateProcessAsync(access.Data!.AccessToken, eContractId.ToString(), companyApproverUserCode, dealerManagerId, draftEContract.Data!.PositionA!, draftEContract.Data!.PositionA!, draftEContract.Data.PageSign);
+                var uProcess = await UpdateProcessAsync(access.Data!.AccessToken, eContractId.ToString(), companyApproverUserCode, dealerManagerId, draftEContract.Data!.PositionA!, draftEContract.Data!.PositionB!, draftEContract.Data.PageSign);
 
                 var sent = await SendProcessAsync(access.Data!.AccessToken, eContractId.ToString());
 
@@ -369,32 +400,6 @@ namespace SWP391Web.Application.Services
             return (pos, lastPage);
         }
 
-        private Dictionary<string, object?> BuildPlaceholders(
-            string dealerName, string dealerAddress, string dealerTax,
-            string dealerContact, string companyRole, string dealerRole,
-            string companyRepresentative, string dealerRepresentative
-            )
-        {
-
-            var data = new Dictionary<string, object?>
-            {
-                ["company.name"] = _cfg["Company:Name"] ?? "N/A",
-                ["company.address"] = _cfg["Company:Address"] ?? "N/A",
-                ["company.taxNo"] = _cfg["Company:TaxNo"] ?? "N/A",
-                ["dealer.name"] = dealerName,
-                ["dealer.address"] = dealerAddress,
-                ["dealer.taxNo"] = dealerTax,
-                ["dealer.contact"] = dealerContact,
-                ["roles.A.representative"] = companyRepresentative,
-                ["roles.A.title"] = companyRole,
-                ["roles.B.representative"] = dealerRepresentative,
-                ["roles.B.title"] = dealerRole,
-            };
-
-            return data;
-        }
-
-
         private async Task<VnptResult<VnptDocumentDto>> CreateDocumentBookingAsync(Guid bookingId, string token, Dealer dealer, CancellationToken ct)
         {
             var templateCode = _cfg["EContract:BookingTemplateCode"] ?? throw new ArgumentNullException("EContract:DealerTemplateCode is not exist");
@@ -407,16 +412,17 @@ namespace SWP391Web.Application.Services
                 throw new Exception($"Booking with id '{bookingId}' is not exist");
             }
 
-            var bookingDetails = await _unitOfWork.BookingDetailRepository.GetBookingDetailsByBookingIdAsync(bookingId, ct);
-            if (bookingDetails is null || !bookingDetails.Any())
-            {
-                throw new Exception($"Booking detail with booking id '{bookingId}' is not exist");
-            }
-
             string BuildBookingRowsHtml(IEnumerable<BookingEVDetail> items)
             {
                 var sb = new StringBuilder();
                 int i = 1;
+                sb.AppendLine($@"
+                        <tr>
+                        <td class=""right"">Số thứ tự</td>
+                        <td>Tên Model – Version</td>
+                        <td>Màu</td>
+                        <td class=""right"">Số lượng</td>
+                        </tr>");
                 foreach (var item in items)
                 {
                     var modelName = item.Version?.Model?.ModelName ?? "(Mẫu)";
@@ -436,7 +442,7 @@ namespace SWP391Web.Application.Services
                 return sb.ToString();
             }
 
-            var rowsHtml = BuildBookingRowsHtml(bookingDetails);
+            var rowsHtml = BuildBookingRowsHtml(booking.BookingEVDetails);
             var totalQty = booking.TotalQuantity;
 
             var data = new Dictionary<string, object?>
@@ -490,10 +496,17 @@ namespace SWP391Web.Application.Services
 
             var status = (EContractStatus)createResult.Data.Status.Value;
 
-            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.ContentHtml, fileName, "System", dealer.ManagerId!, status, EcontractType.BookingContract);
+            if (status is EContractStatus.Draft)
+            {
+                var vnptEContractId = Guid.Parse(createResult.Data.Id);
+                var eContract = new EContract(vnptEContractId, html, fileName, "System", dealer.ManagerId!, status, EcontractType.BookingContract);
+                booking.EContractId = vnptEContractId;
+                booking.Status = BookingStatus.WaitingDealerSign;
 
-            await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
-            await _unitOfWork.SaveAsync();
+                await _unitOfWork.EContractRepository.AddAsync(eContract, ct);
+                _unitOfWork.BookingEVRepository.Update(booking);
+                await _unitOfWork.SaveAsync();
+            }
 
             createResult.Data!.PositionA = positionA.Item1;
             createResult.Data.PositionB = positionB.Item1;
@@ -503,57 +516,67 @@ namespace SWP391Web.Application.Services
             return createResult;
         }
 
-        private async Task<VnptResult<VnptDocumentDto>> CreateDocumentDealerAsync(ClaimsPrincipal userClaim, string token, Dealer dealer, ApplicationUser user, string? additional, string? regionDealer, CancellationToken ct)
+        private async Task<VnptResult<VnptDocumentDto>> CreateDocumentDealerAsync(ClaimsPrincipal userClaim, string token, Dealer dealer, DealerTier dealerTier, ApplicationUser user, CancellationToken ct)
         {
             var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrWhiteSpace(userId)) throw new Exception("The user is not login yet");
 
-            var templateCode = _cfg["EContract:DealerTemplateCode"] ?? throw new ArgumentNullException("EContract:DealerTemplateCode is not exist");
+            var templateCode = dealerTier.Level == 1 ? StaticEContractName.EContractDealerTier1 :
+                               dealerTier.Level == 2 ? StaticEContractName.EContractDealerTier2 :
+                               dealerTier.Level == 3 ? StaticEContractName.EContractDealerTier3 :
+                               dealerTier.Level == 4 ? StaticEContractName.EContractDealerTier4 :
+                               dealerTier.Level == 5 ? StaticEContractName.EContractDealerTier5 :
+                               throw new Exception("Invalid dealer tier level");
 
             var template = await _unitOfWork.EContractTemplateRepository.GetbyCodeAsync(templateCode, ct);
             if (template is null) throw new Exception($"Template with code '{templateCode}' is not exist");
 
-            var term = await _unitOfWork.EContractTermRepository.GetByLevelAsync(dealer.DealerLevel, ct);
-            if (term is null) throw new Exception($"Term for dealer level '{dealer.DealerLevel}' is not exist");
-
             var companyName = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist");
-
+            var supportEmail = _cfg["Company:Email"] ?? throw new ArgumentNullException("Company:Email is not exist");
             var data = new Dictionary<string, object?>
             {
                 ["company.name"] = companyName,
                 ["company.address"] = _cfg["Company:Address"] ?? "N/A",
                 ["company.taxNo"] = _cfg["Company:TaxNo"] ?? "N/A",
+                ["company.phone"] = "0326336224",
+                ["company.email"] = supportEmail,
+                ["company.bankAccount"] = "TPBank",
+                ["company.bankName"] = "0326336224",
+
                 ["dealer.name"] = dealer.Name,
                 ["dealer.address"] = dealer.Address,
                 ["dealer.taxNo"] = dealer.TaxNo,
                 ["dealer.contact"] = $"{user.Email}, {user.PhoneNumber}",
+                ["dealer.phone"] = $"{user.PhoneNumber}",
+                ["dealer.email"] = $"{user.Email}",
+                ["dealer.bankAccount"] = $"{dealer.BankAccount}",
+                ["dealer.bankName"] = $"{dealer.BankName}",
+
                 ["contract.date"] = DateTime.UtcNow.ToString("dd/MM/yyyy"),
                 ["contract.effectiveDate"] = DateTime.UtcNow.ToString("dd/MM/yyyy"),
                 ["contract.expiryDate"] = DateTime.UtcNow.AddDays(365).ToString("dd/MM/yyyy"),
-                ["term.scope"] = term.Scope,
-                ["terms.pricing"] = term.Pricing,
-                ["terms.payment"] = term.Payment,
-                ["terms.commitments"] = term.Commitment,
-                ["terms.region"] = regionDealer == null ? "Toàn quốc" : regionDealer,
-                ["terms.noticeDays"] = term.NoticeDay,
-                ["terms.orderConfirmDays"] = term.OrderConfirmDays,
-                ["terms.deliveryLocation"] = term.DeliveryLocation,
-                ["terms.paymentMethod"] = term.PaymentMethod,
-                ["terms.paymentDueDays"] = term.PaymentDueDays,
-                ["terms.penaltyRate"] = term.PenaltyRate,
-                ["terms.claimDays"] = term.ClaimDays,
-                ["terms.terminationNoticeDays"] = term.TerminationNoticeDays,
-                ["terms.disputeLocation"] = term.DisputeLocation,
-                ["roles.A.representative"] = term.RoleRepresentative,
-                ["roles.A.title"] = term.RoleTitle,
+
+                ["dealer.tier.name"] = dealerTier?.Name ?? "N/A",
+                ["dealer.tier.level"] = dealerTier?.Level.ToString() ?? "0",
+                ["dealer.tier.description"] = dealerTier?.Description ?? "N/A",
+                ["dealer.tier.baseCommissionPercent"] = dealerTier?.BaseCommissionPercent?.ToString() ?? "0",
+                ["dealer.tier.baseCreditLimit"] = dealerTier?.BaseCreditLimit?.ToString() ?? "0",
+                ["dealer.tier.baseDepositPercent"] = dealerTier?.BaseDepositPercent?.ToString() ?? "0",
+                ["dealer.tier.baseLatePenaltyPercent"] = dealerTier?.BaseLatePenaltyPercent?.ToString() ?? "0",
+                ["dealer.tier.createdAt"] = (dealerTier?.CreatedAt ?? DateTime.UtcNow).ToString("dd/MM/yyyy"),
+                ["dealer.tier.updatedAt"] = dealerTier?.UpdatedAt?.ToString("dd/MM/yyyy") ?? "",
+
+                ["roles.A.representative"] = "Đại diện Bên A",
+                ["roles.A.title"] = "Giám đốc",
+                ["roles.A.signatureAnchor"] = "ĐẠI_DIỆN_BÊN_A",
+
                 ["roles.B.representative"] = user.FullName,
-                ["roles.B.title"] = "Khách hàng",
-                ["additional"] = additional == null ? "Không có điều khoản bổ sung" : additional
+                ["roles.B.title"] = "Đại lý",
+                ["roles.B.signatureAnchor"] = "ĐẠI_DIỆN_BÊN_B",
             };
 
             var html = EContractPdf.ReplacePlaceholders(template.ContentHtml, data, htmlEncode: false);
 
-            //html = EContractPdf.RenderHtml(html, term);
             var pdfBytes = await EContractPdf.RenderAsync(html);
 
             var anchors = EContractPdf.FindAnchors(pdfBytes, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
@@ -589,7 +612,7 @@ namespace SWP391Web.Application.Services
 
             var status = (EContractStatus)createResult.Data.Status.Value;
 
-            var EContract = new EContract(Guid.Parse(createResult.Data.Id), template.ContentHtml, fileName, userId, user.Id, status, EcontractType.DealerContract);
+            var EContract = new EContract(Guid.Parse(createResult.Data.Id), html, fileName, userId, user.Id, status, EcontractType.DealerContract);
 
             await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
 
@@ -693,12 +716,21 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if (signResult.Data.Status.Value == (int)EContractStatus.Completed)
+                if (signResult.Data.Status.Value is (int)EContractStatus.Completed && econtract.Type is EcontractType.DealerContract)
                 {
                     await CreateDealerAccount(signResult.Data.Id.ToString(), ct);
-                    econtract.UpdateStatus(EContractStatus.Completed);
-                    _unitOfWork.EContractRepository.Update(econtract);
                 }
+                else if (signResult.Data.Status.Value is (int)EContractStatus.InProgress && econtract.Type is EcontractType.BookingContract)
+                {
+                    econtract.BookingEV!.Status = BookingStatus.Pending;
+                }
+                else if (signResult.Data.Status.Value is (int)EContractStatus.Completed && econtract.Type is EcontractType.BookingContract)
+                {
+                    econtract.BookingEV!.Status = BookingStatus.SignedByAdmin;
+                }
+
+                econtract.UpdateStatus((EContractStatus)signResult.Data.Status.Value);
+                _unitOfWork.EContractRepository.Update(econtract);
 
                 await _unitOfWork.SaveAsync();
 
@@ -720,7 +752,6 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
-
 
         private async Task CreateDealerAccount(string documentId, CancellationToken ct)
         {
@@ -755,6 +786,8 @@ namespace SWP391Web.Application.Services
 
             var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(dealerManager.Id, ct);
             if (dealer is null) throw new Exception($"Cannot find dealer with manager id '{dealerManager.Id}'");
+            dealer.DealerStatus = DealerStatus.Active;
+            _unitOfWork.DealerRepository.Update(dealer);
 
             var warehouse = new CreateWarehouseDTO
             {
@@ -936,15 +969,13 @@ namespace SWP391Web.Application.Services
                 if (contract is null)
                     return new VnptResult<UpdateEContractResponse>($"Cannot find EContract with id '{updateEContractDTO.Id}'");
 
-                var dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(contract.OwnerBy, ct);
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(contract.OwnerBy, ct);
                 if (dealer is null)
                     return new VnptResult<UpdateEContractResponse>($"Cannot find dealer with manager id '{contract.OwnerBy}'");
 
                 var dealerManager = await _unitOfWork.UserManagerRepository.GetByIdAsync(contract.OwnerBy);
                 if (dealerManager is null)
                     return new VnptResult<UpdateEContractResponse>($"Cannot find dealer manager with id '{contract.OwnerBy}'");
-
-                var term = await _unitOfWork.EContractTermRepository.GetByLevelAsync(dealer.DealerLevel, ct);
 
                 var html = updateEContractDTO.HtmlFile;
 
@@ -1149,13 +1180,13 @@ namespace SWP391Web.Application.Services
                 if (deleteResult.Data!.Status!.Value == (int)EContractStatus.Draft)
                 {
                     var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(econtract.OwnerBy, ct);
-                    _unitOfWork.EContractRepository.Remove(econtract);
-                    _unitOfWork.DealerRepository.Remove(dealer);
-                    var manager = await _unitOfWork.UserManagerRepository.GetByIdAsync(dealer.ManagerId);
-                    if (manager.LockoutEnabled is true)
+                    var manager = dealer!.Manager;
+                    if (manager!.LockoutEnabled is true)
                     {
                         _unitOfWork.UserManagerRepository.Remove(manager);
                     }
+                    _unitOfWork.EContractRepository.Remove(econtract);
+                    _unitOfWork.DealerRepository.Remove(dealer);
                     await _unitOfWork.SaveAsync();
 
                     return new ResponseDTO
@@ -1181,6 +1212,25 @@ namespace SWP391Web.Application.Services
                     StatusCode = 500,
                     Message = $"Error to delete EContract draft: {ex.Message}"
                 };
+            }
+        }
+
+        public async Task<VnptResult<DeleteSmartCAResponse>> DeleteSmartCA(DeleteSmartCARequest deleteSmartCARequest)
+        {
+            try
+            {
+                var token = await GetAccessTokenAsync();
+                var response = await _vnpt.DeleteSmartCA(token.Data!.AccessToken, deleteSmartCARequest);
+                if (!response.Success)
+                {
+                    var errors = string.Join(", ", response.Messages);
+                    throw new Exception($"Error to delete SmartCA: {errors}");
+                }
+                return response;
+            }
+            catch (Exception ex)
+            {
+                return new VnptResult<DeleteSmartCAResponse>($"Exception when deleting SmartCA: {ex.Message}");
             }
         }
     }

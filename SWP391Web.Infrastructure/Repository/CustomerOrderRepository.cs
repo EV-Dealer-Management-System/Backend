@@ -32,7 +32,9 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<CustomerOrder?> GetByOrderNoAsync(int customerOrderNo)
         {
             return await _context.CustomerOrders
+                .AsTracking()
                 .Include(co => co.OrderDetails)
+                .Include(co => co.Quote)
                 .FirstOrDefaultAsync(c => c.OrderNo == customerOrderNo);
         }
     }
