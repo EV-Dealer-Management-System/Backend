@@ -11,5 +11,6 @@ namespace SWP391Web.Infrastructure.IRepository
     {
         Task<VehicleDelivery?> GetVehicleDeliveryById(Guid deliveryId , CancellationToken ct);
         Task<VehicleDelivery?> GetVehicleDeliveryByBookingId(Guid BookingId , CancellationToken ct);
+        Task<int> CountByDealerIdAsync(Guid dealerId, CancellationToken ct);
     }
 }

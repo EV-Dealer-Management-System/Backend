@@ -26,9 +26,9 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpGet("Get-all-template-vehicles")]
-        public async Task<ActionResult<ResponseDTO>> GetAllEVTemplate()
+        public async Task<ActionResult<ResponseDTO>> GetAllEVTemplate([FromQuery] int pageNumber = 1,[FromQuery] int pageSize = 10,[FromQuery] string? search = null,[FromQuery] Guid? templateId = null,CancellationToken ct = default)
         {
-            var response = await _evTemplateService.GetAllVehicleTemplateAsync();
+            var response = await _evTemplateService.GetAllVehicleTemplateAsync(pageNumber, pageSize, search, templateId, ct);
             return StatusCode(response.StatusCode,response);
         }
 

@@ -14,5 +14,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<bool> IsExistByIdAsync(Guid customerId);
         Task<Customer?> GetByEmailAync(string email);
         Task<Customer?> GetByPhoneNumber(string phoneNumber);
+        Task<int> CountCustomerByDealerId(Guid dealerId, CancellationToken ct);
     }
 }

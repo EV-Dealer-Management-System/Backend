@@ -45,5 +45,12 @@ namespace SWP391Web.Infrastructure.Repository
                     .ThenInclude(d => d.ElectricVehicle)
                 .FirstOrDefaultAsync(vd => vd.BookingEVId == BookingId,ct);
         }
+
+        public Task<int> CountByDealerIdAsync(Guid dealerId, CancellationToken ct)
+        {
+            return _context.VehicleDeliveries
+               .Where(vd => vd.BookingEV.DealerId == dealerId)
+               .CountAsync(ct);
+        }
     }
 }
