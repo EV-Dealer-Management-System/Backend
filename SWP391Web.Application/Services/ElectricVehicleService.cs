@@ -325,7 +325,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetEVCInventoryAsync(ClaimsPrincipal user, int pageNumber, int pageSize, CancellationToken ct)
+        public async Task<ResponseDTO> GetEVCInventoryAsync(ClaimsPrincipal user, int pageNumber, int pageSize, Guid? warehouseId, CancellationToken ct)
         {
             try
             {
@@ -357,7 +357,14 @@ namespace SWP391Web.Application.Services
                 var companyVehicles = vehicles
                     .Where(v => v.Warehouse != null && v.Warehouse.WarehouseType == WarehouseType.EVInventory)
                     .ToList();
-                
+
+                if (warehouseId.HasValue)
+                {
+                    companyVehicles = companyVehicles
+                        .Where(v => v.WarehouseId == warehouseId.Value)
+                        .ToList();
+                }
+
                 if (!companyVehicles.Any())
                 {
                     return new ResponseDTO

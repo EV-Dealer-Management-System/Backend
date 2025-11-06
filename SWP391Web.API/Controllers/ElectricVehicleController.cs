@@ -81,9 +81,9 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-evc-inventory")]
-        public async Task<ActionResult<ResponseDTO>> GetEVCInventoryAsync(int pageNumber = 1, int pageSize = 10, CancellationToken ct = default)
+        public async Task<ActionResult<ResponseDTO>> GetEVCInventoryAsync(int pageNumber = 1, int pageSize = 10, Guid? warehouseId = null, CancellationToken ct = default)
         {
-            var response = await _electricVehicleService.GetEVCInventoryAsync(User, pageNumber, pageSize, ct);
+            var response = await _electricVehicleService.GetEVCInventoryAsync(User, pageNumber, pageSize, warehouseId, ct);
             return StatusCode(response.StatusCode, response);
         }
     }
