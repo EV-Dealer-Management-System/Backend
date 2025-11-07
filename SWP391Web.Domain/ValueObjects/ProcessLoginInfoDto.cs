@@ -15,5 +15,6 @@ namespace SWP391Web.Domain.ValueObjects
         public string? AccessToken { get; set; }
         public string? Position { get; set; }
         public int? PageSign { get; set; }
+        public bool IsOTP { get; set; }
     }
 }
