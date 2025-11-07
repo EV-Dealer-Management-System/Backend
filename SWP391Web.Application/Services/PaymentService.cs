@@ -423,6 +423,7 @@ namespace SWP391Web.Application.Services
             {
                 await HandleVehicleInOrder(customerOrder, ct);
                 customerOrder.Status = OrderStatus.Completed;
+                await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
             }
             else
             {

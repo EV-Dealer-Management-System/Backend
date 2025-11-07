@@ -155,7 +155,7 @@ namespace SWP391Web.Application.Services
                 {
                     await _paymentService.CreateVNPayLink(customerOrder.Id, ct);
                 }
-                else
+                else if (createCustomerOrderDTO.IsCash && !createCustomerOrderDTO.IsPayFull)
                 {
                     var transaction = new Transaction
                     {
@@ -168,13 +168,30 @@ namespace SWP391Web.Application.Services
                         Provider = "Cash",
                     };
                     await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
-                    await _unitOfWork.SaveAsync();
 
                     if (!createCustomerOrderDTO.IsPayFull)
                     {
                         await _eContractService.CreateDepositEContractConfirm(customerOrder.Id, ct);
                     }
                 }
+                else
+                {
+                    var transaction = new Transaction
+                    {
+                        Amount = amount,
+                        CustomerOrderId = customerOrder.Id,
+                        Status = TransactionStatus.Success,
+                        OrderRef = customerOrder.OrderNo.ToString(),
+                        Currency = "VND",
+                        Note = $"Full payment for order {customerOrder.OrderNo}",
+                        Provider = "Cash",
+                    };
+
+                    await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
+
+                    await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
+                }
+
                 await _unitOfWork.SaveAsync();
 
                 return new ResponseDTO
@@ -433,10 +450,23 @@ namespace SWP391Web.Application.Services
 
                 if (isCash)
                 {
+                    await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
                     customerOrder.Status = OrderStatus.Completed;
                     _unitOfWork.CustomerOrderRepository.Update(customerOrder);
 
                     await HandleOrderDetail(customerOrder, ct);
+
+                    var amount = customerOrder.TotalAmount - customerOrder.DepositAmount;
+                    var transaction = new Transaction
+                    {
+                        Amount = amount!.Value,
+                        CustomerOrderId = customerOrder.Id,
+                        Status = TransactionStatus.Success,
+                        OrderRef = customerOrder.OrderNo.ToString(),
+                        Currency = "VND",
+                        Note = $"Pya remain deposit for order {customerOrder.OrderNo}",
+                        Provider = "Cash",
+                    };
                     await _unitOfWork.SaveAsync();
 
                     return new ResponseDTO

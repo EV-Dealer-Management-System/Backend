@@ -347,6 +347,196 @@ namespace SWP391Web.Application.Services
             return createResult;
         }
 
+        public async Task<ResponseDTO> CreatePayFullConfirmationEContract(Guid customerOderId, CancellationToken ct)
+        {
+            try
+            {
+                var customerOrder = await _unitOfWork.CustomerOrderRepository.GetByIdAsync(customerOderId);
+                if (customerOrder is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Customer order is not exist"
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetByIdAsync(customerOrder.Quote.DealerId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer is not exist"
+                    };
+                }
+
+                var accessToken = await GetAccessTokenAsync();
+                var created = await CreatePayFullConfirmationDraftEContract(customerOrder, dealer, ct);
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 201,
+                    Message = "Pay full confirmation EContract created successfully",
+                    Result = created
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to create Pay Full Confirmation EContract: {ex.Message}"
+                };
+            }
+        }
+
+        private async Task<VnptResult<VnptDocumentDto>> CreatePayFullConfirmationDraftEContract(CustomerOrder customerOrder, Dealer dealer, CancellationToken ct)
+        {
+            var hasDeposit = customerOrder.DepositAmount.HasValue && customerOrder.DepositAmount.Value > 0;
+
+            string templateCode = hasDeposit
+                ? (StaticEContractName.EContractPayRemainderCustomerOrder ?? throw new Exception("EContract:EContractPayRemainderCustomerOrderTemplateCode is not exist"))
+                : (StaticEContractName.EContractPayFullCustomerOrder ?? throw new Exception("EContract:PayFullCustomerOrderTemplateCode is not exist"));
+
+            var template = await _unitOfWork.EContractTemplateRepository.GetbyCodeAsync(templateCode, ct);
+            if (template is null) throw new Exception($"Template with code '{templateCode}' is not exist");
+
+            string Vnd(decimal v) => $"{v:#,0} VND";
+
+            string BuildRowsHtml(IEnumerable<QuoteDetail> items)
+            {
+                var sb = new StringBuilder();
+                int i = 1;
+                foreach (var item in items)
+                {
+                    var modelName = item.ElectricVehicleVersion?.Model?.ModelName ?? "(Mẫu)";
+                    var versionName = item.ElectricVehicleVersion?.VersionName ?? "(Phiên bản)";
+                    var colorName = item.ElectricVehicleColor?.ColorName ?? "(Màu)";
+                    var quantity = item.Quantity;
+
+                    sb.AppendLine($@"
+                <tr>
+                    <td class=""right"">{i}</td>
+                    <td>{modelName} – {versionName}</td>
+                    <td>{colorName}</td>
+                    <td class=""right"">{quantity}</td>
+                </tr>");
+                    i++;
+                }
+                return sb.ToString();
+            }
+
+            var rowsHtml = BuildRowsHtml(customerOrder.Quote.QuoteDetails);
+            var quote = customerOrder.Quote;
+
+            var transaction = await _unitOfWork.TransactionRepository.GetByCustomerOrderIdAsync(customerOrder.Id, ct);
+            var method = (transaction?.Provider == "Cash") ? "Tiền mặt" : "Chuyển khoản";
+
+            decimal total = Convert.ToDecimal(customerOrder.TotalAmount);
+            decimal deposited = Convert.ToDecimal(customerOrder.DepositAmount ?? 0m);
+            decimal payNow = hasDeposit ? (total - deposited) : total;
+            if (payNow < 0) payNow = 0m;
+            decimal remainingAfterThis = Math.Max(total - (deposited + payNow), 0m);
+            var data = new Dictionary<string, object?>
+            {
+                ["order.no"] = customerOrder.OrderNo.ToString(),
+                ["order.date"] = ToGmt7String(DateTime.UtcNow, "dd/MM/yyyy"),
+                ["order.paymentMethod"] = method ?? "",
+
+                ["dealer.name"] = quote.Dealer?.Name ?? "",
+                ["dealer.address"] = quote.Dealer?.Address ?? "",
+                ["dealer.taxNo"] = quote.Dealer?.TaxNo ?? "",
+                ["dealer.phone"] = quote.Dealer?.Manager.PhoneNumber ?? "",
+                ["dealer.email"] = quote.Dealer?.Manager.Email ?? "",
+                ["dealer.bankAccount"] = quote.Dealer?.BankAccount ?? "",
+                ["dealer.bankName"] = quote.Dealer?.BankName ?? "",
+
+                ["customer.fullName"] = customerOrder.Customer?.FullName ?? "",
+                ["customer.phone"] = customerOrder.Customer?.PhoneNumber ?? "",
+                ["customer.email"] = customerOrder.Customer?.Email ?? "",
+                ["customer.idNo"] = customerOrder.Customer?.CitizenID ?? "",
+                ["customer.address"] = customerOrder.Customer?.Address ?? "",
+
+                ["money.orderTotal"] = Vnd(total),
+                ["money.previousDeposit"] = Vnd(deposited),
+                ["money.payNow"] = Vnd(payNow),
+                ["money.deposit"] = Vnd(payNow),
+                ["money.remaining"] = Vnd(remainingAfterThis),
+
+                ["payment.type"] = hasDeposit ? "Thanh toán phần còn lại" : "Thanh toán đủ",
+
+                ["policy.holdDays"] = "15",
+                ["policy.lateDays"] = "7",
+                ["logistics.place"] = quote.Dealer?.Warehouse?.WarehouseName ?? "Kho Đại lý",
+                ["logistics.eta"] = "Theo lịch điều phối",
+                ["order.vehicleRows"] = rowsHtml,
+
+                ["roles.A.representative"] = quote.Dealer?.Manager.FullName ?? "",
+                ["roles.A.title"] = "Đại diện đại lý",
+                ["roles.A.signatureAnchor"] = "ĐẠI_DIỆN_BÊN_A",
+                ["roles.B.signatureAnchor"] = "ĐẠI_DIỆN_BÊN_B"
+            };
+
+            var html = EContractPdf.ReplacePlaceholders(template.ContentHtml, data, htmlEncode: false);
+            var pdfBytes = await EContractPdf.RenderAsync(html);
+            var anchors = EContractPdf.FindAnchors(pdfBytes, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
+
+            var positionA = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_A"],
+                            width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
+            var positionB = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_B"],
+                            width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: 0);
+
+            var documentTypeId = int.Parse(_cfg["EContract:DocumentTypeId"] ?? throw new NullReferenceException("EContract:DocumentTypeId is not exist"));
+            var departmentId = int.Parse(_cfg["EContract:DepartmentId"] ?? throw new NullReferenceException("EContract:DepartmentId is not exist"));
+            var randomText = Guid.NewGuid().ToString()[..20].ToUpper();
+
+            var subject = hasDeposit ? "Pay Remainder Confirm EContract" : "Pay Full Confirm EContract";
+            var request = new CreateDocumentDTO
+            {
+                TypeId = documentTypeId,
+                DepartmentId = departmentId,
+                No = $"EContract-{randomText}",
+                Subject = subject,
+                Description = hasDeposit
+                    ? "EContract confirm customer paid the remaining amount"
+                    : "EContract confirm customer paid in full"
+            };
+
+            request.FileInfo.File = pdfBytes;
+            var fileName = (hasDeposit
+                ? $"PayRemainder_Confirm_E-Contract_{randomText}_{dealer.Name}.pdf"
+                : $"PayFull_Confirm_E-Contract_{randomText}_{dealer.Name}.pdf").Trim();
+            request.FileInfo.FileName = fileName;
+
+            var access = await GetAccessTokenAsync();
+            var token = access.Data!.AccessToken;
+
+            var createResult = await _vnpt.CreateDocumentAsync(token, request);
+            if (!Enum.IsDefined(typeof(EContractStatus), createResult.Data.Status.Value))
+                throw new Exception("Invalid EContract status value.");
+
+            createResult.Data!.PositionA = positionA.Item1;
+            createResult.Data.PositionB = positionB.Item1;
+            createResult.Data.PageSign = positionA.Item2;
+            createResult.Data.FileName = request.FileInfo.FileName;
+
+            var econtractType = hasDeposit
+                ? EcontractType.CustomerOrderDepositFull
+                : EcontractType.CustomerOrderPayFull;
+
+            var vnptEContractId = Guid.Parse(createResult.Data.Id);
+            var eContract = new EContract(vnptEContractId, html, fileName, "System", dealer.ManagerId!, customerOrder.Id, EContractStatus.Draft, econtractType);
+
+            await _unitOfWork.EContractRepository.AddAsync(eContract, ct);
+            await _unitOfWork.SaveAsync();
+
+            return createResult;
+        }
+
         public async Task<ResponseDTO> ReadyCustomerOrderEcontract(Guid eContractId, CancellationToken ct)
         {
             try
@@ -1235,13 +1425,13 @@ namespace SWP391Web.Application.Services
 
                 if (waitingEl.TryGetProperty("accessPermission", out var apEl))
                 {
-                    if(apEl.TryGetProperty("value", out var vlEl) && vlEl.ValueKind == JsonValueKind.Number)
+                    if (apEl.TryGetProperty("value", out var vlEl) && vlEl.ValueKind == JsonValueKind.Number)
                     {
-                        if(vlEl.GetInt32() == 7)
+                        if (vlEl.GetInt32() == 7)
                         {
                             isOTP = true;
                         }
-                    }    
+                    }
                 }
             }
 
