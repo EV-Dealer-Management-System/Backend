@@ -262,8 +262,8 @@ namespace SWP391Web.Application.Services
 
             var rowsHtml = BuildBookingRowsHtml(customerOrder.Quote.QuoteDetails);
             var transaction = await _unitOfWork.TransactionRepository.GetByCustomerOrderIdAsync(customerOrder.Id, ct);
+            var method = transaction?.Provider == "Cash" ? "Tiền mặt" : "Chuyển khoản";
             var quote = customerOrder.Quote;
-            var method = transaction.Provider == "Cash" ? "Tiền mặt" : "Chuyển khoản";
             var data = new Dictionary<string, object?>
             {
                 ["order.no"] = customerOrder.OrderNo.ToString(),
@@ -284,9 +284,9 @@ namespace SWP391Web.Application.Services
                 ["customer.idNo"] = customerOrder.Customer?.CitizenID ?? "",
                 ["customer.address"] = customerOrder.Customer?.Address ?? "",
 
-                ["money.orderTotal"] = ((int)customerOrder.TotalAmount).ToString() + " VND",
-                ["money.deposit"] = customerOrder.DepositAmount.ToString() + " VND" ?? "",
-                ["money.remaining"] = (customerOrder.TotalAmount - customerOrder.DepositAmount).ToString() + " VND",
+                ["money.deposit"] = $"{(customerOrder.DepositAmount ?? 0m):#,0} VND",
+                ["money.remaining"] = $"{(customerOrder.TotalAmount - (customerOrder.DepositAmount ?? 0m)):#,0} VND",
+                ["money.orderTotal"] = $"{customerOrder.TotalAmount:#,0} VND",
 
                 ["policy.holdDays"] = "15",
                 ["policy.lateDays"] = "7",

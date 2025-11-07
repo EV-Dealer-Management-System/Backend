@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
@@ -38,7 +39,7 @@ namespace SWP391Web.Application.Services
         private readonly IMapper _mapper;
         private readonly IEContractService _eContractService;
         public PaymentService(IConfiguration cfg, IUnitOfWork unitOfWork, IHttpContextAccessor httpContext, IEmailService emailService, IHubContext<NotificationHub> hubContext, IDealerDebtService dealerDebtService
-            ,IDealerTierService dealerTierService, IMapper mapper, IEContractService eContractService)
+            , IDealerTierService dealerTierService, IMapper mapper, IEContractService eContractService)
         {
             _baseUrl = cfg["VNPay:BaseUrl"] ?? throw new Exception("Cannot find VNPay:BaseUrl");
             _tmnCode = cfg["VNPay:TmnCode"] ?? throw new Exception("Cannot find VNPay:TmnCode");
@@ -274,12 +275,11 @@ namespace SWP391Web.Application.Services
                         }
 
                         var paidAmount = decimal.Parse(ipnDTO.vnp_Amount) / 100;
-                        await HandleVNPayCustomerOrder(order, paidAmount, ct);
-                        var existed = await _unitOfWork.TransactionRepository.IsExistTransactionAsync("VNPay", ipnDTO.vnp_TxnRef, ct);
 
+                        var existed = await _unitOfWork.TransactionRepository.IsExistTransactionAsync("VNPay", ipnDTO.vnp_TxnRef, ct);
                         if (!existed)
                         {
-                            var transaction = new Transaction
+                            await _unitOfWork.TransactionRepository.AddAsync(new Transaction
                             {
                                 CustomerOrderId = order.Id,
                                 Amount = paidAmount,
@@ -288,10 +288,12 @@ namespace SWP391Web.Application.Services
                                 Currency = "VND",
                                 Status = TransactionStatus.Success,
                                 CreatedAt = DateTime.UtcNow
-                            };
+                            }, ct);
+                            await _unitOfWork.SaveAsync();
+                        }
 
-                            await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
-                        };
+                        // Sau đó mới cập nhật Order + tạo eContract
+                        await HandleVNPayCustomerOrder(order, paidAmount, ct);
 
                         var orderInfo = ipnDTO.vnp_OrderInfo ?? string.Empty;
 
