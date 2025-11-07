@@ -247,5 +247,54 @@ namespace SWP391Web.Application.Pdf
             var idx = html.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
             return idx >= 0 ? html.Insert(idx, style) : style + html;
         }
+
+        public static (string pos, int pageSign) GetVnptEContractPositionSmart(
+            byte[] pdfBytes, AnchorBox anchor,
+            double width = 170, double height = 90,
+            double offsetY = 36, double margin = 18,
+            double xAdjust = 0)
+        {
+            using var ms = new MemoryStream(pdfBytes);
+            using var doc = PdfDocument.Open(ms);
+
+            var page = doc.GetPage(anchor.Page);
+            int lastPage = doc.NumberOfPages;
+
+            double pw = page.Width;
+            double ph = page.Height;
+
+            double candidateLlx = Math.Clamp(anchor.Left + xAdjust, margin, pw - margin - width);
+            double candidateLly = anchor.Bottom - offsetY - height;
+
+            bool enoughSpaceSamePage = candidateLly >= margin;
+
+            if (enoughSpaceSamePage)
+            {
+                var llx = candidateLlx;
+                var lly = candidateLly;
+                var pos1 = $"{(int)llx},{(int)lly},{(int)(llx + width)},{(int)(lly + height)}";
+                return (pos1, anchor.Page);
+            }
+
+            if (anchor.Page < lastPage)
+            {
+                var nextPage = doc.GetPage(anchor.Page + 1);
+                double npw = nextPage.Width;
+                double nph = nextPage.Height;
+
+                double llx = Math.Clamp(anchor.Left + xAdjust, margin, npw - margin - width);
+                double lly = Math.Max(nph - margin - height - 36, margin);
+
+                var pos2 = $"{(int)llx},{(int)lly},{(int)(llx + width)},{(int)(lly + height)}";
+                return (pos2, anchor.Page + 1);
+            }
+
+            {
+                double llx = candidateLlx;
+                double lly = margin;
+                var pos3 = $"{(int)llx},{(int)lly},{(int)(llx + width)},{(int)(lly + height)}";
+                return (pos3, anchor.Page);
+            }
+        }
     }
 }

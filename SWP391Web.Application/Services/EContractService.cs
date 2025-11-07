@@ -673,22 +673,53 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public static (string, int) GetVnptEContractPosition(byte[] pdfBytes, AnchorBox anchor,
-        double width = 170, double height = 90, double offsetY = 36,
-        double margin = 18, double xAdjust = 0)
+        public static (string pos, int pageSign) GetVnptEContractPosition(
+            byte[] pdfBytes, AnchorBox anchor,
+            double width = 170, double height = 90,
+            double offsetY = 36, double margin = 18,
+            double xAdjust = 0)
         {
             using var ms = new MemoryStream(pdfBytes);
             using var doc = PdfDocument.Open(ms);
+
             var page = doc.GetPage(anchor.Page);
-            var lastPage = doc.NumberOfPages;
+            int lastPage = doc.NumberOfPages;
 
             double pw = page.Width;
+            double ph = page.Height;
 
-            var llx = Math.Clamp(anchor.Left + xAdjust, margin, pw - margin - width);
-            var lly = Math.Max(anchor.Bottom - offsetY - height, margin);
+            double candidateLlx = Math.Clamp(anchor.Left + xAdjust, margin, pw - margin - width);
+            double candidateLly = anchor.Bottom - offsetY - height;
 
-            var pos = $"{(int)llx},{(int)lly},{(int)(llx + width)},{(int)(lly + height)}";
-            return (pos, lastPage);
+            bool enoughSpaceSamePage = candidateLly >= margin;
+
+            if (enoughSpaceSamePage)
+            {
+                var llx = candidateLlx;
+                var lly = candidateLly;
+                var pos1 = $"{(int)llx},{(int)lly},{(int)(llx + width)},{(int)(lly + height)}";
+                return (pos1, anchor.Page);
+            }
+
+            if (anchor.Page < lastPage)
+            {
+                var nextPage = doc.GetPage(anchor.Page + 1);
+                double npw = nextPage.Width;
+                double nph = nextPage.Height;
+
+                double llx = Math.Clamp(anchor.Left + xAdjust, margin, npw - margin - width);
+                double lly = Math.Max(nph - margin - height - 36, margin);
+
+                var pos2 = $"{(int)llx},{(int)lly},{(int)(llx + width)},{(int)(lly + height)}";
+                return (pos2, anchor.Page + 1);
+            }
+
+            {
+                double llx = candidateLlx;
+                double lly = margin;
+                var pos3 = $"{(int)llx},{(int)lly},{(int)(llx + width)},{(int)(lly + height)}";
+                return (pos3, anchor.Page);
+            }
         }
 
         private async Task<VnptResult<VnptDocumentDto>> CreateDocumentBookingAsync(Guid bookingId, string token, Dealer dealer, CancellationToken ct)
@@ -1186,6 +1217,7 @@ namespace SWP391Web.Application.Services
             string? downloadUrl = null;
             string? position = null;
             int? pageSign = null;
+            bool isOTP = false;
 
             if (docEl.TryGetProperty("waitingProcess", out var waitingEl))
             {
@@ -1200,6 +1232,17 @@ namespace SWP391Web.Application.Services
 
                 if (waitingEl.TryGetProperty("pageSign", out var pageEl) && pageEl.ValueKind == JsonValueKind.Number)
                     pageSign = pageEl.GetInt32();
+
+                if (waitingEl.TryGetProperty("accessPermission", out var apEl))
+                {
+                    if(apEl.TryGetProperty("value", out var vlEl) && vlEl.ValueKind == JsonValueKind.Number)
+                    {
+                        if(vlEl.GetInt32() == 7)
+                        {
+                            isOTP = true;
+                        }
+                    }    
+                }
             }
 
             if (docEl.TryGetProperty("downloadUrl", out var down) && down.ValueKind == JsonValueKind.String)
@@ -1212,7 +1255,8 @@ namespace SWP391Web.Application.Services
                 ProcessedByUserId = processedByUserId,
                 AccessToken = accessToken,
                 Position = position,
-                PageSign = pageSign
+                PageSign = pageSign,
+                IsOTP = isOTP
             };
         }
 
