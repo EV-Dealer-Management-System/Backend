@@ -13,5 +13,7 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> AddPurchaseForDealerAsync(Guid dealerId, RecordDebtDTO debtDTO, CancellationToken ct);
         Task<ResponseDTO> AddPaymentForDealerAsync(Guid dealerId, RecordPaymentDTO paymentDTO, CancellationToken ct);
         Task<ResponseDTO> AddCommissionForDealerAsync(Guid dealerId, RecordCommissionDTO dto, CancellationToken ct);
+        Task<ResponseDTO> GetDealerDebtBalanceAtQuarterNow(Guid dealerId, CancellationToken ct);
+        Task<ResponseDTO> GetDealerDebtDetails(Guid dealerId, DateTime fromDateUtc, DateTime toDateUtc, CancellationToken ct);
     }
 }
