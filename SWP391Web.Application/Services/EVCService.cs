@@ -94,7 +94,7 @@ namespace SWP391Web.Application.Services
             try
             {
                 IEnumerable<ApplicationUser> evmStaffs = (await _unitOfWork.UserManagerRepository.GetUsersInRoleAsync(StaticUserRole.EVMStaff))
-                    .OrderByDescending(s => s.LockoutEnabled);
+                    .OrderBy(s => s.LockoutEnabled);
                 if (evmStaffs is null || !evmStaffs.Any())
                 {
                     return new ResponseDTO
@@ -166,7 +166,15 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                user.LockoutEnabled = isActive;
+                if (isActive)
+                {
+                    user.LockoutEnabled = false;
+                }
+                else
+                {
+                    user.LockoutEnabled = true;
+                }
+
                 _unitOfWork.UserManagerRepository.Update(user);
                 await _unitOfWork.SaveAsync();
 

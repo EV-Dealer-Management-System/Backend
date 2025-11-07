@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Quote;
 using SWP391Web.Application.IServices;
@@ -212,7 +213,7 @@ namespace SWP391Web.Application.Services
 
             }
 
-        public async Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user, QuoteStatus? status = null)
+        public async Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user, int pageNumber , int pageSize , QuoteStatus? status , CancellationToken ct)
         {
             try
             {
@@ -233,8 +234,6 @@ namespace SWP391Web.Application.Services
                 if (status.HasValue)
                     filter = q => q.Status == status.Value;
 
-                List<Quote> quotes;
-
                 if (role == StaticUserRole.DealerManager || role == StaticUserRole.DealerStaff)
                 {
                     var dealer = await _unitOfWork.DealerRepository
@@ -253,44 +252,63 @@ namespace SWP391Web.Application.Services
                         filter = q => q.DealerId == dealer.Id && q.Status == status.Value;
                     else
                         filter = q => q.DealerId == dealer.Id;
-
-                    quotes = await _unitOfWork.QuoteRepository.GetAllQuotesWithDetailAsync(filter);
                 }
-                else
+
+                (IReadOnlyList<Quote> items, int total) result;
+                result = await _unitOfWork.QuoteRepository.GetPagedAsync(
+                    filter: filter,
+                    includes: q => q.Include(x => x.QuoteDetails)
+                                        .ThenInclude(d => d.Promotion)
+                                    .Include(x => x.QuoteDetails)
+                                        .ThenInclude(d => d.ElectricVehicleVersion)
+                                            .ThenInclude(v => v.Model)
+                                    .Include(x => x.QuoteDetails)
+                                        .ThenInclude(d => d.ElectricVehicleColor)
+                                    .Include(x => x.Dealer),
+                                    
+                    orderBy: q => q.CreatedAt,
+                    ascending: false,
+                    pageNumber: pageNumber,
+                    pageSize: pageSize,
+                    ct: ct
+                );
+                
+                var quotes = result.items.ToList();
+                if (!quotes.Any())
                 {
-                    quotes = await _unitOfWork.QuoteRepository.GetAllQuotesWithDetailAsync(filter);
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = " No quotes found for specified criteria",
+                        StatusCode = 404
+                    };
                 }
 
-
-                //filter quote status
-                var filteredQuotes = new List<GetQuoteDTO>();
-                foreach (var q in quotes)
-                {
-                    bool isShow = true;
-
-                    foreach (var dt in q.QuoteDetails)
-                    {
-                        if (dt.Promotion != null && dt.Promotion.EndDate.HasValue &&
-                            dt.Promotion.EndDate < DateTime.UtcNow)
-                        {
-                            isShow = false;
-                            break;
-                        }
-
-                    }
-
-                    if (isShow)
-                    {
-                        filteredQuotes.Add(_mapper.Map<GetQuoteDTO>(q));
-                    }
-                }
+                var filteredQuotes = quotes
+                    .Where(q =>
+                        q.QuoteDetails.All(dt =>
+                            dt.Promotion == null ||
+                            !dt.Promotion.EndDate.HasValue ||
+                            dt.Promotion.EndDate >= DateTime.UtcNow))
+                    .Select(q => _mapper.Map<GetQuoteDTO>(q))
+                    .ToList();
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     Message = "Get all quotes successfully",
                     StatusCode = 200,
-                    Result = filteredQuotes
+                    Result = new
+                    {
+                        data = filteredQuotes,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = pageSize,
+                            TotalItems = result.total,
+                            TotalPages = (int)Math.Ceiling((double)result.total / pageSize)
+                        }
+                    }
                 };
             }
             catch (Exception ex)

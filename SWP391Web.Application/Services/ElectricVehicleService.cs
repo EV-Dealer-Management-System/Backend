@@ -325,7 +325,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetEVCInventoryAsync(ClaimsPrincipal user)
+        public async Task<ResponseDTO> GetEVCInventoryAsync(ClaimsPrincipal user, int pageNumber, int pageSize, Guid? warehouseId, CancellationToken ct)
         {
             try
             {
@@ -354,21 +354,30 @@ namespace SWP391Web.Application.Services
 
                 var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAllEVCVehiclesWithDetailAsync();
 
-                var companyVehicles = vehicles
-                    .Where(v => v.Warehouse != null && v.Warehouse.WarehouseType == WarehouseType.EVInventory)
-                    .ToList();
-                
-                if (!companyVehicles.Any())
+                List<ElectricVehicle> filteredVehicles;
+
+                if( warehouseId.HasValue )
+                {
+                    // take all vehicles from this warehouseId, no matter evc or dealer
+                    filteredVehicles = vehicles.Where(v => v.WarehouseId == warehouseId.Value).ToList();
+                }
+                else
+                {
+                    // warehouseId null → take alll evc inventory only
+                    filteredVehicles = vehicles.Where(v => v.Warehouse != null && v.Warehouse.WarehouseType == WarehouseType.EVInventory).ToList();
+                }
+
+                if (!filteredVehicles.Any())
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        StatusCode = 404,
-                        Message = "No vehicles found in company inventory."
+                        Message = "No vehicles found",
+                        StatusCode = 404
                     };
                 }
 
-                var groupedInventory = companyVehicles
+                var groupedInventory = filteredVehicles
                     .GroupBy(v => new
                     {
                         ModelId = v.ElectricVehicleTemplate.Version.Model.Id,
@@ -390,7 +399,9 @@ namespace SWP391Web.Application.Services
                         Quantity = g.Count(),
                         Vehicles = g.Select(v => new
                         {
+                            v.Id,
                             v.VIN,
+                            v.Status,
                             v.WarehouseId,
                             WarehouseName = v.Warehouse.WarehouseName,
                             ImportDate = v.ImportDate.HasValue
@@ -404,12 +415,30 @@ namespace SWP391Web.Application.Services
                     .ThenBy(x => x.ColorName)
                     .ToList();
 
+                var totalItems = groupedInventory.Count;
+                var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+
+                var pagedData = groupedInventory
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     StatusCode = 200,
                     Message = "Get company inventory successfully",
-                    Result = groupedInventory
+                    Result = new
+                    {
+                        data = pagedData,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = pageSize,
+                            TotalItems = totalItems,
+                            TotalPages = totalPages
+                        }
+                    }
                 };
             }
             catch (Exception ex)

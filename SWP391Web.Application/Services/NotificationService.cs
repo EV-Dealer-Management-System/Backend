@@ -100,5 +100,130 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
+
+        public async Task<ResponseDTO> ReadNotification(Guid notificationId, CancellationToken ct)
+        {
+            try
+            {
+                var notification = await _unitOfWork.NotificationRepository.GetByIdAsync(notificationId, ct);
+                if (notification is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Notification not found",
+                        StatusCode = 404
+                    };
+                }
+                notification.IsRead = true;
+                _unitOfWork.NotificationRepository.Update(notification);
+                await _unitOfWork.SaveAsync();
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Notification marked as read successfully",
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"Error to mark notification as read: {ex.Message}",
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> RealAll(ClaimsPrincipal userClaim, CancellationToken ct)
+        {
+            try
+            {
+                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                if (dealer is null)
+                {
+                    dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId, ct);
+                    if (dealer is null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer not found",
+                            StatusCode = 404
+                        };
+                    }
+                    await _unitOfWork.NotificationRepository.MarkAllAsReadAsync(dealer.Id, StaticUserRole.DealerStaff, ct);
+                }
+                else
+                {
+                    await _unitOfWork.NotificationRepository.MarkAllAsReadAsync(dealer.Id, StaticUserRole.DealerManager, ct);
+                }
+
+                await _unitOfWork.SaveAsync();
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "All notifications marked as read successfully",
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"Error to mark all notifications as read: {ex.Message}",
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> UnReadNotification(Guid notificationId, CancellationToken ct)
+        {
+            try
+            {
+                var notification = await _unitOfWork.NotificationRepository.GetByIdAsync(notificationId, ct);
+                if (notification is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Notification not found",
+                        StatusCode = 404
+                    };
+                }
+
+                notification.IsRead = false;
+                _unitOfWork.NotificationRepository.Update(notification);
+                await _unitOfWork.SaveAsync();
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Notification marked as unread successfully",
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"Error to mark notification as unread: {ex.Message}",
+                    StatusCode = 500
+                };
+            }
+        }
     }
 }

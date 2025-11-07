@@ -54,13 +54,13 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPut("update-vehicle")]
-        public async Task<ActionResult> UpdateVehicleAsync(Guid vehicleId, [FromBody] UpdateElectricVehicleDTO updateElectricVehicleDTO)
+        public async Task<ActionResult<ResponseDTO>> UpdateVehicleAsync(Guid vehicleId, [FromBody] UpdateElectricVehicleDTO updateElectricVehicleDTO)
         {
             var response = await _electricVehicleService.UpdateVehicleAsync(vehicleId, updateElectricVehicleDTO);
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut("update-vehicle-status/{vehicleId}")]
-        public async Task<ActionResult> UpdateVehicleStatusAsync([FromRoute] Guid vehicleId, [FromRoute] ElectricVehicleStatus status)
+        public async Task<ActionResult<ResponseDTO>> UpdateVehicleStatusAsync([FromRoute] Guid vehicleId, [FromQuery] ElectricVehicleStatus status)
         {
             var response = await _electricVehicleService.UpdateVehicleStatusAsync(vehicleId, status);
             return StatusCode(response.StatusCode, response);
@@ -81,9 +81,9 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-evc-inventory")]
-        public async Task<ActionResult<ResponseDTO>> GetEVCInventoryAsync()
+        public async Task<ActionResult<ResponseDTO>> GetEVCInventoryAsync(int pageNumber = 1, int pageSize = 10, Guid? warehouseId = null, CancellationToken ct = default)
         {
-            var response = await _electricVehicleService.GetEVCInventoryAsync(User);
+            var response = await _electricVehicleService.GetEVCInventoryAsync(User, pageNumber, pageSize, warehouseId, ct);
             return StatusCode(response.StatusCode, response);
         }
     }
