@@ -115,6 +115,7 @@ namespace SWP391Web.Application.Services
                     user = staff;
                     await _emailService.NotifyAddedToDealerExistingUser(createDealerStaffDTO.Email, createDealerStaffDTO.FullName, $"Nhân viên đại lý", dealer.Name);
                     user.LockoutEnabled = false;
+                    _unitOfWork.UserManagerRepository.Update(user);
                 }
 
                 await _unitOfWork.UserManagerRepository.AddToRoleAsync(user, StaticUserRole.DealerStaff);
@@ -171,7 +172,7 @@ namespace SWP391Web.Application.Services
                 }
 
                 string sortField = (sortBy ?? "createdat").Trim().ToLower();
-                bool asc = isAcsending ?? true;
+                //bool asc = isAcsending ?? true;
 
                 (IReadOnlyList<Dealer> items, int total) result = (new List<Dealer>(), 0);
                 Func<IQueryable<Dealer>, IQueryable<Dealer>> includes = q => q
@@ -185,8 +186,8 @@ namespace SWP391Web.Application.Services
                         result = _unitOfWork.DealerRepository.GetPagedAsync(
                             filter: baseFilter,
                             includes: includes,
-                            orderBy: d => d.Name!,
-                            ascending: asc,
+                            orderBy: d => d.DealerStatus,
+                            ascending: true,
                             pageNumber: pageNumber,
                             pageSize: PageSize,
                             ct: ct).Result;
@@ -196,8 +197,8 @@ namespace SWP391Web.Application.Services
                         result = _unitOfWork.DealerRepository.GetPagedAsync(
                             filter: baseFilter,
                             includes: includes,
-                            orderBy: d => d.Id,
-                            ascending: asc,
+                            orderBy: d => d.DealerStatus,
+                            ascending: true,
                             pageNumber: pageNumber,
                             pageSize: PageSize,
                             ct: ct).Result;
@@ -439,7 +440,6 @@ namespace SWP391Web.Application.Services
                     foreach (var staff in dealer.DealerMembers)
                     {
                         staff.ApplicationUser.LockoutEnabled = true;
-                        _unitOfWork.DealerMemberRepository.Update(staff);
                         _unitOfWork.UserManagerRepository.Update(staff.ApplicationUser);
                     }
                 }
