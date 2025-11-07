@@ -1565,12 +1565,12 @@ namespace SWP391Web.Application.Services
 
                 if (eContractStatus != default)
                 {
-                    eContractList = eContractList.Where(ec => ec.Status == eContractStatus);
+                    eContractList = eContractList.Where(ec => ec.Status == eContractStatus).OrderByDescending(ec => ec.CreatedAt);
                 }
 
                 if (econtractType != default)
                 {
-                    eContractList = eContractList.Where(ec => ec.Type == econtractType);
+                    eContractList = eContractList.Where(ec => ec.Type == econtractType).OrderByDescending(ec => ec.CreatedAt);
                 }
 
                 if (pageNumber > 0 && pageSize > 0)
