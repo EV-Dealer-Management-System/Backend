@@ -258,8 +258,14 @@ namespace SWP391Web.Application.Services
                 result = await _unitOfWork.QuoteRepository.GetPagedAsync(
                     filter: filter,
                     includes: q => q.Include(x => x.QuoteDetails)
-                                    .ThenInclude(d => d.Promotion)
+                                        .ThenInclude(d => d.Promotion)
+                                    .Include(x => x.QuoteDetails)
+                                        .ThenInclude(d => d.ElectricVehicleVersion)
+                                            .ThenInclude(v => v.Model)
+                                    .Include(x => x.QuoteDetails)
+                                        .ThenInclude(d => d.ElectricVehicleColor)
                                     .Include(x => x.Dealer),
+                                    
                     orderBy: q => q.CreatedAt,
                     ascending: false,
                     pageNumber: pageNumber,
