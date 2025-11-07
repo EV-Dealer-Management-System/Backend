@@ -151,6 +151,7 @@ namespace SWP391Web.Application.Services
 
                 var getCustomerOrder = _mapper.Map<GetCustomerOrderDTO>(customerOrder);
 
+                await _unitOfWork.SaveAsync();
                 if (!createCustomerOrderDTO.IsCash)
                 {
                     await _paymentService.CreateVNPayLink(customerOrder.Id, ct);
