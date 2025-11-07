@@ -22,5 +22,21 @@ namespace SWP391Web.API.Controllers
             var result = await _notificationService.GetAllNotification(User, pageNumber, pageSize, ct);
             return StatusCode(result.StatusCode, result);
         }
+
+        [HttpPost]
+        [Route("read-notification")]
+        public async Task<ActionResult<ResponseDTO>> ReadNotification([FromQuery] Guid notificationId, CancellationToken ct)
+        {
+            var result = await _notificationService.ReadNotification(notificationId, ct);
+            return StatusCode(result.StatusCode, result);
+        }
+
+        [HttpPost]
+        [Route("read-all-notification")]
+        public async Task<ActionResult<ResponseDTO>> ReadAllNotification(CancellationToken ct)
+        {
+            var result = await _notificationService.RealAll(User, ct);
+            return StatusCode(result.StatusCode, result);
+        }
     }
 }

@@ -19,6 +19,11 @@ namespace SWP391Web.Infrastructure.Repository
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
+        public Task<int> CountByDealerIdAsync(Guid dealerId, CancellationToken ct)
+        {
+             return _context.BookingEVs.Where(b => b.DealerId == dealerId).CountAsync(ct);
+        }
+
         public async Task<List<BookingEV>> GetAllBookingWithDetailAsync()
         {
             {
@@ -46,6 +51,12 @@ namespace SWP391Web.Infrastructure.Repository
                     .ThenInclude(ec => ec.Owner)
                 .FirstOrDefaultAsync(b => b.Id == bookingId);
         }
+
+        public async Task<int> GetTotalBookingsAsync(CancellationToken ct)
+        {
+            return await _context.BookingEVs.CountAsync(ct);
+        }
+
         public async Task<List<ElectricVehicle?>> GetVehiclesByBookingIdAsync(Guid bookingId)
         {
             var bookingDetails = await _context.BookingEVDetails

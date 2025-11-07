@@ -20,7 +20,9 @@ namespace SWP391Web.Infrastructure.Repository
         }
         public async Task<ElectricVehicleTemplate?> GetByIdAsync(Guid EVTemplateId)
         {
-            return await _context.ElectricVehicleTemplates.FirstOrDefaultAsync(evt => evt.Id == EVTemplateId);
+            return await _context.ElectricVehicleTemplates
+                .Include(evt => evt.EVAttachments)
+                .FirstOrDefaultAsync(evt => evt.Id == EVTemplateId);
         }
 
         public async Task<ElectricVehicleTemplate?> GetByVersionColorAndWarehouseAsync(Guid versionId, Guid colorId, Guid warehouseId)

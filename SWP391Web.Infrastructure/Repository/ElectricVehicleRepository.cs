@@ -36,7 +36,6 @@ namespace SWP391Web.Infrastructure.Repository
                         .ThenInclude(v => v.Model)
                 .Include(ev => ev.ElectricVehicleTemplate.Color)
                 .Include(ev => ev.Warehouse)
-                .Where(ev => ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
                 .ToListAsync();
         }
 
@@ -263,6 +262,20 @@ namespace SWP391Web.Infrastructure.Repository
             }
 
             return await query.OrderBy(ev => ev.ImportDate).FirstOrDefaultAsync(ct);
+        }
+
+        public Task<int> CountAvailableByDealerAsync(Guid dealerId, CancellationToken ct)
+        {
+            return _context.ElectricVehicles
+        .Where(ev => ev.Warehouse.DealerId == dealerId && ev.Status == ElectricVehicleStatus.AtDealer)
+        .CountAsync(ct);
+        }
+
+        public async Task<int> GetTotalVehiclesInEVCAsync(CancellationToken ct)
+        {
+            return await _context.ElectricVehicles
+                .Include(ev => ev.Warehouse)
+                .CountAsync(ev => ev.Warehouse.WarehouseType == WarehouseType.EVInventory, ct);
         }
     }
 }

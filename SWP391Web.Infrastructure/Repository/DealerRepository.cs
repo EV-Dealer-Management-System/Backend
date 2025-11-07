@@ -95,5 +95,10 @@ namespace SWP391Web.Infrastructure.Repository
                         || dl.DealerMembers.Any(dm => dm.ApplicationUserId == userId && dm.IsActive))
                 .FirstOrDefaultAsync(ct);
         }
+
+        public async Task<int> GetTotalDealersAsync(CancellationToken ct)
+        {
+            return await _context.Dealers.CountAsync(ct);
+        }
     }
 }
