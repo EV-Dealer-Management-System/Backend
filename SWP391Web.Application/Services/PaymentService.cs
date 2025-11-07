@@ -423,14 +423,17 @@ namespace SWP391Web.Application.Services
             {
                 await HandleVehicleInOrder(customerOrder, ct);
                 customerOrder.Status = OrderStatus.Completed;
+                _unitOfWork.CustomerOrderRepository.Update(customerOrder);
+                await _unitOfWork.SaveAsync();
                 await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
             }
             else
             {
                 customerOrder.Status = OrderStatus.Depositing;
+                _unitOfWork.CustomerOrderRepository.Update(customerOrder);
+                await _unitOfWork.SaveAsync();
                 await _eContractService.CreateDepositEContractConfirm(customerOrder.Id, ct);
             }
-            _unitOfWork.CustomerOrderRepository.Update(customerOrder);
         }
 
         private async Task HandleVehicleInOrder(CustomerOrder customerOrder, CancellationToken ct)

@@ -1,4 +1,5 @@
 ﻿using Aspose.Words;
+using AutoMapper;
 using Microsoft.AspNetCore.Http.HttpResults;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.DealerDebt;
@@ -18,10 +19,12 @@ namespace SWP391Web.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IDealerDebtTransactionService _dealerDebtTransactionService;
-        public DealerDebtService(IUnitOfWork unitOfWork, IDealerDebtTransactionService dealerDebtTransactionService)
+        private readonly IMapper _mapper;
+        public DealerDebtService(IUnitOfWork unitOfWork, IDealerDebtTransactionService dealerDebtTransactionService, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
             _dealerDebtTransactionService = dealerDebtTransactionService;
+            _mapper = mapper;
         }
 
         public async Task<ResponseDTO> AddPurchaseForDealerAsync(Guid dealerId, RecordDebtDTO debtDTO, CancellationToken ct)
@@ -148,6 +151,40 @@ namespace SWP391Web.Application.Services
                     Message = $"Failed to record commission: {ex.Message}"
                 };
             }
+        }
+
+        public async Task<ResponseDTO> GetDealerDebtBalanceAtQuarterNow(Guid dealerId, CancellationToken ct)
+        {
+            //try
+            //{
+            //    var dealer = await _unitOfWork.DealerRepository.GetByIdAsync(dealerId, ct);
+            //    if (dealer is null)
+            //    {
+            //        return new ResponseDTO(false)
+            //        {
+            //            StatusCode = 404,
+            //            Message = "Dealer not found."
+            //        };
+            //    }
+
+            //    var dealerDebt = await _unitOfWork.DealerDebtRepository.GetOrCreateQuarterAsync(dealerId, DateTime.Now, ct);
+            //    if (dealerDebt is null)
+            //    {
+            //        return new ResponseDTO(false)
+            //        {
+            //            StatusCode = 404,
+            //            Message = "Dealer debt record not found."
+            //        };
+            //    }
+
+
+            //}
+            throw new NotImplementedException();
+        }
+
+        public Task<ResponseDTO> GetDealerDebtDetails(Guid dealerId, DateTime fromDateUtc, DateTime toDateUtc, CancellationToken ct)
+        {
+            throw new NotImplementedException();
         }
     }
 }
