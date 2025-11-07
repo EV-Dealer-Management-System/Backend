@@ -25,9 +25,9 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-all-quote")]
-        public async Task<ActionResult<ResponseDTO>> GetAllQuoteAsync([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, QuoteStatus? status = default, CancellationToken ct = default)
+        public async Task<ActionResult<ResponseDTO>> GetAllQuoteAsync([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, QuoteStatus? status = default, bool onlyToday = false, CancellationToken ct = default)
         {
-            var response = await _quoteService.GetAllAsync(User,pageNumber,pageSize, status,ct);
+            var response = await _quoteService.GetAllAsync(User,pageNumber,pageSize, status,onlyToday,ct);
             return StatusCode(response.StatusCode, response);
         }
 

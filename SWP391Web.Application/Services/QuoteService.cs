@@ -213,7 +213,7 @@ namespace SWP391Web.Application.Services
 
             }
 
-        public async Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user, int pageNumber , int pageSize , QuoteStatus? status , CancellationToken ct)
+        public async Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user, int pageNumber , int pageSize ,　QuoteStatus? status , bool onlyToday = false, CancellationToken ct = default)
         {
             try
             {
@@ -234,10 +234,12 @@ namespace SWP391Web.Application.Services
                 if (status.HasValue)
                     filter = q => q.Status == status.Value;
 
+                Guid? dealerId = null;
+
                 if (role == StaticUserRole.DealerManager || role == StaticUserRole.DealerStaff)
                 {
                     var dealer = await _unitOfWork.DealerRepository
-                        .GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
+                        .GetDealerByManagerOrStaffAsync(userId, ct);
                     if (dealer == null)
                     {
                         return new ResponseDTO
@@ -247,39 +249,52 @@ namespace SWP391Web.Application.Services
                             StatusCode = 404
                         };
                     }
-
-                    if (filter != null)
-                        filter = q => q.DealerId == dealer.Id && q.Status == status.Value;
-                    else
-                        filter = q => q.DealerId == dealer.Id;
+                    dealerId = dealer.Id;
                 }
 
-                (IReadOnlyList<Quote> items, int total) result;
-                result = await _unitOfWork.QuoteRepository.GetPagedAsync(
-                    filter: filter,
-                    includes: q => q.Include(x => x.QuoteDetails)
-                                        .ThenInclude(d => d.Promotion)
-                                    .Include(x => x.QuoteDetails)
-                                        .ThenInclude(d => d.ElectricVehicleVersion)
-                                            .ThenInclude(v => v.Model)
-                                    .Include(x => x.QuoteDetails)
-                                        .ThenInclude(d => d.ElectricVehicleColor)
-                                    .Include(x => x.Dealer),
-                                    
-                    orderBy: q => q.CreatedAt,
-                    ascending: false,
-                    pageNumber: pageNumber,
-                    pageSize: pageSize,
-                    ct: ct
-                );
-                
-                var quotes = result.items.ToList();
+                var query = _unitOfWork.QuoteRepository.Query();
+                if (status.HasValue)
+                {
+                    query = query.Where(q => q.Status == status.Value);
+                }
+
+                if (dealerId.HasValue)
+                {
+                    query = query.Where(q => q.DealerId == dealerId.Value);
+                }
+
+                if (onlyToday)
+                {
+                    var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                    var nowVN = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+                    var todayVN = nowVN.Date;
+                    var tomorrowVN = todayVN.AddDays(1);
+
+                    var todayUTC = TimeZoneInfo.ConvertTimeToUtc(todayVN, vnTimeZone);
+                    var tomorrowUTC = TimeZoneInfo.ConvertTimeToUtc(tomorrowVN, vnTimeZone);
+
+                    query = query.Where(q => q.CreatedAt >= todayUTC && q.CreatedAt < tomorrowUTC);
+                }
+
+                query = query
+                    .Include(x => x.QuoteDetails).ThenInclude(d => d.Promotion)
+                    .Include(x => x.QuoteDetails).ThenInclude(d => d.ElectricVehicleVersion).ThenInclude(v => v.Model)
+                    .Include(x => x.QuoteDetails).ThenInclude(d => d.ElectricVehicleColor)
+                    .Include(x => x.Dealer);
+
+                var totalItems = await query.CountAsync(ct);
+                var quotes = await query
+                    .OrderByDescending(q => q.CreatedAt)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync(ct);
+
                 if (!quotes.Any())
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = " No quotes found for specified criteria",
+                        Message = "No quotes found for specified criteria",
                         StatusCode = 404
                     };
                 }
@@ -305,8 +320,8 @@ namespace SWP391Web.Application.Services
                         {
                             PageNumber = pageNumber,
                             PageSize = pageSize,
-                            TotalItems = result.total,
-                            TotalPages = (int)Math.Ceiling((double)result.total / pageSize)
+                            TotalItems = totalItems,
+                            TotalPages = (int)Math.Ceiling((double)totalItems / pageSize)
                         }
                     }
                 };
