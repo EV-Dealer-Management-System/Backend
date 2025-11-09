@@ -214,6 +214,8 @@ namespace SWP391Web.Application.Mappings
                 
             CreateMap<VehicleDeliveryDetail, GetVehicleDeliveryDetailDTO>()
                 .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.ElectricVehicle.VIN));
+
+            CreateMap<DealerDebt, GetDealerDebtDTO>().ReverseMap();
         }
     }
 }

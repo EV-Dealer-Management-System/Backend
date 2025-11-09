@@ -39,8 +39,8 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPost]
-        [Route("create-vnpay-mobile/{amount:int}")]
-        public async Task<ActionResult<ResponseDTO>> CreateVNPayLinkMobile(int amount, CancellationToken ct)
+        [Route("create-vnpay-mobile/{amount:long}")]
+        public async Task<ActionResult<ResponseDTO>> CreateVNPayLinkMobile(long amount, CancellationToken ct)
         {
             var response = await _paymentService.CreateVNPayLinkMobile(amount, ct);
             return StatusCode(response.StatusCode, response);
