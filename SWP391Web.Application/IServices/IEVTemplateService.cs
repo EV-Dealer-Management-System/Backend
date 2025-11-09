@@ -12,7 +12,7 @@ namespace SWP391Web.Application.IServices
     {
         Task<ResponseDTO> CreateEVTemplateAsync(CreateEVTemplateDTO createEVTemplateDTO);
         Task<ResponseDTO> GetVehicleTemplateByIdAsync(Guid EVTemplateId);
-        Task<ResponseDTO> GetAllVehicleTemplateAsync(int pageNumber, int pageSize,string? search, Guid? templateId, CancellationToken ct);
+        Task<ResponseDTO> GetAllVehicleTemplateAsync(int pageNumber, int pageSize, string? search, Guid? templateId, decimal? minPrice, decimal? maxPrice, bool sortByPriceAsc, CancellationToken ct);
         Task<ResponseDTO> UpdateEVTemplateAsync(Guid EVTemplateId, UpdateEVTemplateDTO updateEVTemplateDTO);
         Task<ResponseDTO> DeleteEVTemplateAsync(Guid EVTemplateId);
         Task<ResponseDTO> GetTemplatesByVersionAndColorAsync(Guid versionId,Guid colorId);

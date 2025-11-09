@@ -118,7 +118,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetAllVehicleTemplateAsync(int pageNumber, int pageSize, string? search, Guid? templateId,CancellationToken ct)
+        public async Task<ResponseDTO> GetAllVehicleTemplateAsync(int pageNumber, int pageSize, string? search, Guid? templateId, decimal?　minPrice, decimal? maxPrice, bool sortByPriceAsc ,CancellationToken ct)
         {
             try
             {
@@ -129,18 +129,23 @@ namespace SWP391Web.Application.Services
 
                 Expression<Func<ElectricVehicleTemplate, bool>> filter = t =>
                     t.IsActive == true &&
-                    (!templateId.HasValue || t.Id == templateId.Value);
+                    (!templateId.HasValue || t.Id == templateId.Value) &&
+                    (!minPrice.HasValue || t.Price >= minPrice.Value) &&
+                    (!maxPrice.HasValue || t.Price <= maxPrice.Value);
 
-                if (templateId.HasValue || !string.IsNullOrWhiteSpace(search))
+                if (!string.IsNullOrWhiteSpace(search))
                 {
-                    var lowered = search?.Trim().ToLower();
+                    var lowered = search.Trim().ToLower();
                     filter = t =>
                         t.IsActive == true &&
                         (!templateId.HasValue || t.Id == templateId.Value) &&
-                        (string.IsNullOrWhiteSpace(lowered)
-                            || (t.Version != null && t.Version.VersionName.ToLower().Contains(lowered))
-                            || (t.Version.Model != null && t.Version.Model.ModelName.ToLower().Contains(lowered))
-                            || (t.Color != null && t.Color.ColorName.ToLower().Contains(lowered)));
+                        (!minPrice.HasValue || t.Price >= minPrice.Value) &&
+                        (!maxPrice.HasValue || t.Price <= maxPrice.Value) &&
+                        (
+                            (t.Version != null && t.Version.VersionName.ToLower().Contains(lowered)) ||
+                            (t.Version.Model != null && t.Version.Model.ModelName.ToLower().Contains(lowered)) ||
+                            (t.Color != null && t.Color.ColorName.ToLower().Contains(lowered))
+                        );
                 }
 
                 (IReadOnlyList<ElectricVehicleTemplate> items, int total) result =
@@ -148,7 +153,7 @@ namespace SWP391Web.Application.Services
                         filter: filter,
                         includes: includes,
                         orderBy: t => t.Price,
-                        ascending: false,
+                        ascending: sortByPriceAsc,
                         pageNumber: pageNumber,
                         pageSize: pageSize,
                         ct: ct
