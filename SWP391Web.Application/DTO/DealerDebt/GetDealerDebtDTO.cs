@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SWP391Web.Domain.Entities
+namespace SWP391Web.Application.DTO.DealerDebt
 {
-    public class DealerDebt
+    public class GetDealerDebtDTO
     {
         public Guid Id { get; set; }
         public Guid DealerId { get; set; }
@@ -23,7 +23,5 @@ namespace SWP391Web.Domain.Entities
         public string? Note { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public string? CreatedBy { get; set; }
-
-        public Dealer Dealer { get; set; } = null!;
     }
 }

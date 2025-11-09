@@ -155,31 +155,44 @@ namespace SWP391Web.Application.Services
 
         public async Task<ResponseDTO> GetDealerDebtBalanceAtQuarterNow(Guid dealerId, CancellationToken ct)
         {
-            //try
-            //{
-            //    var dealer = await _unitOfWork.DealerRepository.GetByIdAsync(dealerId, ct);
-            //    if (dealer is null)
-            //    {
-            //        return new ResponseDTO(false)
-            //        {
-            //            StatusCode = 404,
-            //            Message = "Dealer not found."
-            //        };
-            //    }
+            try
+            {
+                var dealer = await _unitOfWork.DealerRepository.GetByIdAsync(dealerId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO(false)
+                    {
+                        StatusCode = 404,
+                        Message = "Dealer not found."
+                    };
+                }
 
-            //    var dealerDebt = await _unitOfWork.DealerDebtRepository.GetOrCreateQuarterAsync(dealerId, DateTime.Now, ct);
-            //    if (dealerDebt is null)
-            //    {
-            //        return new ResponseDTO(false)
-            //        {
-            //            StatusCode = 404,
-            //            Message = "Dealer debt record not found."
-            //        };
-            //    }
+                var dealerDebt = await _unitOfWork.DealerDebtRepository.GetOrCreateQuarterAsync(dealerId, DateTime.Now, ct);
+                if (dealerDebt is null)
+                {
+                    return new ResponseDTO(false)
+                    {
+                        StatusCode = 404,
+                        Message = "Dealer debt record not found."
+                    };
+                }
 
-
-            //}
-            throw new NotImplementedException();
+                var getDealerDebt = _mapper.Map<GetDealerDebtDTO>(dealerDebt);
+                return new ResponseDTO
+                {
+                    StatusCode = 200,
+                    Message = "Successfully retrieved dealer debt balance.",
+                    Result = getDealerDebt
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false)
+                {
+                    StatusCode = 500,
+                    Message = $"Failed to retrieve dealer debt balance: {ex.Message}"
+                };
+            }
         }
 
         public Task<ResponseDTO> GetDealerDebtDetails(Guid dealerId, DateTime fromDateUtc, DateTime toDateUtc, CancellationToken ct)

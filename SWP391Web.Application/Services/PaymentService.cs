@@ -21,6 +21,7 @@ using System;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Net;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
@@ -506,7 +507,7 @@ namespace SWP391Web.Application.Services
             await _hubContext.Clients.Group($"Dealer_{dealerId}_{StaticUserRole.DealerManager}").SendAsync("NotificationChanged");
         }
 
-        public async Task<ResponseDTO> CreateVNPayLinkMobile(int amount, CancellationToken ct)
+        public async Task<ResponseDTO> CreateVNPayLinkMobile(long amount, CancellationToken ct)
         {
             try
             {
@@ -557,7 +558,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        private async Task HandleMobileTransaction(int amount, string orderNo, CancellationToken ct)
+        private async Task HandleMobileTransaction(long amount, string orderNo, CancellationToken ct)
         {
             var transaction = new Transaction
             {
@@ -613,6 +614,79 @@ namespace SWP391Web.Application.Services
                 {
                     IsSuccess = false,
                     Message = $"Error to get VNPay Mobile transactions: {ex.Message}",
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetAllVNPayPaymentTransaction(ClaimsPrincipal userClaim, int pageNumber, int pageSize, TransactionStatus? status, CancellationToken ct)
+        {
+            try
+            {
+                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 401
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                if (dealer is null)
+                {
+                    dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId, ct);
+                    if (dealer is null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer not found",
+                            StatusCode = 404
+                        };
+                    }
+                }
+                Expression<Func<Transaction, bool>> filter = t => t.Provider != "VNPay" & t.CustomerOrder.Quote.DealerId == dealer.Id;
+                if (status.HasValue)
+                {
+                    filter = t => t.Provider != "VNPay" && t.Status == status.Value;
+                }
+
+                (IReadOnlyList<Transaction> items, int total) result;
+                result = await _unitOfWork.TransactionRepository.GetPagedAsync(
+                    filter: filter,
+                    includes: null,
+                    orderBy: o => o.CreatedAt,
+                    ascending: false,
+                    pageNumber: pageNumber,
+                    pageSize: pageSize, ct);
+                var getTransactionList = _mapper.Map<List<Transaction>>(result.items);
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Get payment transactions successfully",
+                    StatusCode = 200,
+                    Result = new
+                    {
+                        Data = getTransactionList,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = pageSize,
+                            TotalItems = result.total,
+                            TotalPages = (int)Math.Ceiling((double)result.total / pageSize)
+                        }
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO()
+                {
+                    IsSuccess = false,
+                    Message = $"Error to get payment transactions: {ex.Message}",
                     StatusCode = 500
                 };
             }
