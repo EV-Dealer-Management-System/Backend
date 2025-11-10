@@ -27,5 +27,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<IList<UserLoginInfo>> HasLogin(ApplicationUser user);
         Task<IdentityResult> ResetAccessFailedAsync(ApplicationUser user);
         Task<int> GetTotalEVMStaffAsync(CancellationToken ct);
+        Task<ApplicationUser?> GetByUserNameAsync(string userName);
     }
 }

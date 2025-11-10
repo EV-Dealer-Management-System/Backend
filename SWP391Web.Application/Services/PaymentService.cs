@@ -347,7 +347,7 @@ namespace SWP391Web.Application.Services
                     else if (ipnDTO.vnp_OrderInfo.Equals("VNPay_Mobile"))
                     {
                         var orderNo = ipnDTO.vnp_TxnRef;
-                        await HandleMobileTransaction(int.Parse(ipnDTO.vnp_Amount) / 100, orderNo, ct);
+                        await HandleMobileTransaction(long.Parse(ipnDTO.vnp_Amount) / 100, orderNo, ct);
                     }
                     else
                     {

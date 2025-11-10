@@ -12,5 +12,7 @@ namespace SWP391Web.Application.IService
         Task<ResponseDTO> HandleGoogleCallbackAsync(ClaimsPrincipal userClaims, CancellationToken ct);
         Task StoreAsync(string ticket, AuthResultDTO value, TimeSpan ttl);
         Task<AuthResultDTO?> RedeemAsync(string ticket);
+        Task<ResponseDTO> RegisterMobile(RegisterMobileDTO registerMobileDTO);
+        Task<ResponseDTO> LoginMobile(LoginMobileDTO loginMobileDTO, CancellationToken ct);
     }
 }
