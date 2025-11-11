@@ -131,6 +131,11 @@ namespace SWP391Web.Infrastructure.Repository
             return await _userManager.FindByNameAsync(userName);
         }
 
+        public async Task<bool> IsExistUserName(string userName)
+        {
+            return await _userManager.Users.AnyAsync(u => u.UserName == userName);
+        }
+
         public async Task<int> GetTotalEVMStaffAsync(CancellationToken ct)
         {
             var roleId = await _context.Roles
