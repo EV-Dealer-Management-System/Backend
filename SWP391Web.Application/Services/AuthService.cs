@@ -397,8 +397,7 @@ namespace SWP391Web.Application.Service
                     UserName = registerMobileDTO.UserName,
                     Email = registerMobileDTO.Email,
                     PhoneNumber = registerMobileDTO.PhoneNumber,
-                    Address = registerMobileDTO.Address,
-                    LockoutEnabled = false
+                    Address = registerMobileDTO.Address
                 };
 
                 var created = await _unitOfWork.UserManagerRepository.CreateAsync(newUser, registerMobileDTO.Password);
@@ -412,6 +411,10 @@ namespace SWP391Web.Application.Service
                         Result = created
                     };
                 }
+
+                newUser.LockoutEnabled = false;
+                _unitOfWork.UserManagerRepository.Update(newUser);
+                await _unitOfWork.SaveAsync();
 
                 return new ResponseDTO
                 {

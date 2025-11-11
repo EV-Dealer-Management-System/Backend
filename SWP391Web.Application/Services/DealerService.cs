@@ -67,9 +67,6 @@ namespace SWP391Web.Application.Services
                         Email = createDealerStaffDTO.Email,
                         FullName = createDealerStaffDTO.FullName,
                         PhoneNumber = createDealerStaffDTO.PhoneNumber,
-                        EmailConfirmed = true,
-                        PhoneNumberConfirmed = true,
-                        LockoutEnabled = false
                     };
 
                     var randomPassword = "Staff@" + Guid.NewGuid().ToString()[..6].ToUpper();
@@ -84,6 +81,13 @@ namespace SWP391Web.Application.Services
                             Message = "Failed to create Dealer Staff."
                         };
                     }
+
+                    user.LockoutEnabled = false;
+                    user.EmailConfirmed = true;
+                    user.PhoneNumberConfirmed = true;
+
+                    _unitOfWork.UserManagerRepository.Update(user);
+                    await _unitOfWork.SaveAsync();
 
                     await _emailService.SendDealerStaffAaccountEmail(createDealerStaffDTO.Email, createDealerStaffDTO.FullName, randomPassword, dealer.Name);
                 }
