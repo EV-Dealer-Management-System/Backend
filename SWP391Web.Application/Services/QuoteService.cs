@@ -277,9 +277,13 @@ namespace SWP391Web.Application.Services
                 }
 
                 query = query
-                    .Include(x => x.QuoteDetails).ThenInclude(d => d.Promotion)
-                    .Include(x => x.QuoteDetails).ThenInclude(d => d.ElectricVehicleVersion).ThenInclude(v => v.Model)
-                    .Include(x => x.QuoteDetails).ThenInclude(d => d.ElectricVehicleColor)
+                    .Include(x => x.QuoteDetails)
+                        .ThenInclude(d => d.Promotion)
+                    .Include(x => x.QuoteDetails)
+                        .ThenInclude(d => d.ElectricVehicleVersion)
+                            .ThenInclude(v => v.Model)
+                    .Include(x => x.QuoteDetails)
+                        .ThenInclude(d => d.ElectricVehicleColor)
                     .Include(x => x.Dealer);
 
                 var totalItems = await query.CountAsync(ct);

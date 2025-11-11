@@ -397,14 +397,14 @@ namespace SWP391Web.Application.Service
 
                 var isExistUserName = await _unitOfWork.UserManagerRepository.IsExistUserName(registerMobileDTO.UserName);
                 if (isExistUserName)
-                {
+                  {
                     return new ResponseDTO
                     {
-                        IsSuccess = false,
-                        StatusCode = 409,
-                        Message = "User name is exist"
+                      IsSuccess = false,
+                      StatusCode = 409,
+                      Message = "User name is exist"
                     };
-                }
+                  }
 
                 var newUser = new ApplicationUser
                 {
