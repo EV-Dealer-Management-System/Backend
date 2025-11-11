@@ -381,15 +381,18 @@ namespace SWP391Web.Application.Service
         {
             try
             {
-                var isExistEmail = await _unitOfWork.UserManagerRepository.IsEmailExist(registerMobileDTO.Email);
-                if (isExistEmail)
+                if (registerMobileDTO is not null)
                 {
-                    return new ResponseDTO
+                    var isExistEmail = await _unitOfWork.UserManagerRepository.IsEmailExist(registerMobileDTO.Email);
+                    if (isExistEmail)
                     {
-                        IsSuccess = false,
-                        StatusCode = 409,
-                        Message = $"{registerMobileDTO.Email} existed"
-                    };
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            StatusCode = 409,
+                            Message = $"{registerMobileDTO.Email} existed"
+                        };
+                    }
                 }
 
                 var newUser = new ApplicationUser
