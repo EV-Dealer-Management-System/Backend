@@ -29,4 +29,5 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<int> GetTotalEVMStaffAsync(CancellationToken ct);
         Task<ApplicationUser?> GetByUserNameAsync(string userName);
         Task<bool> IsExistUserName(string userName);
+    }
 }

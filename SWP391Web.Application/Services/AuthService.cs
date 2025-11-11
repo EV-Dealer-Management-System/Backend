@@ -400,9 +400,9 @@ namespace SWP391Web.Application.Service
                   {
                     return new ResponseDTO
                     {
-                      IsSuccess = false,
-                      StatusCode = 409,
-                      Message = "User name is exist"
+                        IsSuccess = false,
+                        StatusCode = 409,
+                        Message = "User name is exist"
                     };
                   }
 
