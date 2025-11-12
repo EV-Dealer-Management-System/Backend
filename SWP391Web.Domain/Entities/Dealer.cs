@@ -30,5 +30,6 @@ namespace SWP391Web.Domain.Entities
         public ICollection<DealerPolicyOverride> PolicyOverrides { get; set; } = new List<DealerPolicyOverride>();
         public ICollection<DealerDebt> DealerDebts { get; set; } = new List<DealerDebt>();
         public ICollection<DealerDebtTransaction> DealerDebtTransactions { get; set; } = new List<DealerDebtTransaction>();
+        public ICollection<DealerDailyInventory> DealerDailyInventories { get; set; } = new List<DealerDailyInventory>();
     }
 }
