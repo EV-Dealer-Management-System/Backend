@@ -50,7 +50,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<VehicleDeliveryDetail> VehicleDeliveryDetails { get; set; }
         public DbSet<DealerDebtTransaction> DealerDebtTransactions { get; set; }
         public DbSet<DealerDailyInventory> DealerDailyInventories { get; set; }
-
+        public DbSet<DealerInventoryForecast> DealerInventoryForecasts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -541,7 +541,25 @@ namespace SWP391Web.Infrastructure.Context
                  .OnDelete(DeleteBehavior.Restrict);
 
                 e.HasOne(x => x.EVTemplate)
-                 .WithMany(ev => ev.DealerDailyInventories) 
+                 .WithMany(ev => ev.DealerDailyInventories)
+                 .HasForeignKey(x => x.EVTemplateId)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            /******************************************************************************/
+            // Configure DealerInventoryForecast entity
+
+            modelBuilder.Entity<DealerInventoryForecast>(e =>
+            {
+                e.HasIndex(x => new { x.DealerId, x.EVTemplateId, x.TargetDate });
+
+                e.HasOne(x => x.Dealer)
+                 .WithMany(d => d.DealerInventoryForecasts)
+                 .HasForeignKey(x => x.DealerId)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.EVTemplate)
+                 .WithMany(ev => ev.DealerInventoryForecasts)
                  .HasForeignKey(x => x.EVTemplateId)
                  .OnDelete(DeleteBehavior.Restrict);
             });

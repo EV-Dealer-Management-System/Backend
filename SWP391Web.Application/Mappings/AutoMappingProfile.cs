@@ -216,6 +216,10 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.ElectricVehicle.VIN));
 
             CreateMap<DealerDebt, GetDealerDebtDTO>().ReverseMap();
+
+            CreateMap<DealerDailyInventory, DemandSeriesPointDTO>()
+                .ForMember(dest => dest.Ds, opt => opt.MapFrom(src => src.SnapshotDate))
+                .ForMember(dest => dest.Y, opt => opt.MapFrom(src => src.Outflow)).ReverseMap();
         }
     }
 }

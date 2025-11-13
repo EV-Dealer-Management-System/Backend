@@ -45,6 +45,7 @@ namespace SWP391Web.Infrastructure.IRepository
         public IDealerDebtTransactionRepository DealerDebtTransactionRepository { get; }
         public IVehicleDeliveryDetailRepository VehicleDeliveryDetailRepository { get; }
         public IDealerDailyInventoryRepository DealerDailyInventoryRepository { get; }
+        public IDealerInventoryForecastRepository DealerInventoryForecastRepository { get; }
 
         Task<int> SaveAsync(CancellationToken ct = default);
         Task ExecuteInTransactionAsync(Func<Task> action, CancellationToken ct = default);

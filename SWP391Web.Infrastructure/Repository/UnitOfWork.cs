@@ -45,6 +45,7 @@ namespace SWP391Web.Infrastructure.Repository
         public IDealerDebtTransactionRepository DealerDebtTransactionRepository { get; private set; }
         public IVehicleDeliveryDetailRepository VehicleDeliveryDetailRepository { get; private set; }
         public IDealerDailyInventoryRepository DealerDailyInventoryRepository { get; private set; }
+        public IDealerInventoryForecastRepository DealerInventoryForecastRepository { get; private set; }
 
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
@@ -87,6 +88,7 @@ namespace SWP391Web.Infrastructure.Repository
             DealerDebtTransactionRepository = new DealerDebtTransactionRepository(_context);
             VehicleDeliveryDetailRepository = new VehicleDeliveryDetailRepository(_context);
             DealerDailyInventoryRepository = new DealerDailyInventoryRepository(_context);
+            DealerInventoryForecastRepository = new DealerInventoryForecastRepository(_context);
         }
         public async Task<int> SaveAsync()
         {
