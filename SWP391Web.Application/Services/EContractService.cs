@@ -1575,7 +1575,7 @@ namespace SWP391Web.Application.Services
                 if (contract is null)
                     return new VnptResult<UpdateEContractResponse>($"Cannot find EContract with id '{updateEContractDTO.Id}'");
 
-                if (Role != StaticUserRole.Admin || (contract.CreatedBy != userId &&
+                if (Role != StaticUserRole.Admin || Role != StaticUserRole.EVMStaff || (contract.CreatedBy != userId &&
                      (contract.Type == EcontractType.CustomerOrderPayFull ||
                       contract.Type == EcontractType.CustomerOrderDepositFull ||
                       contract.Type == EcontractType.CustomerOrderDepositContract)))
