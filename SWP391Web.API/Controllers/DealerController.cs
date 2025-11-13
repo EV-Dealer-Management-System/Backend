@@ -123,5 +123,22 @@ namespace SWP391Web.API.Controllers
             var response = await _dealerDailyInventoryService.BuildDailySnapshotAsync(utcDate, ct);
             return StatusCode(response.StatusCode, response);
         }
+
+        [HttpGet]
+        [Route("get-demand-series")]
+        public async Task<IActionResult> GetDemandSeries([FromQuery] Guid dealerId, [FromQuery] Guid evTemplateId,
+            [FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct)
+        {
+            var response = await _dealerDailyInventoryService.GetDemandSeriesAsync(dealerId, evTemplateId, from, to, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost]
+        [Route("upsert-forecast-batch")]
+        public async Task<IActionResult> UpsertForecastBatch([FromBody] List<UpsertDealerInventoryForecastDTO> upsertsDTO, CancellationToken ct)
+        {
+            var response = await _dealerDailyInventoryService.UpsertForecastBatchAsync(upsertsDTO, ct);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

@@ -1,5 +1,7 @@
 ﻿using Amazon.S3.Model.Internal.MarshallTransformations;
+using AutoMapper;
 using SWP391Web.Application.DTO.Auth;
+using SWP391Web.Application.DTO.Dealer;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Infrastructure.IRepository;
@@ -9,9 +11,11 @@ namespace SWP391Web.Application.Services
     public class DealerDailyInventoryService : IDealerDailyInventoryService
     {
         private readonly IUnitOfWork _unitOfWork;
-        public DealerDailyInventoryService(IUnitOfWork unitOfWork)
+        private readonly IMapper _mapper;
+        public DealerDailyInventoryService(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
         public async Task<ResponseDTO> BuildDailySnapshotAsync(DateTime utcDate, CancellationToken ct)
         {
@@ -69,6 +73,83 @@ namespace SWP391Web.Application.Services
                 {
                     IsSuccess = false,
                     Message = $"Error building daily snapshot: {ex.Message}",
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetDemandSeriesAsync(Guid dealerId, Guid evTemplateId, DateTime from, DateTime to, CancellationToken ct)
+        {
+            try
+            {
+                var fromDate = from.Date;
+                var toDate = to.Date;
+
+                var data = await _unitOfWork.DealerDailyInventoryRepository.GetRangeAsync(dealerId, evTemplateId, fromDate, toDate, ct);
+
+                var getData = _mapper.Map<List<DemandSeriesPointDTO>>(data);
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Demand series retrieved successfully.",
+                    StatusCode = 200,
+                    Result = getData
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"Error retrieving demand series: {ex.Message}",
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> UpsertForecastBatchAsync(IEnumerable<UpsertDealerInventoryForecastDTO> forecasts, CancellationToken ct)
+        {
+            try
+            {
+                var now = DateTime.UtcNow;
+
+                var rows = forecasts.Select(f => new DealerInventoryForecast
+                {
+                    Id = Guid.NewGuid(),
+                    DealerId = f.DealerId,
+                    EVTemplateId = f.EVTemplateId,
+                    TargetDate = f.TargetDate.Date,
+                    Forecast = f.Forecast,
+                    ForecastLower = f.ForecastLower,
+                    ForecastUpper = f.ForecastUpper,
+                    CreatedAtUtc = now,
+                    ModelVersion = f.ModelVersion
+                }).ToList();
+
+                await _unitOfWork.ExecuteInTransactionAsync(async () =>
+                {
+                    await _unitOfWork.DealerInventoryForecastRepository.UpsertRangeAsync(rows, ct);
+                    await _unitOfWork.SaveAsync(ct);
+                }, ct);
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Forecast batch upserted successfully.",
+                    StatusCode = 200,
+                    Result = new
+                    {
+                        Count = rows.Count
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"Error upserting forecast batch: {ex.Message}",
                     StatusCode = 500
                 };
             }

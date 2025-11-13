@@ -73,6 +73,18 @@ namespace SWP391Web.Infrastructure.Repository
                     ct);
         }
 
+        public async Task<IEnumerable<DealerDailyInventory>?> GetRangeAsync(Guid dealerId, Guid evTemplateId, DateTime fromDate, DateTime toDate, CancellationToken ct)
+        {
+            return await _context.DealerDailyInventories
+                .AsNoTracking()
+                .Where(x => x.DealerId == dealerId &&
+                    x.EVTemplateId == evTemplateId &&
+                    x.SnapshotDate >= fromDate &&
+                    x.SnapshotDate <= toDate)
+                .OrderBy(x => x.SnapshotDate)
+                .ToListAsync(ct);
+        }
+
         public async Task UpsertRangeAsync(IEnumerable<DealerDailyInventory> rows, CancellationToken ct)
         {
             foreach (var r in rows)
@@ -97,5 +109,7 @@ namespace SWP391Web.Infrastructure.Repository
                 }
             }
         }
+
+
     }
 }
