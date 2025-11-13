@@ -277,5 +277,51 @@ namespace SWP391Web.Infrastructure.Repository
                 .Include(ev => ev.Warehouse)
                 .CountAsync(ev => ev.Warehouse.WarehouseType == WarehouseType.EVInventory, ct);
         }
+
+        public async Task<IReadOnlyDictionary<(Guid DealerId, Guid EVTemplateId), int>> GetInflowAsync(DateTime dayUtc, CancellationToken ct)
+        {
+            var dayOnly = dayUtc.Date;
+            var query =
+                from vdd in _context.VehicleDeliveryDetails
+                join vd in _context.VehicleDeliveries on vdd.VehicleDeliveryId equals vd.Id
+                join b in _context.BookingEVs on vd.BookingEVId equals b.Id
+                join ev in _context.ElectricVehicles on vdd.ElectricVehicleId equals ev.Id
+                where vd.Status == DeliveryStatus.Confirmed
+                      && vdd.Status == DeliveryVehicleStatus.Delivered
+                      && vd.UpdateAt.HasValue && vd.UpdateAt.Value.Date == dayOnly
+                group vdd by new { b.DealerId, ev.ElectricVehicleTemplateId } into g
+                select new
+                {
+                    g.Key.DealerId,
+                    g.Key.ElectricVehicleTemplateId,
+                    Qty = g.Count()
+                };
+
+            var list = await query.AsNoTracking().ToListAsync(ct);
+
+            return list.ToDictionary(x => (x.DealerId, x.ElectricVehicleTemplateId), x => x.Qty);
+        }
+
+        public async Task<IReadOnlyDictionary<(Guid DealerId, Guid EVTemplateId), int>> GetOutflowAsync(DateTime dayUtc, CancellationToken ct)
+        {
+            var dayOnly = dayUtc.Date;
+            var query =
+                from od in _context.OrderDetails
+                join ev in _context.ElectricVehicles on od.ElectricVehicleId equals ev.Id
+                join w in _context.Warehouses on ev.WarehouseId equals w.Id
+                where od.DeliveryDate != null
+                      && od.DeliveryDate.Value.Date == dayOnly
+                group od by new { w.DealerId, ev.ElectricVehicleTemplateId } into g
+                select new
+                {
+                    g.Key.DealerId,
+                    g.Key.ElectricVehicleTemplateId,
+                    Qty = g.Count()
+                };
+
+            var list = await query.AsNoTracking().ToListAsync(ct);
+
+            return list.ToDictionary(x => (x.DealerId!.Value, x.ElectricVehicleTemplateId), x => x.Qty);
+        }
     }
 }

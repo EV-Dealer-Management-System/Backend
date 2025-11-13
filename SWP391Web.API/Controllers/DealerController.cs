@@ -14,10 +14,12 @@ namespace SWP391Web.API.Controllers
     {
         private readonly IDealerService _dealerService;
         private readonly IDealerTierService _dealerTierService;
-        public DealerController(IDealerService dealerService, IDealerTierService dealerTierService)
+        private readonly IDealerDailyInventoryService _dealerDailyInventoryService;
+        public DealerController(IDealerService dealerService, IDealerTierService dealerTierService, IDealerDailyInventoryService dealerDailyInventoryService)
         {
             _dealerService = dealerService;
             _dealerTierService = dealerTierService;
+            _dealerDailyInventoryService = dealerDailyInventoryService;
         }
 
         [HttpPost]
@@ -111,6 +113,14 @@ namespace SWP391Web.API.Controllers
         public async Task<IActionResult> UpdateStatusDealerStaff([FromQuery] bool isActive, [FromQuery] string applicationUserId, CancellationToken ct)
         {
             var response = await _dealerService.UpdateStatusDealerStaff(User, isActive, applicationUserId, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPut]
+        [Route("build-daily-inventory-snapshot")]
+        public async Task<IActionResult> BuildDailyInventorySnapshot([FromQuery] DateTime utcDate, CancellationToken ct)
+        {
+            var response = await _dealerDailyInventoryService.BuildDailySnapshotAsync(utcDate, ct);
             return StatusCode(response.StatusCode, response);
         }
     }

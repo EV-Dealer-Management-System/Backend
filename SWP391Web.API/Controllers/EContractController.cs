@@ -219,5 +219,13 @@ namespace SWP391Web.API.Controllers
             var r = await _econtractService.ReadyCustomerOrderEcontract(eContractId, ct);
             return StatusCode(r.StatusCode, r);
         }
+
+        [HttpPost]
+        [Route("confirm-booking-econtract")]
+        public async Task<ActionResult<ResponseDTO>> ConfirmBookingEVEContract([FromQuery] Guid EContractId, CancellationToken ct)
+        {
+            var r = await _econtractService.ConfirmBookingEVEContract(User, EContractId, ct);
+            return StatusCode(r.StatusCode, r);
+        }
     }
 }
