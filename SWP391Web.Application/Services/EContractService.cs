@@ -1565,15 +1565,23 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContract(UpdateEContractDTO updateEContractDTO, CancellationToken ct)
+        public async Task<VnptResult<UpdateEContractResponse>> UpdateEContract(ClaimsPrincipal userClaim, UpdateEContractDTO updateEContractDTO, CancellationToken ct)
         {
             try
             {
-                var access = await GetAccessTokenAsync();
+                var Role = userClaim.FindFirst(ClaimTypes.Role)?.Value;
+                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 var contract = await _unitOfWork.EContractRepository.GetByIdAsync(Guid.Parse(updateEContractDTO.Id), ct);
                 if (contract is null)
                     return new VnptResult<UpdateEContractResponse>($"Cannot find EContract with id '{updateEContractDTO.Id}'");
 
+                if (Role != StaticUserRole.Admin || (contract.CreatedBy != userId &&
+                     (contract.Type == EcontractType.CustomerOrderPayFull ||
+                      contract.Type == EcontractType.CustomerOrderDepositFull ||
+                      contract.Type == EcontractType.CustomerOrderDepositContract)))
+                    return new VnptResult<UpdateEContractResponse>($"You do not have permission to update this EContract");
+
+                var access = await GetAccessTokenAsync();
                 var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(contract.OwnerBy, ct);
                 if (dealer is null)
                     return new VnptResult<UpdateEContractResponse>($"Cannot find dealer with manager id '{contract.OwnerBy}'");
