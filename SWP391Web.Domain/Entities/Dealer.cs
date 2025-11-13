@@ -31,5 +31,6 @@ namespace SWP391Web.Domain.Entities
         public ICollection<DealerDebt> DealerDebts { get; set; } = new List<DealerDebt>();
         public ICollection<DealerDebtTransaction> DealerDebtTransactions { get; set; } = new List<DealerDebtTransaction>();
         public ICollection<DealerDailyInventory> DealerDailyInventories { get; set; } = new List<DealerDailyInventory>();
+        public ICollection<DealerInventoryForecast> DealerInventoryForecasts { get; set; } = new List<DealerInventoryForecast>();
     }
 }
