@@ -44,6 +44,7 @@ namespace SWP391Web.Infrastructure.Repository
         public IVehicleDeliveryRepository VehicleDeliveryRepository { get; private set; }
         public IDealerDebtTransactionRepository DealerDebtTransactionRepository { get; private set; }
         public IVehicleDeliveryDetailRepository VehicleDeliveryDetailRepository { get; private set; }
+        public IDealerDailyInventoryRepository DealerDailyInventoryRepository { get; private set; }
 
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
@@ -85,10 +86,31 @@ namespace SWP391Web.Infrastructure.Repository
             VehicleDeliveryRepository = new VehicleDeliveryRepository(_context);
             DealerDebtTransactionRepository = new DealerDebtTransactionRepository(_context);
             VehicleDeliveryDetailRepository = new VehicleDeliveryDetailRepository(_context);
+            DealerDailyInventoryRepository = new DealerDailyInventoryRepository(_context);
         }
         public async Task<int> SaveAsync()
         {
             return await _context.SaveChangesAsync();
+        }
+
+        public async Task<int> SaveAsync(CancellationToken ct = default)
+        {
+            return await _context.SaveChangesAsync(ct);
+        }
+
+        public async Task ExecuteInTransactionAsync(Func<Task> action, CancellationToken ct = default)
+        {
+           await using var transaction = await _context.Database.BeginTransactionAsync(ct);
+            try
+            {
+                await action();
+                await transaction.CommitAsync(ct);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
         }
     }
 }

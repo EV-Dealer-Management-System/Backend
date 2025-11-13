@@ -32,5 +32,6 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> CreateDepositEContractConfirm(Guid customerOderId, CancellationToken ct);
         Task<ResponseDTO> ReadyCustomerOrderEcontract(Guid eContractId, CancellationToken ct);
         Task<ResponseDTO> CreatePayFullConfirmationEContract(Guid customerOderId, CancellationToken ct);
+        Task<ResponseDTO> ConfirmBookingEVEContract(ClaimsPrincipal userClaim, Guid EContractId, CancellationToken ct);
     }
 }
