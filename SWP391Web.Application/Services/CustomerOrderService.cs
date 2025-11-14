@@ -38,6 +38,140 @@ namespace SWP391Web.Application.Services
             _dealerDebtTransactionService = dealerDebtTransactionService;
             _eContractService = eContractService;
         }
+
+        public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
+        {
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found.",
+                        StatusCode = 404,
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
+                if (dealer == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found.",
+                        StatusCode = 404,
+                    };
+                }
+
+                var quote = await _unitOfWork.QuoteRepository.GetQuoteByIdAsync(createCustomerOrderDTO.QuoteId);
+                if (quote == null || quote.DealerId != dealer.Id)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Quote not found.",
+                        StatusCode = 404,
+                    };
+                }
+
+                if (quote.Status != QuoteStatus.Accepted)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Quote is not accepted yet. Cann't create order.",
+                        StatusCode = 400,
+                    };
+                }
+
+                var orderNo = _unitOfWork.CustomerOrderRepository.GenerateOrderNumber();
+
+                OrderStatus status;
+                var amount = quote.TotalAmount;
+                decimal? deposit = null;
+                var depositRate = await _depositSetting.GetDepositSetting(user, ct);
+                deposit = amount * (depositRate.Data!.MaxDepositPercentage / 100);
+
+                var customerOrder = new CustomerOrder
+                {
+                    CustomerId = createCustomerOrderDTO.CustomerId,
+                    QuoteId = quote.Id,
+                    OrderNo = orderNo,
+                    CreatedAt = DateTime.UtcNow,
+                    TotalAmount = amount,
+                    DepositAmount = deposit.HasValue ? (int)deposit.Value : (int?)null,
+                    Status = status,
+                    CreatedBy = userId,
+                    Quote = quote
+                };
+
+                await _unitOfWork.CustomerOrderRepository.AddAsync(customerOrder, ct);
+
+                await HandleOrderDetail(customerOrder, ct);
+
+                var getCustomerOrder = _mapper.Map<GetCustomerOrderDTO>(customerOrder);
+
+                await _unitOfWork.SaveAsync();
+                if (createCustomerOrderDTO.IsCash && !createCustomerOrderDTO.IsPayFull)
+                {
+                    var transaction = new Transaction
+                    {
+                        Amount = createCustomerOrderDTO.IsPayFull ? amount : deposit.Value,
+                        CustomerOrderId = customerOrder.Id,
+                        Status = TransactionStatus.Success,
+                        OrderRef = customerOrder.OrderNo.ToString(),
+                        Currency = "VND",
+                        Note = createCustomerOrderDTO.IsPayFull ? $"Full payment for order {customerOrder.OrderNo}" : $"Deposit payment for order {customerOrder.OrderNo}",
+                        Provider = "Cash",
+                    };
+                    await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
+
+                    if (!createCustomerOrderDTO.IsPayFull)
+                    {
+                        await _eContractService.CreateDepositEContractConfirm(customerOrder.Id, ct);
+                    }
+                }
+                else
+                {
+                    var transaction = new Transaction
+                    {
+                        Amount = amount,
+                        CustomerOrderId = customerOrder.Id,
+                        Status = TransactionStatus.Success,
+                        OrderRef = customerOrder.OrderNo.ToString(),
+                        Currency = "VND",
+                        Note = $"Full payment for order {customerOrder.OrderNo}",
+                        Provider = "Cash",
+                    };
+
+                    await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
+
+                    await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
+                }
+
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Create customer order successfully.",
+                    StatusCode = 201,
+                    Result = getCustomerOrder,
+                };
+
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500,
+                };
+            }
+        }
         public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
         {
             try
@@ -152,11 +286,7 @@ namespace SWP391Web.Application.Services
                 var getCustomerOrder = _mapper.Map<GetCustomerOrderDTO>(customerOrder);
 
                 await _unitOfWork.SaveAsync();
-                if (!createCustomerOrderDTO.IsCash)
-                {
-                    await _paymentService.CreateVNPayLink(customerOrder.Id, ct);
-                }
-                else if (createCustomerOrderDTO.IsCash && !createCustomerOrderDTO.IsPayFull)
+                if (createCustomerOrderDTO.IsCash && !createCustomerOrderDTO.IsPayFull)
                 {
                     var transaction = new Transaction
                     {
@@ -214,6 +344,147 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
+
+        public async Task<ResponseDTO> ConfirmCashReceipt(ClaimsPrincipal userClaim, Guid customerOrderId, CancellationToken ct)
+        {
+            try
+            {
+                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found.",
+                        StatusCode = 404,
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository
+                    .GetDealerByManagerOrStaffAsync(userId, ct);
+                if (dealer == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found.",
+                        StatusCode = 404,
+                    };
+                }
+
+                var customerOrder = await _unitOfWork.CustomerOrderRepository
+                    .GetByIdAsync(customerOrderId);
+
+                if (customerOrder is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Customer order not found.",
+                        StatusCode = 404,
+                    };
+                }
+
+                if (customerOrder.Status != OrderStatus.FullPending &&
+                    customerOrder.Status != OrderStatus.DepositPending)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Only orders with FullPending or DepositPending status can confirm cash receipt.",
+                        StatusCode = 400,
+                    };
+                }
+
+                var originalStatus = customerOrder.Status;
+
+                decimal paidAmount;
+                string paymentNote;
+                string eContractNote;
+
+                if (originalStatus == OrderStatus.FullPending)
+                {
+                    paidAmount = customerOrder.TotalAmount;
+                    paymentNote = $"Full cash payment for order {customerOrder.OrderNo}";
+                    eContractNote = "FullPayment";
+
+                    customerOrder.Status = OrderStatus.Completed;
+                }
+                else
+                {
+                    if (!customerOrder.DepositAmount.HasValue)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Deposit amount is not set for this order.",
+                            StatusCode = 400,
+                        };
+                    }
+
+                    paidAmount = customerOrder.DepositAmount.Value;
+                    paymentNote = $"Cash deposit payment for order {customerOrder.OrderNo}";
+                    eContractNote = "Deposit";
+
+                    customerOrder.Status = OrderStatus.Depositing;
+                }
+
+                _unitOfWork.CustomerOrderRepository.Update(customerOrder);
+                await _unitOfWork.SaveAsync();
+
+                var recordPayment = new RecordPaymentDTO
+                {
+                    PaidAtUtc = DateTime.UtcNow,
+                    Amount = paidAmount,
+                    ReferenceNo = $"CustomerOrderId|{customerOrder.OrderNo}",
+                    Note = paymentNote,
+                    Method = "Cash",
+                };
+
+                await _dealerDebtService.AddPaymentForDealerAsync(dealer.Id, recordPayment, ct);
+
+                var transaction = new Transaction
+                {
+                    Amount = paidAmount,
+                    CustomerOrderId = customerOrder.Id,
+                    Status = TransactionStatus.Success,
+                    OrderRef = customerOrder.OrderNo.ToString(),
+                    Currency = "VND",
+                    Note = paymentNote,
+                    Provider = "Cash",
+                };
+
+                await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
+
+                if (originalStatus == OrderStatus.FullPending)
+                {
+                    await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
+                }
+                else
+                {
+                    await _eContractService.CreateDepositEContractConfirm(customerOrder.Id, ct);
+                }
+
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Cash receipt confirmed successfully.",
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = $"Error to confirm cash receipt: {ex.Message}",
+                    StatusCode = 500,
+                };
+            }
+        }
+
 
         private async Task HandleOrderDetail(CustomerOrder customerOrder, CancellationToken ct)
         {

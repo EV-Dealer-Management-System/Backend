@@ -1612,9 +1612,28 @@ namespace SWP391Web.Application.Services
                 var anchors = EContractPdf.FindAnchors(filePdf, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
                 var positionA = GetVnptEContractPosition(filePdf, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
                 var positionB = GetVnptEContractPosition(filePdf, anchors["ĐẠI_DIỆN_BÊN_B"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: 0);
-                response.Data.PositionA = positionA.Item1;
+                response.Data!.PositionA = positionA.Item1;
                 response.Data.PositionB = positionB.Item1;
                 response.Data.PageSign = positionA.Item2;
+
+                var updatedAt = DateTime.UtcNow.ToString("HH:mm:ss dd/MM/yyyy");
+                if (contract.Type == EcontractType.DealerContract || contract.Type == EcontractType.BookingContract)
+                {
+                    await _emailService.NotifyEContractUpdated(dealerManager.Email!, dealerManager.FullName!, updatedAt, response.Data.DownloadUrl!);
+                }
+                else
+                {
+                    if (contract.CustomerOrder is null)
+                        return new VnptResult<UpdateEContractResponse>($"EContract with id '{updateEContractDTO.Id}' does not link to any customer order");
+                    if (contract.CustomerOrder.Customer is null)
+                        return new VnptResult<UpdateEContractResponse>($"Customer order with id '{contract.CustomerOrder.Id}' does not link to any customer");
+                    if (string.IsNullOrWhiteSpace(contract.CustomerOrder.Customer.Email))
+                        return new VnptResult<UpdateEContractResponse>($"Customer with id '{contract.CustomerOrder.Customer.Id}' does not have email");
+                    if (string.IsNullOrWhiteSpace(contract.CustomerOrder.Customer.FullName))
+                        return new VnptResult<UpdateEContractResponse>($"Customer with id '{contract.CustomerOrder.Customer.Id}' does not have full name");
+
+                    await _emailService.NotifyEContractUpdated(contract.CustomerOrder.Customer.Email, contract.CustomerOrder.Customer.FullName, updatedAt, response.Data.DownloadUrl!);
+                }
                 return response;
             }
             catch (Exception ex)
