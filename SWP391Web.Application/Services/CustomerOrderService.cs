@@ -39,139 +39,139 @@ namespace SWP391Web.Application.Services
             _eContractService = eContractService;
         }
 
-        public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
-        {
-            try
-            {
-                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (userId == null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "User not found.",
-                        StatusCode = 404,
-                    };
-                }
+        //public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
+        //{
+        //    try
+        //    {
+        //        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        if (userId == null)
+        //        {
+        //            return new ResponseDTO
+        //            {
+        //                IsSuccess = false,
+        //                Message = "User not found.",
+        //                StatusCode = 404,
+        //            };
+        //        }
 
-                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
-                if (dealer == null)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Dealer not found.",
-                        StatusCode = 404,
-                    };
-                }
+        //        var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
+        //        if (dealer == null)
+        //        {
+        //            return new ResponseDTO
+        //            {
+        //                IsSuccess = false,
+        //                Message = "Dealer not found.",
+        //                StatusCode = 404,
+        //            };
+        //        }
 
-                var quote = await _unitOfWork.QuoteRepository.GetQuoteByIdAsync(createCustomerOrderDTO.QuoteId);
-                if (quote == null || quote.DealerId != dealer.Id)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Quote not found.",
-                        StatusCode = 404,
-                    };
-                }
+        //        var quote = await _unitOfWork.QuoteRepository.GetQuoteByIdAsync(createCustomerOrderDTO.QuoteId);
+        //        if (quote == null || quote.DealerId != dealer.Id)
+        //        {
+        //            return new ResponseDTO
+        //            {
+        //                IsSuccess = false,
+        //                Message = "Quote not found.",
+        //                StatusCode = 404,
+        //            };
+        //        }
 
-                if (quote.Status != QuoteStatus.Accepted)
-                {
-                    return new ResponseDTO
-                    {
-                        IsSuccess = false,
-                        Message = "Quote is not accepted yet. Cann't create order.",
-                        StatusCode = 400,
-                    };
-                }
+        //        if (quote.Status != QuoteStatus.Accepted)
+        //        {
+        //            return new ResponseDTO
+        //            {
+        //                IsSuccess = false,
+        //                Message = "Quote is not accepted yet. Cann't create order.",
+        //                StatusCode = 400,
+        //            };
+        //        }
 
-                var orderNo = _unitOfWork.CustomerOrderRepository.GenerateOrderNumber();
+        //        var orderNo = _unitOfWork.CustomerOrderRepository.GenerateOrderNumber();
 
-                OrderStatus status;
-                var amount = quote.TotalAmount;
-                decimal? deposit = null;
-                var depositRate = await _depositSetting.GetDepositSetting(user, ct);
-                deposit = amount * (depositRate.Data!.MaxDepositPercentage / 100);
+        //        OrderStatus status;
+        //        var amount = quote.TotalAmount;
+        //        decimal? deposit = null;
+        //        var depositRate = await _depositSetting.GetDepositSetting(user, ct);
+        //        deposit = amount * (depositRate.Data!.MaxDepositPercentage / 100);
 
-                var customerOrder = new CustomerOrder
-                {
-                    CustomerId = createCustomerOrderDTO.CustomerId,
-                    QuoteId = quote.Id,
-                    OrderNo = orderNo,
-                    CreatedAt = DateTime.UtcNow,
-                    TotalAmount = amount,
-                    DepositAmount = deposit.HasValue ? (int)deposit.Value : (int?)null,
-                    Status = status,
-                    CreatedBy = userId,
-                    Quote = quote
-                };
+        //        var customerOrder = new CustomerOrder
+        //        {
+        //            CustomerId = createCustomerOrderDTO.CustomerId,
+        //            QuoteId = quote.Id,
+        //            OrderNo = orderNo,
+        //            CreatedAt = DateTime.UtcNow,
+        //            TotalAmount = amount,
+        //            DepositAmount = deposit.HasValue ? (int)deposit.Value : (int?)null,
+        //            Status = status,
+        //            CreatedBy = userId,
+        //            Quote = quote
+        //        };
 
-                await _unitOfWork.CustomerOrderRepository.AddAsync(customerOrder, ct);
+        //        await _unitOfWork.CustomerOrderRepository.AddAsync(customerOrder, ct);
 
-                await HandleOrderDetail(customerOrder, ct);
+        //        await HandleOrderDetail(customerOrder, ct);
 
-                var getCustomerOrder = _mapper.Map<GetCustomerOrderDTO>(customerOrder);
+        //        var getCustomerOrder = _mapper.Map<GetCustomerOrderDTO>(customerOrder);
 
-                await _unitOfWork.SaveAsync();
-                if (createCustomerOrderDTO.IsCash && !createCustomerOrderDTO.IsPayFull)
-                {
-                    var transaction = new Transaction
-                    {
-                        Amount = createCustomerOrderDTO.IsPayFull ? amount : deposit.Value,
-                        CustomerOrderId = customerOrder.Id,
-                        Status = TransactionStatus.Success,
-                        OrderRef = customerOrder.OrderNo.ToString(),
-                        Currency = "VND",
-                        Note = createCustomerOrderDTO.IsPayFull ? $"Full payment for order {customerOrder.OrderNo}" : $"Deposit payment for order {customerOrder.OrderNo}",
-                        Provider = "Cash",
-                    };
-                    await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
+        //        await _unitOfWork.SaveAsync();
+        //        if (createCustomerOrderDTO.IsCash && !createCustomerOrderDTO.IsPayFull)
+        //        {
+        //            var transaction = new Transaction
+        //            {
+        //                Amount = createCustomerOrderDTO.IsPayFull ? amount : deposit.Value,
+        //                CustomerOrderId = customerOrder.Id,
+        //                Status = TransactionStatus.Success,
+        //                OrderRef = customerOrder.OrderNo.ToString(),
+        //                Currency = "VND",
+        //                Note = createCustomerOrderDTO.IsPayFull ? $"Full payment for order {customerOrder.OrderNo}" : $"Deposit payment for order {customerOrder.OrderNo}",
+        //                Provider = "Cash",
+        //            };
+        //            await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
 
-                    if (!createCustomerOrderDTO.IsPayFull)
-                    {
-                        await _eContractService.CreateDepositEContractConfirm(customerOrder.Id, ct);
-                    }
-                }
-                else
-                {
-                    var transaction = new Transaction
-                    {
-                        Amount = amount,
-                        CustomerOrderId = customerOrder.Id,
-                        Status = TransactionStatus.Success,
-                        OrderRef = customerOrder.OrderNo.ToString(),
-                        Currency = "VND",
-                        Note = $"Full payment for order {customerOrder.OrderNo}",
-                        Provider = "Cash",
-                    };
+        //            if (!createCustomerOrderDTO.IsPayFull)
+        //            {
+        //                await _eContractService.CreateDepositEContractConfirm(customerOrder.Id, ct);
+        //            }
+        //        }
+        //        else
+        //        {
+        //            var transaction = new Transaction
+        //            {
+        //                Amount = amount,
+        //                CustomerOrderId = customerOrder.Id,
+        //                Status = TransactionStatus.Success,
+        //                OrderRef = customerOrder.OrderNo.ToString(),
+        //                Currency = "VND",
+        //                Note = $"Full payment for order {customerOrder.OrderNo}",
+        //                Provider = "Cash",
+        //            };
 
-                    await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
+        //            await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
 
-                    await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
-                }
+        //            await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
+        //        }
 
-                await _unitOfWork.SaveAsync();
+        //        await _unitOfWork.SaveAsync();
 
-                return new ResponseDTO
-                {
-                    IsSuccess = true,
-                    Message = "Create customer order successfully.",
-                    StatusCode = 201,
-                    Result = getCustomerOrder,
-                };
+        //        return new ResponseDTO
+        //        {
+        //            IsSuccess = true,
+        //            Message = "Create customer order successfully.",
+        //            StatusCode = 201,
+        //            Result = getCustomerOrder,
+        //        };
 
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO
-                {
-                    IsSuccess = false,
-                    Message = ex.Message,
-                    StatusCode = 500,
-                };
-            }
-        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new ResponseDTO
+        //        {
+        //            IsSuccess = false,
+        //            Message = ex.Message,
+        //            StatusCode = 500,
+        //        };
+        //    }
+        //}
         public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
         {
             try
