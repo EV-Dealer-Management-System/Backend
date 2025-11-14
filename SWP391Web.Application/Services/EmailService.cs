@@ -217,5 +217,16 @@ namespace SWP391Web.Application.Service
                 { "SupportEmail", _configuration["Company:Email"] ?? "" }
             });
         }
+
+        public Task<bool> SendContractReviewAndConfirm(string to, string customerName, string contractName, string confirmLink)
+        {
+            return SendEmailFromTemplate(to, "PublicCustomer_ContractReviewAndConfirm", new Dictionary<string, string>
+            {
+                { "{CustomerName}", customerName },
+                { "{ContractName}", contractName },
+                { "{ViewLink}", confirmLink },
+                { "{SupportEmail}",  _configuration["Company:Email"] ?? "" }
+            });
+        }
     }
 }

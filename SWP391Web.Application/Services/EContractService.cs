@@ -386,6 +386,12 @@ namespace SWP391Web.Application.Services
                 var access = await GetAccessTokenAsync();
                 var created = await CreateDepositDocumentAsync(access.Data!.AccessToken, dealer, customerOrder, ct);
 
+                var customer = customerOrder.Customer;
+                var contract = customerOrder.EContracts!.First();
+                var vnptUrl = created.Data!.DownloadUrl;
+                var confirmLink = StaticLinkUrl.WebUrl + $"/confirm-econtract?downloadUrl={vnptUrl}&econtractId={contract.Id}&email={customer.Email}";
+                await _emailService.SendContractReviewAndConfirm(customer.Email!, customer.FullName!, contract.Name!, confirmLink);
+
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -549,6 +555,13 @@ namespace SWP391Web.Application.Services
 
                 var accessToken = await GetAccessTokenAsync();
                 var created = await CreatePayFullConfirmationDraftEContract(customerOrder, dealer, ct);
+
+                var customer = customerOrder.Customer;
+                var contract = customerOrder.EContracts!.First();
+                var vnptUrl = created.Data!.DownloadUrl;
+                var confirmLink = StaticLinkUrl.WebUrl + $"/confirm-econtract?downloadUrl={vnptUrl}&econtractId={contract.Id}&email={customer.Email}";
+                await _emailService.SendContractReviewAndConfirm(customer.Email!, customer.FullName!, contract.Name!, confirmLink);
+
                 return new ResponseDTO
                 {
                     IsSuccess = true,
