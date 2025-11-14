@@ -18,6 +18,8 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _context.EContracts
                 .Include(ec => ec.BookingEV)
+                .Include(ec => ec.CustomerOrder)
+                    .ThenInclude(co => co != null ? co.Customer : null!)
                 .Where(x => x.Id == id).FirstOrDefaultAsync(ct);
         }
 

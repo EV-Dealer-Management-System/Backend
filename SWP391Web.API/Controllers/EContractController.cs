@@ -162,7 +162,7 @@ namespace SWP391Web.API.Controllers
         [HttpPost]
         [Route("update-econtract")]
         [Consumes("application/json")]
-        [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
+        [Authorize(Roles = StaticUserRole.AllRolesInSystem)]
         public async Task<ActionResult<ResponseDTO>> UpdateEContract([FromBody] UpdateEContractDTO dto, CancellationToken ct)
         {
             var r = await _econtractService.UpdateEContract(User, dto, ct);
