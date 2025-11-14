@@ -29,7 +29,7 @@ namespace SWP391Web.API.Controllers
 
         [HttpGet]
         [Route("get-all-customer-orders")]
-        public async Task<ActionResult<ResponseDTO>> GetAllCustomerOrdersAsync([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, OrderStatus? orderStatus = default, CancellationToken ct = default)
+        public async Task<ActionResult<ResponseDTO>> GetAllCustomerOrdersAsync([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] OrderStatus? orderStatus = default, CancellationToken ct = default)
         {
             var response = await _customerOrderService.GetAllCustomerOrders(User, pageNumber, pageSize, orderStatus, ct);
             return StatusCode(response.StatusCode, response);
@@ -50,5 +50,22 @@ namespace SWP391Web.API.Controllers
             var response = await _customerOrderService.PayDeposit(customerOrderId, isCash, ct);
             return StatusCode(response.StatusCode, response);
         }
+
+        [HttpPost]
+        [Route("confirm-customer-order/{customerOrderId:guid}")]
+        public async Task<ActionResult<ResponseDTO>> ConfirmCustomerOrder(Guid customerOrderId, [FromQuery] string email, [FromQuery] bool isAccept, CancellationToken ct)
+        {
+            var response = await _customerOrderService.CustomerConfirm(customerOrderId, email, isAccept, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost]
+        [Route("pay-customer-order")]
+        public async Task<ActionResult<ResponseDTO>> PayCustomerOrder([FromBody] ConfirmCustomerOrderDTO confirmCustomerOrderDTO, CancellationToken ct)
+        {
+            var response = await _customerOrderService.PayCustomerOrder(User, confirmCustomerOrderDTO, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
     }
 }

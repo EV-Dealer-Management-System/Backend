@@ -26,5 +26,6 @@ namespace SWP391Web.Application.IService
         Task<bool> NotifyAddedToDealerExistingUser(string to, string fullName, string roleInDealer, string dealerName);
         Task<bool> NotifyPaymentLinkToCustomer(string to, string customerName, int orderNo, decimal orderAmount, string paymentLink);
         Task<bool> NotifyEContractUpdated(string to, string fullName, string UpdatedAt, string downloadLink);
+        Task<bool> SendContractReviewAndConfirm(string to, string customerName, string contractName, string confirmLink);
     }
 }
