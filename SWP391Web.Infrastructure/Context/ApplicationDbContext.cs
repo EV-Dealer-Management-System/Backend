@@ -51,6 +51,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<DealerDebtTransaction> DealerDebtTransactions { get; set; }
         public DbSet<DealerDailyInventory> DealerDailyInventories { get; set; }
         public DbSet<DealerInventoryForecast> DealerInventoryForecasts { get; set; }
+        public DbSet<DealerInventoryRisk> DealerInventoryRisks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -560,6 +561,21 @@ namespace SWP391Web.Infrastructure.Context
 
                 e.HasOne(x => x.EVTemplate)
                  .WithMany(ev => ev.DealerInventoryForecasts)
+                 .HasForeignKey(x => x.EVTemplateId)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            /******************************************************************************/
+            // Configure DealerInventoryRisk entity
+
+            modelBuilder.Entity<DealerInventoryRisk>(e =>
+            {
+                e.HasOne(x => x.Dealer)
+                 .WithMany(d => d.DealerInventoryRisks)
+                 .HasForeignKey(x => x.DealerId)
+                 .OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.EVTemplate)
+                 .WithMany(ev => ev.DealerInventoryRisks)
                  .HasForeignKey(x => x.EVTemplateId)
                  .OnDelete(DeleteBehavior.Restrict);
             });

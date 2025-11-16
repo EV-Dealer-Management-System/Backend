@@ -632,6 +632,227 @@ new
     Status = EmailStatus.Active
 });
 
+            modelBuilder.Entity<EmailTemplate>().HasData(
+    new
+    {
+        Id = Guid.Parse("f3c5b8d2-4a67-4a5f-9c32-11c5b4f8d2a1"),
+        TemplateName = "NotifyEContractUpdated",
+        SenderName = "EVSystem",
+        SenderEmail = "hoangtuzami@gmail.com",
+        Category = "Contract",
+        SubjectLine = "[EVSystem] Hợp đồng điện tử của bạn đã được cập nhật",
+        PreHeaderText = "Hợp đồng điện tử gắn với tài khoản của bạn vừa được cập nhật. Vui lòng xem lại để đảm bảo quyền lợi.",
+        PersonalizationTags = "{CustomerName},{UpdatedAt},{ViewLink},{SupportEmail}",
+        BodyContent = @"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Thông báo cập nhật hợp đồng điện tử</title>
+  <style>
+    body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; margin:0; padding:0; background:#f3f4f6; color:#111827; }
+    .wrap { padding:40px 0; }
+    .card {
+        width:640px; margin:auto; background:#ffffff; border-radius:14px;
+        box-shadow:0 8px 24px rgba(15,23,42,0.10); overflow:hidden;
+    }
+    .header {
+        background:linear-gradient(90deg,#F59E0B,#F97316);
+        color:#ffffff; text-align:center; padding:26px 20px;
+    }
+    .header h1 { margin:0; font-size:24px; font-weight:700; letter-spacing:0.3px; }
+    .header p { margin:8px 0 0; font-size:14px; opacity:.95; }
+    .content { padding:36px 42px; line-height:1.7; }
+    .content p { font-size:15px; margin:0 0 12px; }
+    .info-box {
+        background:#f9fafb; border:1px solid #e5e7eb;
+        border-radius:10px; padding:16px 20px; margin:22px 0;
+    }
+    .info-box table { width:100%; border-collapse:collapse; }
+    .info-box td { padding:6px 0; font-size:14px; vertical-align:top; }
+    .info-box td:first-child { width:180px; font-weight:600; color:#374151; }
+    .btn {
+        display:inline-block; padding:14px 30px; background:#F97316;
+        color:#ffffff !important; text-decoration:none; border-radius:8px;
+        font-weight:600; font-size:15px; letter-spacing:0.3px;
+        transition:all 0.25s ease;
+    }
+    .btn:hover { background:#EA580C; transform:translateY(-2px); }
+    .note {
+        font-size:13px; color:#6b7280; margin-top:24px;
+        border-top:1px dashed #e5e7eb; padding-top:16px; line-height:1.6;
+    }
+    .footer {
+        background:#fafafa; text-align:center; padding:20px;
+        font-size:13px; color:#6b7280; border-top:1px solid #e5e7eb;
+    }
+    .footer a { color:#F97316; text-decoration:none; }
+    @media (max-width:640px){
+        .card{width:95%}
+        .content{padding:26px}
+    }
+  </style>
+</head>
+<body>
+  <div class='wrap'>
+    <div class='card'>
+      <div class='header'>
+        <h1>Electric Vehicle Management System</h1>
+        <p>Thông báo cập nhật hợp đồng điện tử</p>
+      </div>
+      <div class='content'>
+        <p>Xin chào <strong>{CustomerName}</strong>,</p>
+        <p>
+          Hợp đồng điện tử gắn với tài khoản của bạn trên <strong>EVSystem</strong> đã được cập nhật.
+        </p>
+        <p>
+          Để đảm bảo quyền lợi và nắm rõ các điều khoản mới nhất, vui lòng đăng nhập và kiểm tra lại nội dung hợp đồng.
+        </p>
+
+        <div class='info-box'>
+          <table>
+            <tr>
+              <td>Loại tài liệu:</td>
+              <td>Hợp đồng điện tử (eContract)</td>
+            </tr>
+            <tr>
+              <td>Thời điểm cập nhật:</td>
+              <td><strong>{UpdatedAt}</strong></td>
+            </tr>
+          </table>
+        </div>
+
+        <p style='text-align:center; margin:26px 0;'>
+          <a href='{ViewLink}' class='btn'>Xem hợp đồng đã cập nhật</a>
+        </p>
+
+        <p class='note'>
+          ℹ️ <strong>Lưu ý:</strong><br>
+          • Vui lòng đọc kỹ lại nội dung hợp đồng trước khi tiếp tục các bước tiếp theo trong quy trình.<br>
+          • Nếu bạn có bất kỳ câu hỏi hoặc cần hỗ trợ thêm, vui lòng liên hệ bộ phận hỗ trợ EVSystem qua email:
+            <a href='mailto:{SupportEmail}'>{SupportEmail}</a>.<br>
+          • Đây là email được gửi tự động, vui lòng không trả lời trực tiếp email này.
+        </p>
+      </div>
+      <div class='footer'>
+        <p>Trân trọng,<br><strong>EVSystem Support Team</strong></p>
+        <p>Website: <a href='https://electricvehiclesystem.click'>electricvehiclesystem.click</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>",
+        FooterContent = "EVSystem Support – Electric Vehicle Management System",
+        CallToAction = "<a href=\"{ViewLink}\" class=\"btn\">Xem hợp đồng đã cập nhật</a>",
+        Language = "Vietnamese",
+        RecipientType = "Customer",
+        CreatedBy = "System",
+        CreatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+        UpdatedBy = "System",
+        UpdatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc),
+        Status = EmailStatus.Active
+    });
+
+            modelBuilder.Entity<EmailTemplate>().HasData(
+new
+{
+    Id = Guid.Parse("E3F7C9B1-3C44-4A89-9AF3-98D7C1B56CC1"),
+    TemplateName = "PublicCustomer_ContractReviewAndConfirm",
+    SenderName = "EVSystem",
+    SenderEmail = "hoangtuzami@gmail.com",
+    Category = "EContract",
+    SubjectLine = "Hợp đồng điện tử của bạn đã sẵn sàng – vui lòng xem và xác nhận",
+    PreHeaderText = "Bạn nhận được một hợp đồng điện tử từ EVSystem. Vui lòng xem và xác nhận.",
+    PersonalizationTags = "{CustomerName},{ContractName},{ViewLink},{SupportEmail}",
+    BodyContent = @"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Xác nhận hợp đồng điện tử</title>
+  <style>
+    body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; margin:0; padding:0; background:#f5f6fa; color:#111827; }
+    .wrap { padding:40px 0; }
+    .card {
+        width:640px; margin:auto; background:#ffffff; border-radius:14px;
+        box-shadow:0 8px 20px rgba(0,0,0,0.08); overflow:hidden;
+    }
+    .header {
+        background:#2563EB; color:#ffffff; text-align:center; padding:26px 24px;
+    }
+    .header h1 { margin:0; font-size:23px; font-weight:700; }
+    .content { padding:36px 42px; line-height:1.7; }
+    .content p { font-size:15px; margin-bottom:14px; }
+    .btn-primary {
+        display:inline-block; padding:14px 32px; background:#2563EB;
+        color:#ffffff !important; text-decoration:none; border-radius:8px;
+        font-size:15px; font-weight:600; transition:0.25s ease;
+    }
+    .btn-primary:hover { background:#1E40AF; }
+    .footer {
+        background:#fafafa; text-align:center; padding:20px;
+        font-size:13px; color:#6b7280; border-top:1px solid #e5e7eb;
+    }
+    .footer a { color:#2563EB; text-decoration:none; }
+  </style>
+</head>
+
+<body>
+  <div class='wrap'>
+    <div class='card'>
+      <div class='header'>
+        <h1>Hợp đồng điện tử cần xác nhận</h1>
+      </div>
+
+      <div class='content'>
+        <p>Xin chào <strong>{CustomerName}</strong>,</p>
+
+        <p>
+          Bạn nhận được một hợp đồng điện tử từ <strong>EVSystem</strong> liên quan đến:
+          <strong>{ContractName}</strong>.
+        </p>
+
+        <p>
+          Vui lòng nhấn nút bên dưới để xem toàn bộ nội dung hợp đồng. 
+          Trên trang hiển thị hợp đồng, bạn có thể lựa chọn:
+        </p>
+
+        <ul style='font-size:15px; line-height:1.7;'>
+          <li><strong>Xác nhận hợp đồng</strong> nếu bạn đồng ý</li>
+          <li><strong>Từ chối / Không đồng ý</strong> nếu bạn không chấp thuận</li>
+        </ul>
+
+        <div style='text-align:center; margin:30px 0;'>
+          <a href='{ViewLink}' class='btn-primary'>Xem hợp đồng</a>
+        </div>
+
+        <p style='font-size:14px; color:#6b7280; margin-top:20px;'>
+          Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ:
+          <a href='mailto:{SupportEmail}'>{SupportEmail}</a>.
+        </p>
+      </div>
+
+      <div class='footer'>
+        <p>Trân trọng,<br><strong>EVSystem</strong></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>",
+    FooterContent = "EVSystem – Hệ thống hợp đồng điện tử",
+    CallToAction = "<a href=\"{ViewLink}\" class=\"btn-primary\">Xem hợp đồng</a>",
+    Language = "Vietnamese",
+    RecipientType = "PublicCustomer",
+    CreatedBy = "System",
+    CreatedAt = new DateTime(2025, 02, 01, 0, 0, 0, DateTimeKind.Utc),
+    UpdatedBy = "System",
+    UpdatedAt = new DateTime(2025, 02, 01, 0, 0, 0, DateTimeKind.Utc),
+    Status = EmailStatus.Active
+});
+
+
         }
     }
 }
