@@ -1380,8 +1380,8 @@ namespace SWP391Web.Application.Services
             await _unitOfWork.UserManagerRepository.SetPassword(dealerManager, password);
             var data = new Dictionary<string, string>
             {
-                ["{FullName}"] = dealerManager.FullName,
-                ["{UserName}"] = dealerManager.Email,
+                ["{FullName}"] = dealerManager.FullName!,
+                ["{UserName}"] = dealerManager.Email!,
                 ["{Password}"] = password,
                 ["{LoginUrl}"] = StaticLinkUrl.WebUrl,
                 ["{Company}"] = _cfg["Company:Name"] ?? throw new ArgumentNullException("Company:Name is not exist"),
@@ -1588,10 +1588,12 @@ namespace SWP391Web.Application.Services
                 if (contract is null)
                     return new VnptResult<UpdateEContractResponse>($"Cannot find EContract with id '{updateEContractDTO.Id}'");
 
-                if (Role != StaticUserRole.Admin || Role != StaticUserRole.EVMStaff || (contract.CreatedBy != userId &&
-                     (contract.Type == EcontractType.CustomerOrderPayFull ||
-                      contract.Type == EcontractType.CustomerOrderDepositFull ||
-                      contract.Type == EcontractType.CustomerOrderDepositContract)))
+                var isAdminOrStaff = Role == StaticUserRole.Admin || Role == StaticUserRole.EVMStaff;
+                var isCreator = contract.CreatedBy != userId && 
+                    (contract.Type == EcontractType.CustomerOrderPayFull ||
+                    contract.Type == EcontractType.CustomerOrderDepositFull ||
+                    contract.Type == EcontractType.CustomerOrderDepositContract);
+                if (!isAdminOrStaff && !isCreator)
                     return new VnptResult<UpdateEContractResponse>($"You do not have permission to update this EContract");
 
                 var access = await GetAccessTokenAsync();
