@@ -34,5 +34,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<ElectricVehicle?> GetFirstAvailableVehicleAsync(Guid versionId, Guid colorId, IEnumerable<Guid>? excludeVehicleIds, CancellationToken ct);
         Task<IReadOnlyDictionary<(Guid DealerId, Guid EVTemplateId), int>> GetInflowAsync(DateTime dayUtc, CancellationToken ct);
         Task<IReadOnlyDictionary<(Guid DealerId, Guid EVTemplateId), int>> GetOutflowAsync(DateTime dayUtc, CancellationToken ct);
+        Task<IReadOnlyDictionary<(Guid DealerId, Guid EVTemplateId), int>> GetDealerOnHandStockAsync(CancellationToken ct);
     }
 }

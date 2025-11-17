@@ -14,8 +14,8 @@ namespace SWP391Web.API.Controllers
     {
         private readonly IDealerService _dealerService;
         private readonly IDealerTierService _dealerTierService;
-        private readonly IDealerDailyInventoryService _dealerDailyInventoryService;
-        public DealerController(IDealerService dealerService, IDealerTierService dealerTierService, IDealerDailyInventoryService dealerDailyInventoryService)
+        private readonly IDealerForecastService _dealerDailyInventoryService;
+        public DealerController(IDealerService dealerService, IDealerTierService dealerTierService, IDealerForecastService dealerDailyInventoryService)
         {
             _dealerService = dealerService;
             _dealerTierService = dealerTierService;
@@ -126,10 +126,11 @@ namespace SWP391Web.API.Controllers
 
         [HttpGet]
         [Route("get-demand-series")]
+        [Authorize]
         public async Task<IActionResult> GetDemandSeries([FromQuery] Guid dealerId, [FromQuery] Guid evTemplateId,
             [FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct)
         {
-            var response = await _dealerDailyInventoryService.GetDemandSeriesAsync(dealerId, evTemplateId, from, to, ct);
+            var response = await _dealerDailyInventoryService.GetDemandSeriesAsync(User, dealerId, evTemplateId, from, to, ct);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -138,6 +139,14 @@ namespace SWP391Web.API.Controllers
         public async Task<IActionResult> UpsertForecastBatch([FromBody] List<UpsertDealerInventoryForecastDTO> upsertsDTO, CancellationToken ct)
         {
             var response = await _dealerDailyInventoryService.UpsertForecastBatchAsync(upsertsDTO, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost]
+        [Route("evaluate-inventory-risk")]
+        public async Task<IActionResult> EvaluateInventoryRisk([FromQuery] int horizonDays, CancellationToken ct)
+        {
+            var response = await _dealerDailyInventoryService.EvaluateInventoryRiskAsync(horizonDays, ct);
             return StatusCode(response.StatusCode, response);
         }
     }

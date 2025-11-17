@@ -2,11 +2,6 @@
 using SWP391Web.Domain.Entities;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.IRepository;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SWP391Web.Infrastructure.Repository
 {
@@ -27,6 +22,15 @@ namespace SWP391Web.Infrastructure.Repository
                                        && x.SnapshotDate == dateOnly, ct);
         }
 
+        public async Task<IReadOnlyList<DealerDailyInventory>> GetByDateAsync(DateTime date, CancellationToken ct)
+        {
+            var dayOnly = date.Date;
+            return await _context.DealerDailyInventories
+                .AsNoTracking()
+                .Where(x => x.SnapshotDate == dayOnly)
+                .ToListAsync(ct);
+        }
+
         public async Task<Dictionary<(Guid DealerId, Guid EVTemplateId), int>> GetClosingStockMapAsync(DateTime snapshotDateUtc, CancellationToken ct)
         {
             return await _context.DealerDailyInventories
@@ -38,16 +42,11 @@ namespace SWP391Web.Infrastructure.Repository
                     cancellationToken: ct);
         }
 
-        public async Task<Dictionary<(Guid DealerId, Guid EVTemplateId), int>> GetInflowAsync(DateTime snapshotDateUtc, CancellationToken ct)
+        public async Task<DateTime?> GetMaxSnapshotDateAsync(CancellationToken ct)
         {
-            var dateOnly = snapshotDateUtc.Date;
             return await _context.DealerDailyInventories
-                .AsNoTracking()
-                .Where(x => x.SnapshotDate == dateOnly)
-                .ToDictionaryAsync(
-                    x => (x.DealerId, x.EVTemplateId),
-                    x => x.Inflow,
-                    ct);
+            .Select(x => (DateTime?)x.SnapshotDate)
+            .MaxAsync(ct);
         }
 
         public async Task<Dictionary<(Guid DealerId, Guid EVTemplateId), int>> GetOpeningStockAsync(DateTime snapshotDateUtc, CancellationToken ct)
@@ -59,18 +58,6 @@ namespace SWP391Web.Infrastructure.Repository
                     keySelector: x => (x.DealerId, x.EVTemplateId),
                     elementSelector: x => x.OpeningStock,
                     cancellationToken: ct);
-        }
-
-        public async Task<Dictionary<(Guid DealerId, Guid EVTemplateId), int>> GetOutflowAsync(DateTime snapshotDateUtc, CancellationToken ct)
-        {
-            var dateOnly = snapshotDateUtc.Date;
-            return await _context.DealerDailyInventories
-                .AsNoTracking()
-                .Where(x => x.SnapshotDate == dateOnly)
-                .ToDictionaryAsync(
-                    x => (x.DealerId, x.EVTemplateId),
-                    x => x.Outflow,
-                    ct);
         }
 
         public async Task<IEnumerable<DealerDailyInventory>?> GetRangeAsync(Guid dealerId, Guid evTemplateId, DateTime fromDate, DateTime toDate, CancellationToken ct)

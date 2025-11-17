@@ -22,5 +22,6 @@ namespace SWP391Web.Domain.Entities
         public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
         public ICollection<DealerDailyInventory> DealerDailyInventories { get; set; } = new List<DealerDailyInventory>();
         public ICollection<DealerInventoryForecast> DealerInventoryForecasts { get; set; } = new List<DealerInventoryForecast>();
+        public ICollection<DealerInventoryRisk> DealerInventoryRisks { get; set; } = new List<DealerInventoryRisk>();
     }
 }
