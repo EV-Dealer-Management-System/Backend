@@ -389,7 +389,7 @@ namespace SWP391Web.Application.Services
                 var customer = customerOrder.Customer;
                 var contract = customerOrder.EContracts!.First();
                 var vnptUrl = created.Data!.DownloadUrl;
-                var confirmLink = StaticLinkUrl.WebUrl + $"/confirm-econtract?downloadUrl={vnptUrl}&econtractId={contract.Id}&email={customer.Email}";
+                var confirmLink = StaticLinkUrl.WebUrl + $"/confirm-econtract?downloadUrl={vnptUrl}&customerOrderId={customerOderId}&email={customer.Email}";
                 await _emailService.SendContractReviewAndConfirm(customer.Email!, customer.FullName!, contract.Name!, confirmLink);
 
                 return new ResponseDTO
@@ -559,7 +559,7 @@ namespace SWP391Web.Application.Services
                 var customer = customerOrder.Customer;
                 var contract = customerOrder.EContracts!.First();
                 var vnptUrl = created.Data!.DownloadUrl;
-                var confirmLink = StaticLinkUrl.WebUrl + $"/confirm-econtract?downloadUrl={vnptUrl}&econtractId={contract.Id}&email={customer.Email}";
+                var confirmLink = StaticLinkUrl.WebUrl + $"/confirm-econtract?downloadUrl={vnptUrl}&customerOrderId={customerOderId}&email={customer.Email}";
                 await _emailService.SendContractReviewAndConfirm(customer.Email!, customer.FullName!, contract.Name!, confirmLink);
 
                 return new ResponseDTO
@@ -1444,11 +1444,10 @@ namespace SWP391Web.Application.Services
             {
                 dataEl = dataProp;
             }
-            // 2️⃣ Nếu API trả về trực tiếp "token" và "document"
             else if (root.TryGetProperty("token", out var tokenProp) &&
                      root.TryGetProperty("document", out var docProp))
             {
-                dataEl = root; // gán root để đọc token/doc như cũ
+                dataEl = root;
             }
             else
             {
@@ -1589,7 +1588,7 @@ namespace SWP391Web.Application.Services
                     return new VnptResult<UpdateEContractResponse>($"Cannot find EContract with id '{updateEContractDTO.Id}'");
 
                 var isAdminOrStaff = Role == StaticUserRole.Admin || Role == StaticUserRole.EVMStaff;
-                var isCreator = contract.CreatedBy != userId && 
+                var isCreator = contract.CreatedBy != userId &&
                     (contract.Type == EcontractType.CustomerOrderPayFull ||
                     contract.Type == EcontractType.CustomerOrderDepositFull ||
                     contract.Type == EcontractType.CustomerOrderDepositContract);

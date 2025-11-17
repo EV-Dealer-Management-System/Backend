@@ -224,7 +224,7 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<List<ElectricVehicle>> GetBookedVehicleByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId)
         {
             return await _context.ElectricVehicles
-                .Include(ev => ev.Warehouse) 
+                .Include(ev => ev.Warehouse)
                 .Include(ev => ev.ElectricVehicleTemplate)
                 .Where(ev => ev.ElectricVehicleTemplate.Version.ModelId == modelId
                              && ev.ElectricVehicleTemplate.VersionId == versionId
@@ -256,7 +256,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .Where(ev => ev.Status == ElectricVehicleStatus.Available
                     && ev.ElectricVehicleTemplate.VersionId == versionId
                     && ev.ElectricVehicleTemplate.ColorId == colorId);
-            if( excludeVehicleIds != null && excludeVehicleIds.Any())
+            if (excludeVehicleIds != null && excludeVehicleIds.Any())
             {
                 query = query.Where(ev => !excludeVehicleIds.Contains(ev.Id));
             }
@@ -304,13 +304,18 @@ namespace SWP391Web.Infrastructure.Repository
 
         public async Task<IReadOnlyDictionary<(Guid DealerId, Guid EVTemplateId), int>> GetOutflowAsync(DateTime dayUtc, CancellationToken ct)
         {
-            var dayOnly = dayUtc.Date;
+            var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
+            var vnStart = DateTime.SpecifyKind(dayUtc.Date, DateTimeKind.Unspecified);
+            var vnEnd = vnStart.AddDays(1);
+
+            var utcStart = TimeZoneInfo.ConvertTimeToUtc(vnStart, vnTimeZone);
+            var utcEnd = TimeZoneInfo.ConvertTimeToUtc(vnEnd, vnTimeZone);
             var query =
                 from od in _context.OrderDetails
                 join ev in _context.ElectricVehicles on od.ElectricVehicleId equals ev.Id
                 join w in _context.Warehouses on ev.WarehouseId equals w.Id
-                where od.DeliveryDate != null
-                      && od.DeliveryDate.Value.Date == dayOnly
+                where od.CreatedAt >= utcStart && od.CreatedAt < utcEnd
                 group od by new { w.DealerId, ev.ElectricVehicleTemplateId } into g
                 select new
                 {
@@ -322,6 +327,32 @@ namespace SWP391Web.Infrastructure.Repository
             var list = await query.AsNoTracking().ToListAsync(ct);
 
             return list.ToDictionary(x => (x.DealerId!.Value, x.ElectricVehicleTemplateId), x => x.Qty);
+        }
+
+        public async Task<IReadOnlyDictionary<(Guid DealerId, Guid EVTemplateId), int>> GetDealerOnHandStockAsync(CancellationToken ct)
+        {
+            var validStatuses = new[]
+            {
+                ElectricVehicleStatus.AtDealer,
+                ElectricVehicleStatus.DealerPending,
+                ElectricVehicleStatus.DepositBooked
+            };
+
+            var query =
+                from ev in _context.ElectricVehicles
+                join w in _context.Warehouses on ev.WarehouseId equals w.Id
+                where w.WarehouseType == WarehouseType.Dealer
+                      && validStatuses.Contains(ev.Status)
+                group ev by new { w.DealerId, ev.ElectricVehicleTemplateId } into g
+                select new
+                {
+                    DealerId = g.Key.DealerId!.Value,
+                    g.Key.ElectricVehicleTemplateId,
+                    Qty = g.Count()
+                };
+
+            var list = await query.AsNoTracking().ToListAsync(ct);
+            return list.ToDictionary(x => (x.DealerId, x.ElectricVehicleTemplateId), x => x.Qty);
         }
     }
 }

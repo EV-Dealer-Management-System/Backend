@@ -13,9 +13,9 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<Dictionary<(Guid DealerId, Guid EVTemplateId), int>> GetOpeningStockAsync(DateTime snapshotDateUtc, CancellationToken ct);
 
         Task<DealerDailyInventory?> GetAsync(Guid dealerId, Guid evTemplateId, DateTime snapshotDateUtc, CancellationToken ct);
-        Task<Dictionary<(Guid DealerId, Guid EVTemplateId), int>> GetInflowAsync(DateTime dayUtc, CancellationToken ct);
-        Task<Dictionary<(Guid DealerId, Guid EVTemplateId), int>> GetOutflowAsync(DateTime dayUtc, CancellationToken ct);
         Task UpsertRangeAsync(IEnumerable<DealerDailyInventory> rows, CancellationToken ct);
         Task<IEnumerable<DealerDailyInventory>?> GetRangeAsync(Guid dealerId, Guid evTemplateId, DateTime fromDate, DateTime toDate, CancellationToken ct);
+        Task<DateTime?> GetMaxSnapshotDateAsync(CancellationToken ct);
+        Task<IReadOnlyList<DealerDailyInventory>> GetByDateAsync(DateTime date, CancellationToken ct);
     }
 }

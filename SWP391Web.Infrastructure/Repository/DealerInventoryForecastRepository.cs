@@ -55,5 +55,15 @@ namespace SWP391Web.Infrastructure.Repository
                 .OrderBy(x => x.TargetDate)
                 .ToListAsync(ct);
         }
+
+        public async Task<IReadOnlyList<DealerInventoryForecast>> GetForecastsInRangeAsync(DateTime from, DateTime to, CancellationToken ct)
+        {
+            var fromDate = from.Date;
+            var toDate = to.Date;
+            return await _context.DealerInventoryForecasts
+                .AsNoTracking()
+                .Where(f => f.TargetDate >= fromDate && f.TargetDate <= toDate)
+                .ToListAsync(ct);
+        }
     }
 }

@@ -12,6 +12,6 @@ namespace SWP391Web.Infrastructure.IRepository
         Task UpsertRangeAsync(IEnumerable<DealerInventoryForecast> rows, CancellationToken ct);
 
         Task<IEnumerable<DealerInventoryForecast>> GetRangeAsync(Guid dealerId, Guid evTemplateId, DateTime fromDate, DateTime toDate, CancellationToken ct);
-
+        Task<IReadOnlyList<DealerInventoryForecast>> GetForecastsInRangeAsync(DateTime from, DateTime to, CancellationToken ct);
     }
 }
