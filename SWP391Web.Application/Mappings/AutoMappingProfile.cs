@@ -1,5 +1,6 @@
 ﻿using Aspose.Words.XAttr;
 using AutoMapper;
+using Microsoft.AspNetCore.DataProtection.XmlEncryption;
 using SWP391Web.Application.DTO.Appointment;
 using SWP391Web.Application.DTO.AppointmentSetting;
 using SWP391Web.Application.DTO.Auth;
@@ -220,6 +221,8 @@ namespace SWP391Web.Application.Mappings
             CreateMap<DealerDailyInventory, DemandSeriesPointDTO>()
                 .ForMember(dest => dest.Ds, opt => opt.MapFrom(src => src.SnapshotDate))
                 .ForMember(dest => dest.Y, opt => opt.MapFrom(src => src.Outflow)).ReverseMap();
+
+            CreateMap<DealerDailyInventory, ForecastTargetDTO>().ReverseMap();
         }
     }
 }
