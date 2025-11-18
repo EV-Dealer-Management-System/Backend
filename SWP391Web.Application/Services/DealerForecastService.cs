@@ -377,5 +377,60 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
+
+        public async Task<ResponseDTO> GetForecastTargetsAsync(CancellationToken ct)
+        {
+            try
+            {
+                var maxDate = await _unitOfWork.DealerDailyInventoryRepository.GetMaxSnapshotDateAsync(ct);
+
+                if (maxDate is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = true,
+                        StatusCode = 200,
+                        Message = "No snapshot data yet.",
+                        Result = new
+                        {
+                            SnapshotDate = (DateTime?)null,
+                            Count = 0,
+                            Targets = new List<ForecastTargetDTO>()
+                        }
+                    };
+                }
+
+                var snapshotDate = maxDate.Value.Date;
+
+                var inventories = await _unitOfWork.DealerDailyInventoryRepository.GetByDateAsync(snapshotDate, ct);
+
+                var targets = inventories.Where(x => x.OpeningStock > 0 || x.ClosingStock > 0).ToList();
+                
+                var targetDTOs = _mapper.Map<List<ForecastTargetDTO>>(targets);
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Forecast targets retrieved successfully.",
+                    Result = new
+                    {
+                        SnapshotDate = snapshotDate,
+                        Count = targets.Count,
+                        Targets = targetDTOs
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error getting forecast targets: {ex.Message}"
+                };
+            }
+        }
+
     }
 }

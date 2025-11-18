@@ -149,5 +149,13 @@ namespace SWP391Web.API.Controllers
             var response = await _dealerDailyInventoryService.EvaluateInventoryRiskAsync(horizonDays, ct);
             return StatusCode(response.StatusCode, response);
         }
+
+        [HttpGet]
+        [Route("get-forecast-targets")]
+        public async Task<IActionResult> GetForecastTargets(CancellationToken ct)
+        {
+            var response = await _dealerDailyInventoryService.GetForecastTargetsAsync(ct);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

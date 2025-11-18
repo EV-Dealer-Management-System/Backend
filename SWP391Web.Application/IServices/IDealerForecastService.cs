@@ -15,5 +15,6 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> GetDemandSeriesAsync(ClaimsPrincipal userClaim, Guid? dealerId, Guid evTemplateId, DateTime from, DateTime to, CancellationToken ct);
         Task<ResponseDTO> UpsertForecastBatchAsync(IEnumerable<UpsertDealerInventoryForecastDTO> forecasts, CancellationToken ct);
         Task<ResponseDTO> EvaluateInventoryRiskAsync(int horizonDays, CancellationToken ct);
+        Task<ResponseDTO> GetForecastTargetsAsync(CancellationToken ct);
     }
 }
