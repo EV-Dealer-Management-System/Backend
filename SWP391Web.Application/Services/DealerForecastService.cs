@@ -118,9 +118,8 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var maxDate = await _unitOfWork.DealerDailyInventoryRepository.GetMaxSnapshotDateAsync(ct);
-
-                if (maxDate is null)
+                var snapshotDate = await _unitOfWork.DealerDailyInventoryRepository.GetMaxSnapshotDateAsync(ct);
+                if (snapshotDate is null)
                 {
                     return new ResponseDTO
                     {
@@ -130,9 +129,9 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var snapshotDate = maxDate.Value.Date;
+                snapshotDate = new DateTime(snapshotDate.Value.Year, snapshotDate.Value.Month, snapshotDate.Value.Day, 0, 0, 0, DateTimeKind.Utc);
 
-                var latestInventories = await _unitOfWork.DealerDailyInventoryRepository.GetByDateAsync(snapshotDate, ct);
+                var latestInventories = await _unitOfWork.DealerDailyInventoryRepository.GetByDateAsync(snapshotDate.Value, ct);
 
                 var latestMap = latestInventories.Where(x => x.ClosingStock > 0)
                     .ToDictionary(
@@ -153,11 +152,10 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var from = snapshotDate.AddDays(1);
-                var to = snapshotDate.AddDays(horizonDays);
+                var from = snapshotDate.Value.AddDays(1);
+                var to = snapshotDate.Value.AddDays(horizonDays);
 
-                var forecasts = await _unitOfWork.DealerInventoryForecastRepository
-                    .GetForecastsInRangeAsync(from, to, ct);
+                var forecasts = await _unitOfWork.DealerInventoryForecastRepository.GetForecastsInRangeAsync(from, to, ct);
 
                 var forecastByPair = forecasts.GroupBy(f => new { f.DealerId, f.EVTemplateId })
                     .ToDictionary(
@@ -166,8 +164,9 @@ namespace SWP391Web.Application.Services
 
                 var risks = new List<DealerInventoryRisk>();
 
-                const int DefaultAlertThreshold = 5;
+                const int DefaultAlertThreshold = 10;
                 const int CriticalThreshold = 0;
+                const int MediumThreshold = 5;
 
                 foreach (var kvp in latestMap)
                 {
@@ -190,6 +189,10 @@ namespace SWP391Web.Application.Services
                         if (current <= CriticalThreshold)
                         {
                             level = InventoryRiskLevel.Critical;
+                        }
+                        else if (current <= MediumThreshold)
+                        {
+                            level = InventoryRiskLevel.Medium;
                         }
                         else if (current <= DefaultAlertThreshold)
                         {
@@ -405,7 +408,7 @@ namespace SWP391Web.Application.Services
                 var inventories = await _unitOfWork.DealerDailyInventoryRepository.GetByDateAsync(snapshotDate, ct);
 
                 var targets = inventories.Where(x => x.OpeningStock > 0 || x.ClosingStock > 0).ToList();
-                
+
                 var targetDTOs = _mapper.Map<List<ForecastTargetDTO>>(targets);
 
                 return new ResponseDTO
@@ -431,6 +434,5 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
-
     }
 }

@@ -143,8 +143,8 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPost]
-        [Route("evaluate-inventory-risk")]
-        public async Task<IActionResult> EvaluateInventoryRisk([FromQuery] int horizonDays, CancellationToken ct)
+        [Route("evaluate-inventory-risk/{horizonDays:int}")]
+        public async Task<IActionResult> EvaluateInventoryRisk(int horizonDays, CancellationToken ct)
         {
             var response = await _dealerDailyInventoryService.EvaluateInventoryRiskAsync(horizonDays, ct);
             return StatusCode(response.StatusCode, response);
