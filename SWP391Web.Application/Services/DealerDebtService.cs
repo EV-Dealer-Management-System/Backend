@@ -4,12 +4,15 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.DealerDebt;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -153,21 +156,72 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetDealerDebtBalanceAtQuarterNow(Guid dealerId, CancellationToken ct)
+        public async Task<ResponseDTO> GetDealerDebtBalanceAtQuarterNow(ClaimsPrincipal userClaim, Guid? dealerId, CancellationToken ct)
         {
             try
             {
-                var dealer = await _unitOfWork.DealerRepository.GetByIdAsync(dealerId, ct);
-                if (dealer is null)
+                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+                if (userId is null)
                 {
-                    return new ResponseDTO(false)
+                    return new ResponseDTO()
                     {
-                        StatusCode = 404,
-                        Message = "Dealer not found."
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "The user not login yet."
                     };
                 }
 
-                var dealerDebt = await _unitOfWork.DealerDebtRepository.GetOrCreateQuarterAsync(dealerId, DateTime.Now, ct);
+                var role = userClaim.FindFirst(ClaimTypes.Role)!.Value;
+                if (role is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 403,
+                        Message = "The user has no role assigned."
+                    };
+                }
+
+                Dealer? dealer;
+                if (role.Equals(StaticUserRole.Admin) || role.Equals(StaticUserRole.EVMStaff))
+                {
+                    if (dealerId is null)
+                    {
+                        return new ResponseDTO(false)
+                        {
+                            StatusCode = 400,
+                            Message = "DealerId is required for admin or staff users."
+                        };
+                    }
+
+                    dealer = await _unitOfWork.DealerRepository.GetByIdAsync(dealerId.Value, ct);
+                    if (dealer is null)
+                    {
+                        return new ResponseDTO(false)
+                        {
+                            StatusCode = 404,
+                            Message = "Dealer not found."
+                        };
+                    }
+                }
+                else
+                {
+                    dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                    if (dealer is null)
+                    {
+                        dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId, ct);
+                        if (dealer is null)
+                        {
+                            return new ResponseDTO(false)
+                            {
+                                StatusCode = 404,
+                                Message = "Dealer not found for the current user."
+                            };
+                        }
+                    }
+                }
+
+                var dealerDebt = await _unitOfWork.DealerDebtRepository.GetOrCreateQuarterAsync(dealer.Id, DateTime.Now, ct);
                 if (dealerDebt is null)
                 {
                     return new ResponseDTO(false)
@@ -195,9 +249,113 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public Task<ResponseDTO> GetDealerDebtDetails(Guid dealerId, DateTime fromDateUtc, DateTime toDateUtc, CancellationToken ct)
+        public async Task<ResponseDTO> GetDealerDebtDetails(ClaimsPrincipal userClaim, Guid? dealerId, DateTime fromDateUtc, DateTime toDateUtc, int pageNumber, int pageSize, CancellationToken ct)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "The user not login yet."
+                    };
+                }
+
+                var role = userClaim.FindFirst(ClaimTypes.Role)!.Value;
+                if (role is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 403,
+                        Message = "The user has no role assigned."
+                    };
+                }
+
+                Dealer? dealer;
+                if (role.Equals(StaticUserRole.Admin) || role.Equals(StaticUserRole.EVMStaff))
+                {
+                    if (dealerId is null)
+                    {
+                        return new ResponseDTO(false)
+                        {
+                            StatusCode = 400,
+                            Message = "DealerId is required for admin or staff users."
+                        };
+                    }
+
+                    dealer = await _unitOfWork.DealerRepository.GetByIdAsync(dealerId.Value, ct);
+                    if (dealer is null)
+                    {
+                        return new ResponseDTO(false)
+                        {
+                            StatusCode = 404,
+                            Message = "Dealer not found."
+                        };
+                    }
+                }
+                else
+                {
+                    dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                    if (dealer is null)
+                    {
+                        dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId, ct);
+                        if (dealer is null)
+                        {
+                            return new ResponseDTO(false)
+                            {
+                                StatusCode = 404,
+                                Message = "Dealer not found for the current user."
+                            };
+                        }
+                    }
+                }
+
+                Expression<Func<DealerDebtTransaction, bool>> filter = ddt => ddt
+                    .DealerId == dealer.Id &&
+                    ddt.CreatedAtUtc >= fromDateUtc &&
+                    ddt.CreatedAtUtc <= toDateUtc;
+
+                (IReadOnlyList<DealerDebtTransaction> items, int total) result;
+
+                result = await _unitOfWork.DealerDebtTransactionRepository.GetPagedAsync(
+                            filter: filter,
+                            includes: null,
+                            orderBy: dm => dm.CreatedAtUtc,
+                            ascending: false,
+                            pageNumber: pageNumber,
+                            pageSize: pageSize,
+                            ct: ct);
+
+                var dealerDebtDetails = _mapper.Map<List<GetDealerDebtTransactionDTO>>(result.items);
+                return new ResponseDTO
+                {
+                    StatusCode = 200,
+                    Message = "Successfully retrieved dealer debt details.",
+                    Result = new
+                    {
+                        data = dealerDebtDetails,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = pageSize,
+                            TotalItems = result.total,
+                            TotalPages = (int)Math.Ceiling((double)result.total / pageSize)
+                        }
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO(false)
+                {
+                    StatusCode = 500,
+                    Message = $"Failed to retrieve dealer debt details: {ex.Message}"
+                };
+            }
         }
     }
 }
