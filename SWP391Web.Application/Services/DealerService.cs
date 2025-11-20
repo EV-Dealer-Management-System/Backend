@@ -25,11 +25,13 @@ namespace SWP391Web.Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
         private readonly IMapper _mapper;
-        public DealerService(IUnitOfWork unitOfWork, IEmailService emailService, IMapper mapper)
+        private readonly IDealerTierService _dealerTierService;
+        public DealerService(IUnitOfWork unitOfWork, IEmailService emailService, IMapper mapper, IDealerTierService dealerTierService)
         {
             _unitOfWork = unitOfWork;
             _emailService = emailService;
             _mapper = mapper;
+            _dealerTierService = dealerTierService;
         }
         public async Task<ResponseDTO> CreateDealerStaffAsync(ClaimsPrincipal claimUser, CreateDealerStaffDTO createDealerStaffDTO, CancellationToken ct)
         {
@@ -395,6 +397,17 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
+                var effectivePolicy = await _dealerTierService.GetEffectivePolicyAsync(dealer.Id, ct);
+                if (effectivePolicy is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer tier policy information not found"
+                    };
+                }
+
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -402,9 +415,10 @@ namespace SWP391Web.Application.Services
                     Message = "Get dealer information successfully.",
                     Result = new
                     {
-                        dealer = _mapper.Map<GetDealerDTO>(dealer),
-                        memberTotal = memberTotal,
-                        econtractDealer = _mapper.Map<List<GetEContractDTO>>(econtractDealer)
+                        Dealer = _mapper.Map<GetDealerDTO>(dealer),
+                        MemberTotal = memberTotal,
+                        EcontractDealer = _mapper.Map<List<GetEContractDTO>>(econtractDealer),
+                        EffectivePolicy = effectivePolicy
                     }
                 };
             }
