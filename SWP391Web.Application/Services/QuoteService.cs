@@ -303,14 +303,39 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var filteredQuotes = quotes
-                    .Where(q =>
-                        q.QuoteDetails.All(dt =>
-                            dt.Promotion == null ||
-                            !dt.Promotion.EndDate.HasValue ||
-                            dt.Promotion.EndDate >= DateTime.UtcNow))
-                    .Select(q => _mapper.Map<GetQuoteDTO>(q))
-                    .ToList();
+                var filteredQuotes = new List<GetQuoteDTO>();
+
+                foreach (var q in quotes)
+                {
+                    bool isShow = true;
+
+                    foreach (var dt in q.QuoteDetails)
+                    {
+                        // Check promotion expiration
+                        if (dt.Promotion != null &&
+                            dt.Promotion.EndDate.HasValue &&
+                            dt.Promotion.EndDate < DateTime.UtcNow)
+                        {
+                            isShow = false;
+                            break;
+                        }
+
+                        // Check vehicle availability
+                        var availableVehicles = await _unitOfWork.ElectricVehicleRepository
+                            .GetAvailableVehicleByDealerAsync(q.DealerId, dt.VersionId, dt.ColorId);
+
+                        if (!availableVehicles.Any())
+                        {
+                            isShow = false;
+                            break;
+                        }
+                    }
+
+                    if (isShow)
+                    {
+                        filteredQuotes.Add(_mapper.Map<GetQuoteDTO>(q));
+                    }
+                }
 
                 return new ResponseDTO
                 {
