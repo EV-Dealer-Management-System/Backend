@@ -13,5 +13,9 @@ namespace SWP391Web.Domain.Constants
         public const string EContractDealerTier3 = "DEALER_TIER_3";
         public const string EContractDealerTier4 = "DEALER_TIER_4";
         public const string EContractDealerTier5 = "DEALER_TIER_5";
+
+        public const string EContractDepositCustomerOrder = "CUSTOMER_DEPOSIT_CONTRACT";
+        public const string EContractPayFullCustomerOrder = "CUSTOMER_PAY_FULL_E_CONTRACT";
+        public const string EContractPayRemainderCustomerOrder = "CUSTOMER_PAY_REMAINDER_E_CONTRACT";
     }
 }

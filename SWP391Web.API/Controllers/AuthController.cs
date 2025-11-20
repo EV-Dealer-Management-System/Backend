@@ -125,5 +125,21 @@ namespace SWP391Web.API.Controllers
             if (string.IsNullOrWhiteSpace(returnUrl)) return @default;
             return returnUrl;
         }
+
+        [HttpPost]
+        [Route("register-mobile")]
+        public async Task<IActionResult> RegisterMobile(RegisterMobileDTO registerMobileDTO)
+        {
+            var response = await _authService.RegisterMobile(registerMobileDTO);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost]
+        [Route("login-mobile")]
+        public async Task<IActionResult> LoginMobile(LoginMobileDTO loginMobileDTO, CancellationToken ct)
+        {
+            var response = await _authService.LoginMobile(loginMobileDTO, ct);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

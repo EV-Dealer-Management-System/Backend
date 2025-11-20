@@ -17,9 +17,11 @@ namespace SWP391Web.Domain.Entities
         public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
         public string CreatedBy { get; private set; } = null!;
         public string OwnerBy { get; private set; } = null!;
+        public Guid? CustomerOrderId { get; private set; }
 
         public ApplicationUser Owner { get; private set; } = null!;
-        public BookingEV? BookingEV { get; private set; } = null!;
+        public BookingEV? BookingEV { get; private set; }
+        public CustomerOrder? CustomerOrder { get; private set; }
 
         private EContract() { }
         public EContract(Guid id, string htmlTemaple, string? name, string createdBy, string ownerBy, EContractStatus status, EcontractType type)
@@ -31,6 +33,18 @@ namespace SWP391Web.Domain.Entities
             CreatedBy = createdBy;
             OwnerBy = ownerBy;
             Type = type;
+        }
+
+        public EContract(Guid id, string htmlTemaple, string? name, string createdBy, string ownerBy, Guid customerOrderId, EContractStatus status, EcontractType type)
+        {
+            Id = id;
+            HtmlTemaple = htmlTemaple;
+            Name = name;
+            Status = status;
+            CreatedBy = createdBy;
+            OwnerBy = ownerBy;
+            Type = type;
+            CustomerOrderId = customerOrderId;
         }
 
         public void UpdateHtmlTemplate(string htmlTemplate, string? name)

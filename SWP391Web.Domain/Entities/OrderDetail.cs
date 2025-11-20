@@ -12,6 +12,7 @@ namespace SWP391Web.Domain.Entities
         public Guid CustomerOrderId { get; set; }
         public Guid ElectricVehicleId { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? DeliveryDate { get; set; }
 
         public CustomerOrder CustomerOrder { get; set; } = null!;
         public ElectricVehicle ElectricVehicle { get; set; } = null!;

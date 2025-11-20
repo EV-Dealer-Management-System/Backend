@@ -13,6 +13,7 @@ namespace SWP391Web.Application.DTO.ElectricVehicle
         public ViewVersionName? Version { get; set; }
         public ViewColorName? Color { get; set; }
         public int TotalQuantity { get; set; }
+        public DateTime? ImportDate { get; set; }
         public List<WarehouseQuantityDTO> Warehouses { get; set; } = new();
     }
 

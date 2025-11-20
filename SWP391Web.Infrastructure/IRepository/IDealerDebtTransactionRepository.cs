@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Infrastructure.IRepository
 {
-    public interface IEContractTermRepository : IRepository<EContractTerm>
+    public interface IDealerDebtTransactionRepository : IRepository<DealerDebtTransaction>
     {
-        Task<EContractTerm?> GetByLevelAsync(int level, CancellationToken ct);
+        Task<bool> IsDuplicated(Guid dealerId, string externalId, CancellationToken ct);
     }
 }

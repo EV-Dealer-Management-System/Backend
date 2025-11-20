@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SWP391Web.Application.DTO.Dealer;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Constants;
+using SWP391Web.Domain.Enums;
 
 namespace SWP391Web.API.Controllers
 {
@@ -13,10 +14,12 @@ namespace SWP391Web.API.Controllers
     {
         private readonly IDealerService _dealerService;
         private readonly IDealerTierService _dealerTierService;
-        public DealerController(IDealerService dealerService, IDealerTierService dealerTierService)
+        private readonly IDealerForecastService _dealerDailyInventoryService;
+        public DealerController(IDealerService dealerService, IDealerTierService dealerTierService, IDealerForecastService dealerDailyInventoryService)
         {
             _dealerService = dealerService;
             _dealerTierService = dealerTierService;
+            _dealerDailyInventoryService = dealerDailyInventoryService;
         }
 
         [HttpPost]
@@ -43,10 +46,10 @@ namespace SWP391Web.API.Controllers
         [Route("get-all-dealers")]
         //[Authorize(Roles = StaticUserRole.Admin)]
         public async Task<IActionResult> GetAllDealers([FromQuery] string? filterOn, [FromQuery] string? filterQuery,
-            [FromQuery] string? sortBy, [FromQuery] bool? isAcsending, [FromQuery] int pageNumber = 1,
+            [FromQuery] string? sortBy, [FromQuery] DealerStatus? status, [FromQuery] bool? isAcsending, [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10, CancellationToken ct = default)
         {
-            var response = await _dealerService.GetAllDealerAsync(filterOn, filterQuery, sortBy, isAcsending, pageNumber, pageSize, ct);
+            var response = await _dealerService.GetAllDealerAsync(filterOn, filterQuery, sortBy, status, isAcsending, pageNumber, pageSize, ct);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -84,6 +87,75 @@ namespace SWP391Web.API.Controllers
         {
             var response = await _dealerTierService.GetEffectivePolicyAsync(dealerId, ct);
             return StatusCode(200, response);
+        }
+
+        [HttpGet]
+        [Route("dealer-information")]
+        [Authorize(Roles = StaticUserRole.DealerManager)]
+        public async Task<IActionResult> DealerInformation(CancellationToken ct)
+        {
+            var response = await _dealerService.DealerInformationAsync(User, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPut]
+        [Route("update-dealer-status/{dealerId}")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<IActionResult> UpdateStatusDealer([FromRoute] Guid dealerId, [FromQuery] DealerStatus status, CancellationToken ct)
+        {
+            var response = await _dealerService.UpdateStatusDealer(dealerId, status, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPut]
+        [Route("update-dealer-staff-status")]
+        [Authorize(Roles = StaticUserRole.DealerManager)]
+        public async Task<IActionResult> UpdateStatusDealerStaff([FromQuery] bool isActive, [FromQuery] string applicationUserId, CancellationToken ct)
+        {
+            var response = await _dealerService.UpdateStatusDealerStaff(User, isActive, applicationUserId, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPut]
+        [Route("build-daily-inventory-snapshot")]
+        public async Task<IActionResult> BuildDailyInventorySnapshot([FromQuery] DateTime utcDate, CancellationToken ct)
+        {
+            var response = await _dealerDailyInventoryService.BuildDailySnapshotAsync(utcDate, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpGet]
+        [Route("get-demand-series")]
+        [Authorize]
+        public async Task<IActionResult> GetDemandSeries([FromQuery] Guid dealerId, [FromQuery] Guid evTemplateId,
+            [FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct)
+        {
+            var response = await _dealerDailyInventoryService.GetDemandSeriesAsync(User, dealerId, evTemplateId, from, to, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost]
+        [Route("upsert-forecast-batch")]
+        public async Task<IActionResult> UpsertForecastBatch([FromBody] List<UpsertDealerInventoryForecastDTO> upsertsDTO, CancellationToken ct)
+        {
+            var response = await _dealerDailyInventoryService.UpsertForecastBatchAsync(upsertsDTO, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost]
+        [Route("evaluate-inventory-risk")]
+        public async Task<IActionResult> EvaluateInventoryRisk([FromQuery] int horizonDays, CancellationToken ct)
+        {
+            var response = await _dealerDailyInventoryService.EvaluateInventoryRiskAsync(horizonDays, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpGet]
+        [Route("get-forecast-targets")]
+        public async Task<IActionResult> GetForecastTargets(CancellationToken ct)
+        {
+            var response = await _dealerDailyInventoryService.GetForecastTargetsAsync(ct);
+            return StatusCode(response.StatusCode, response);
         }
     }
 }

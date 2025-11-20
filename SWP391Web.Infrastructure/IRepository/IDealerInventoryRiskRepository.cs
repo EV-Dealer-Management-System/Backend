@@ -7,7 +7,8 @@ using System.Threading.Tasks;
 
 namespace SWP391Web.Infrastructure.IRepository
 {
-    public interface INofiticationRepository : IRepository<Notification>
+    public interface IDealerInventoryRiskRepository : IRepository<DealerInventoryRisk>
     {
+        Task UpsertRangeAsync(IEnumerable<DealerInventoryRisk> risks, CancellationToken ct);
     }
 }

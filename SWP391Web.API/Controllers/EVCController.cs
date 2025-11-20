@@ -34,5 +34,14 @@ namespace SWP391Web.API.Controllers
             var response = await _evcService.GetAllEVMStaff(filterOn, filterQuery, sortBy, isAcsending, pageNumber, pageSize);
             return StatusCode(response.StatusCode, response);
         }
+
+        [HttpPut]
+        [Route("update-evm-staff-status/{evcStaffId}")]
+        //[Authorize(Roles = StaticUserRole.Admin)]
+        public async Task<ActionResult<ResponseDTO>> UpdateEVCStaffStatus([FromRoute] string evcStaffId, [FromQuery] bool isActive, CancellationToken ct)
+        {
+            var response = await _evcService.UpdateEVCStaffStatus(evcStaffId, isActive, ct);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

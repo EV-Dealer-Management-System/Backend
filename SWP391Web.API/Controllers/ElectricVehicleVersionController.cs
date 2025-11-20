@@ -41,6 +41,12 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         
+        [HttpGet("get-all-available-versions-for-booking-by-model-id/{modelId}")]
+        public async Task<ActionResult<ResponseDTO>> GetAllAvailableVersionsForBookingByModelIdAsync([FromRoute] Guid modelId)
+        {
+            var response = await _electricVehicleVersionService.GetAllAvailableVersionsForBookingByModelIdAsync(modelId);
+            return StatusCode(response.StatusCode, response);
+        }
         [HttpGet("get-all-available-versions-by-model-id/{modelId}")]
         public async Task<ActionResult<ResponseDTO>> GetAllAvailableVersionsByModelIdAsync([FromRoute] Guid modelId)
         {

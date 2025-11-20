@@ -206,5 +206,27 @@ namespace SWP391Web.Application.Service
                 { "{PaymentLink}", paymentLink }
             });
         }
+
+        public Task<bool> NotifyEContractUpdated(string to, string fullName, string UpdatedAt, string downloadLink)
+        {
+            return SendEmailFromTemplate(to, "NotifyEContractUpdated", new Dictionary<string, string>
+            {
+                { "{CustomerName}", fullName },
+                { "{UpdatedAt}", UpdatedAt },
+                { "{ViewLink}" , downloadLink },
+                { "SupportEmail", _configuration["Company:Email"] ?? "" }
+            });
+        }
+
+        public Task<bool> SendContractReviewAndConfirm(string to, string customerName, string contractName, string confirmLink)
+        {
+            return SendEmailFromTemplate(to, "PublicCustomer_ContractReviewAndConfirm", new Dictionary<string, string>
+            {
+                { "{CustomerName}", customerName },
+                { "{ContractName}", contractName },
+                { "{ViewLink}", confirmLink },
+                { "{SupportEmail}",  _configuration["Company:Email"] ?? "" }
+            });
+        }
     }
 }

@@ -13,5 +13,7 @@ namespace SWP391Web.Domain.Constants
         public const string DealerStaff = "DealerStaff";
         public const string EVMStaff = "EVMStaff";
         public const string Admin_EVMStaff = Admin + "," + EVMStaff;
+        public const string DealerManager_DealerStaff = DealerManager + "," + DealerStaff;
+        public const string AllRolesInSystem = Admin + "," + DealerManager + "," + DealerStaff + "," + EVMStaff;
     }
 }

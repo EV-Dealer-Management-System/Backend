@@ -52,6 +52,16 @@ namespace SWP391Web.Application.Service
                     };
                 }
 
+                if (user.LockoutEnabled)
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "Account is deactivated. Please contact support.",
+                        IsSuccess = false,
+                        StatusCode = 403
+                    };
+                }
+
                 var isPasswordValid = await _unitOfWork.UserManagerRepository.CheckPasswordAsync(user, loginUserDTO.Password);
                 if (!isPasswordValid)
                 {
@@ -357,13 +367,163 @@ namespace SWP391Web.Application.Service
             return Task.CompletedTask;
         }
 
-        public Task<AuthResultDTO?> RedeemAsync(string ticket) 
-        { 
-            if (_cache.TryGetValue<AuthResultDTO>(ticket, out var payload)) 
-            { 
-                _cache.Remove(ticket); 
-                return Task.FromResult<AuthResultDTO?>(payload); 
-            } 
-            return Task.FromResult<AuthResultDTO?>(null); }
+        public Task<AuthResultDTO?> RedeemAsync(string ticket)
+        {
+            if (_cache.TryGetValue<AuthResultDTO>(ticket, out var payload))
+            {
+                _cache.Remove(ticket);
+                return Task.FromResult<AuthResultDTO?>(payload);
+            }
+            return Task.FromResult<AuthResultDTO?>(null);
+        }
+
+        public async Task<ResponseDTO> RegisterMobile(RegisterMobileDTO registerMobileDTO)
+        {
+            try
+            {
+                if (registerMobileDTO.Email is not null)
+                {
+                    var isExistEmail = await _unitOfWork.UserManagerRepository.IsEmailExist(registerMobileDTO.Email);
+                    if (isExistEmail)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            StatusCode = 409,
+                            Message = $"{registerMobileDTO.Email} existed"
+                        };
+                    }
+                }
+
+                var isExistUserName = await _unitOfWork.UserManagerRepository.IsExistUserName(registerMobileDTO.UserName);
+                if (isExistUserName)
+                  {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 409,
+                        Message = "User name is exist"
+                    };
+                  }
+
+                var newUser = new ApplicationUser
+                {
+                    UserName = registerMobileDTO.UserName,
+                    Email = registerMobileDTO.Email,
+                    PhoneNumber = registerMobileDTO.PhoneNumber,
+                    Address = registerMobileDTO.Address
+                };
+
+                var created = await _unitOfWork.UserManagerRepository.CreateAsync(newUser, registerMobileDTO.Password);
+                if (!created.Succeeded)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 500,
+                        Message = "Cannot create new account",
+                        Result = created
+                    };
+                }
+
+                newUser.LockoutEnabled = false;
+                _unitOfWork.UserManagerRepository.Update(newUser);
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 201,
+                    Message = "Create new user successfully"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to register a new account {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> LoginMobile(LoginMobileDTO loginMobileDTO, CancellationToken ct)
+        {
+            try
+            {
+                var user = await _unitOfWork.UserManagerRepository.GetByUserNameAsync(loginMobileDTO.Username);
+                if (user is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "The user is not exist"
+                    };
+                }
+
+                if (user.LockoutEnd > DateTimeOffset.UtcNow)
+                {
+                    var remainingMinutes = (user.LockoutEnd.Value - DateTimeOffset.UtcNow).Minutes;
+                    return new ResponseDTO
+                    {
+                        Message = $"Account is locked. Try again in {remainingMinutes} minutes.",
+                        IsSuccess = false,
+                        StatusCode = 403
+                    };
+                }
+
+                if (user.LockoutEnabled)
+                {
+                    return new ResponseDTO
+                    {
+                        Message = "Account is deactivated. Please contact support.",
+                        IsSuccess = false,
+                        StatusCode = 403
+                    };
+                }
+                var isPasswordValid = await _unitOfWork.UserManagerRepository.CheckPasswordAsync(user, loginMobileDTO.Password);
+                if (!isPasswordValid)
+                {
+                    await _unitOfWork.UserManagerRepository.AccessFailedAsync(user);
+                    return new ResponseDTO
+                    {
+                        Message = $"Password is incorrect. If you enter {5 - user.AccessFailedCount} incorrectly again, your account will be locked for 5 minutes.",
+                        IsSuccess = false,
+                        StatusCode = 400
+                    };
+                }
+
+                var accessToken = await _tokenService.GenerateJwtAccessTokenAysnc(user, ct);
+                var refreshToken = await _tokenService.GenerateJwtRefreshTokenAsync(user, true);
+
+                var getUser = _mapper.Map<GetApplicationUserDTO>(user);
+
+                await _unitOfWork.UserManagerRepository.ResetAccessFailedAsync(user);
+
+                return new ResponseDTO
+                {
+                    Message = "Login successful",
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Result = new
+                    {
+                        AccessToken = accessToken,
+                        RefreshToken = refreshToken,
+                        UserData = getUser
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to login mobile {ex.Message}"
+                };
+            }
+        }
     }
 }

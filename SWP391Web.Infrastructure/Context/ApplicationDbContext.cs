@@ -23,7 +23,6 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<ElectricVehicle> ElectricVehicles { get; set; }
         public DbSet<EContract> EContracts { get; set; }
         public DbSet<EContractTemplate> EContractTemplates { get; set; }
-        public DbSet<EContractTerm> EContractTerms { get; set; }
         public DbSet<BookingEV> BookingEVs { get; set; }
         public DbSet<BookingEVDetail> BookingEVDetails { get; set; }
         public DbSet<EVCInventory> EVCInventories { get; set; }
@@ -48,6 +47,11 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<DealerDebt> DealerDebts { get; set; }
         public DbSet<DealerTier> DealerTiers { get; set; }
         public DbSet<VehicleDelivery> VehicleDeliveries { get; set; }
+        public DbSet<VehicleDeliveryDetail> VehicleDeliveryDetails { get; set; }
+        public DbSet<DealerDebtTransaction> DealerDebtTransactions { get; set; }
+        public DbSet<DealerDailyInventory> DealerDailyInventories { get; set; }
+        public DbSet<DealerInventoryForecast> DealerInventoryForecasts { get; set; }
+        public DbSet<DealerInventoryRisk> DealerInventoryRisks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -57,7 +61,6 @@ namespace SWP391Web.Infrastructure.Context
             DealerTierSeeder.DealerTierConfigure(modelBuilder);
             EmailSeeder.SeedEmailTemplate(modelBuilder);
             EContractSeeder.EContractTemplateSeeder.SeedDealerEContract(modelBuilder);
-            EContractTermSeeder.SeedTerm(modelBuilder);
             AdminSeeder.AdminConfigure(modelBuilder);
 
             // Customize ASP.NET Identity table names
@@ -494,6 +497,89 @@ namespace SWP391Web.Infrastructure.Context
                 .WithMany(cf => cf.CustomerFBAttachments)
                 .HasForeignKey(cfba => cfba.CustomerFeedBackId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure VehicleDeliveryDetail entity
+
+            modelBuilder.Entity<VehicleDeliveryDetail>()
+                .HasOne(vdd => vdd.VehicleDelivery)
+                .WithMany(vd => vd.VehicleDeliveryDetails)
+                .HasForeignKey(vdd => vdd.VehicleDeliveryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<VehicleDeliveryDetail>()
+                .HasOne(vdd => vdd.ElectricVehicle)
+                .WithMany(ev => ev.VehicleDeliveryDetails)
+                .HasForeignKey(vdd => vdd.ElectricVehicleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            /*****************************************************************************/
+            // Configure DealerDebtTransaction entity
+
+            modelBuilder.Entity<DealerDebtTransaction>()
+                .HasOne(ddt => ddt.Dealer)
+                .WithMany(d => d.DealerDebtTransactions)
+                .HasForeignKey(ddt => ddt.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DealerDebt>(e =>
+            {
+                e.HasIndex(x => new { x.DealerId, x.PeriodFrom, x.PeriodTo }).IsUnique();
+            });
+
+            /******************************************************************************/
+            // Configure DealerDailyInventory entity
+
+            modelBuilder.Entity<DealerDailyInventory>(e =>
+            {
+                e.HasIndex(x => new { x.DealerId, x.EVTemplateId, x.SnapshotDate }).IsUnique();
+
+                e.Property(x => x.SnapshotDate).HasColumnType("date");
+
+                e.HasOne(x => x.Dealer)
+                 .WithMany(d => d.DealerDailyInventories)
+                 .HasForeignKey(x => x.DealerId)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.EVTemplate)
+                 .WithMany(ev => ev.DealerDailyInventories)
+                 .HasForeignKey(x => x.EVTemplateId)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            /******************************************************************************/
+            // Configure DealerInventoryForecast entity
+
+            modelBuilder.Entity<DealerInventoryForecast>(e =>
+            {
+                e.HasIndex(x => new { x.DealerId, x.EVTemplateId, x.TargetDate });
+
+                e.HasOne(x => x.Dealer)
+                 .WithMany(d => d.DealerInventoryForecasts)
+                 .HasForeignKey(x => x.DealerId)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(x => x.EVTemplate)
+                 .WithMany(ev => ev.DealerInventoryForecasts)
+                 .HasForeignKey(x => x.EVTemplateId)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            /******************************************************************************/
+            // Configure DealerInventoryRisk entity
+
+            modelBuilder.Entity<DealerInventoryRisk>(e =>
+            {
+                e.HasOne(x => x.Dealer)
+                 .WithMany(d => d.DealerInventoryRisks)
+                 .HasForeignKey(x => x.DealerId)
+                 .OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.EVTemplate)
+                 .WithMany(ev => ev.DealerInventoryRisks)
+                 .HasForeignKey(x => x.EVTemplateId)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
         }
     }
 }

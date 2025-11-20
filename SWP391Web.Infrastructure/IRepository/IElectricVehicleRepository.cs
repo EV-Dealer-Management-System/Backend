@@ -13,7 +13,7 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<bool> IsVehicleExistsByVIN(string vin);
         Task<ElectricVehicle?> GetByIdsAsync(Guid vehicleId);
         Task<ElectricVehicle?> GetByVINAsync(string vin);
-        Task<List<ElectricVehicle>> GetAvailableVehicleByModelIdAsync(Guid modelId);
+        Task<List<ElectricVehicle>> GetAvailableVehicleForBookingByModelIdAsync(Guid modelId);
         Task<int> GetAvailableQuantityByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId);
         Task<int> GetAvailableQuantityByVersionColorAsync(Guid versionId, Guid colorId);
         Task<List<ElectricVehicle>> GetAvailableVehicleByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId);
@@ -29,5 +29,11 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<List<ElectricVehicle>> GetVehicleByQuantityWithOldestImportDateForDealerAsync(Guid versionId, Guid colorId, Guid warehouseId, int quantity);
         Task<int> CountDealerAvailableByVersionColorAsync(Guid dealerId, Guid versionId, Guid colorId, CancellationToken ct);
         Task<ElectricVehicle?> GetByVersionColorId(Guid VersionId, Guid ColorId);
+        Task<int> CountAvailableByDealerAsync(Guid dealerId, CancellationToken ct);
+        Task<int> GetTotalVehiclesInEVCAsync(CancellationToken ct);
+        Task<ElectricVehicle?> GetFirstAvailableVehicleAsync(Guid versionId, Guid colorId, IEnumerable<Guid>? excludeVehicleIds, CancellationToken ct);
+        Task<IReadOnlyDictionary<(Guid DealerId, Guid EVTemplateId), int>> GetInflowAsync(DateTime dayUtc, CancellationToken ct);
+        Task<IReadOnlyDictionary<(Guid DealerId, Guid EVTemplateId), int>> GetOutflowAsync(DateTime dayUtc, CancellationToken ct);
+        Task<IReadOnlyDictionary<(Guid DealerId, Guid EVTemplateId), int>> GetDealerOnHandStockAsync(CancellationToken ct);
     }
 }

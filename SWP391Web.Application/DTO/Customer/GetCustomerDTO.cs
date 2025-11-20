@@ -11,6 +11,7 @@ namespace SWP391Web.Application.DTO.Customer
         public Guid Id { get; set; }
         public string? FullName { get; set; }
         public string? PhoneNumber { get; set; }
+        public string? CitizenID { get; set; } //CCCD 
         public string? Address { get; set; }
         public string? Email { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -18,9 +18,22 @@ namespace SWP391Web.Infrastructure.Repository
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
+
+        public async Task<List<(Guid DealerId, Guid EVTemplateId)>> GetActiveDealerTemplatePairsAsync(CancellationToken ct)
+        {
+            return await _context.ElectricVehicles
+                .Where(ev => ev.Warehouse != null && ev.Warehouse.DealerId != null)
+                .Select(ev => new { DealerId = ev.Warehouse!.DealerId, ev.ElectricVehicleTemplateId })
+                .Distinct()
+                .Select(x => new ValueTuple<Guid, Guid>(x.DealerId!.Value, x.ElectricVehicleTemplateId))
+                .ToListAsync(ct);
+        }
+
         public async Task<ElectricVehicleTemplate?> GetByIdAsync(Guid EVTemplateId)
         {
-            return await _context.ElectricVehicleTemplates.FirstOrDefaultAsync(evt => evt.Id == EVTemplateId);
+            return await _context.ElectricVehicleTemplates
+                .Include(evt => evt.EVAttachments)
+                .FirstOrDefaultAsync(evt => evt.Id == EVTemplateId);
         }
 
         public async Task<ElectricVehicleTemplate?> GetByVersionColorAndWarehouseAsync(Guid versionId, Guid colorId, Guid warehouseId)

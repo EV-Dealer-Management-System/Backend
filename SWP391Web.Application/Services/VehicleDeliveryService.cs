@@ -29,32 +29,120 @@ namespace SWP391Web.Application.Services
             _mapper = mapper;
             _bookingEVService = bookingEVService;
         }
-        public async Task<ResponseDTO> GetAllVehicleDelivery(DeliveryStatus? status = null)
+        public async Task<ResponseDTO> GetAllVehicleDelivery(ClaimsPrincipal user, int pageNumber, int pageSize,DeliveryStatus? status, Guid? templateId, CancellationToken ct)
         {
             try
             {
-                Func<IQueryable<VehicleDelivery>, IQueryable<VehicleDelivery>> includes = q =>
-                q.Include(vd => vd.BookingEV)
-                    .ThenInclude(b => b.Dealer);
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
 
-                Expression<Func<VehicleDelivery, bool>>? filter = null;
-                if (status.HasValue)
+                if (userId == null)
                 {
-                    filter = vd => vd.Status == status.Value;
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found.",
+                        StatusCode = 401
+                    };
                 }
 
-                var deliveries = await _unitOfWork.VehicleDeliveryRepository.GetAllAsync(
-                    filter: filter,
-                    includes: includes);
+                Guid? dealerId = null;
+                if (role == StaticUserRole.DealerManager)
+                {
+                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                    if (dealer == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Dealer not found for current user.",
+                            StatusCode = 404
+                        };
+                    }
+                    dealerId = dealer.Id;
+                }
 
-                var getDeliveries = _mapper.Map<List<GetVehicleDeliveryDTO>>(deliveries);
+                Func<IQueryable<VehicleDelivery>, IQueryable<VehicleDelivery>> includes = q => q
+                    .Include(vd => vd.BookingEV)
+                        .ThenInclude(b => b.Dealer)
+                    .Include(vd => vd.VehicleDeliveryDetails)
+                        .ThenInclude(vdd => vdd.ElectricVehicle)
+                            .ThenInclude(vdd => vdd.ElectricVehicleTemplate)
+                                .ThenInclude(evt => evt.Version)
+                    .Include(vd => vd.VehicleDeliveryDetails)
+                        .ThenInclude(vdd => vdd.ElectricVehicle)
+                            .ThenInclude(vdd => vdd.ElectricVehicleTemplate)
+                                .ThenInclude(evt => evt.Color);
+
+
+
+                Expression<Func<VehicleDelivery, bool>>? filter = null;
+                if (status.HasValue || templateId.HasValue || dealerId.HasValue)
+                {
+                    filter = vd =>
+                        (!status.HasValue || vd.Status == status.Value) &&
+                        (!templateId.HasValue ||
+                            vd.VehicleDeliveryDetails.Any(vdd =>
+                                vdd.ElectricVehicle != null &&
+                                vdd.ElectricVehicle.ElectricVehicleTemplateId == templateId.Value)) &&
+                                (!dealerId.HasValue || vd.BookingEV.DealerId == dealerId.Value);
+                }
+
+                (IReadOnlyList<VehicleDelivery> items, int total) result;
+                result = await _unitOfWork.VehicleDeliveryRepository.GetPagedAsync(
+                            filter: filter,
+                            includes: includes,
+                            orderBy: dm => dm.CreatedDate,
+                            ascending: false,
+                            pageNumber: pageNumber,
+                            pageSize: pageSize,
+                            ct: ct);
+
+                if (result.items == null || !result.items.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No vehicle deliveries found for the specified criteria.",
+                        StatusCode = 404
+                    };
+                }
+
+                var deliveries = result.items.ToList();
+
+                var templateSummary = deliveries
+                    .SelectMany(d => d.VehicleDeliveryDetails)
+                    .Where(vdd => vdd.ElectricVehicle != null && vdd.ElectricVehicle.ElectricVehicleTemplateId != null)
+                    .GroupBy(vdd => vdd.ElectricVehicle.ElectricVehicleTemplateId)
+                    .Select(g => new
+                    {
+                        VersionName = g.First().ElectricVehicle.ElectricVehicleTemplate.Version.VersionName,
+                        ColorName = g.First().ElectricVehicle.ElectricVehicleTemplate.Color.ColorName,
+                        TemplateId = g.Key,
+                        VehicleCount = g.Count(),
+                        VinList = g.Select(vdd => vdd.ElectricVehicle.VIN).ToList()
+                    })
+                    .ToList();
+
+                var getDeliveries = _mapper.Map<List<GetVehicleDeliveryDTO>>(result.items);
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     Message = "Get all deliveries successfully",
                     StatusCode = 200,
-                    Result = getDeliveries
+                    Result = new
+                    {
+                        data = getDeliveries,
+                        templateSummary,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = pageSize,
+                            TotalItems = result.total,
+                            TotalPages = (int)Math.Ceiling((double)result.total / pageSize)
+                        }
+                    }
                 };
                    
             }
@@ -223,23 +311,32 @@ namespace SWP391Web.Application.Services
                 delivery.UpdateAt = DateTime.UtcNow;
                 _unitOfWork.VehicleDeliveryRepository.Update(delivery);
 
-                if (newStatus == DeliveryStatus.InTransit)
+                foreach (var dt in delivery.VehicleDeliveryDetails)
                 {
-                    foreach (var dt in delivery.BookingEV.BookingEVDetails)
+                    switch (newStatus)
                     {
-                        var vehicles = await _unitOfWork.ElectricVehicleRepository
-                            .GetBookedVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
+                        case DeliveryStatus.Packing:
+                            dt.Status = DeliveryVehicleStatus.Preparing;
+                            dt.Note = "Vehicle is being prepared for shipment";
+                            break;
 
-                        foreach (var ev in vehicles.Take(dt.Quantity))
-                        {
-                            ev.Status = ElectricVehicleStatus.InTransit;
-                            _unitOfWork.ElectricVehicleRepository.Update(ev);
-                        }
+                        case DeliveryStatus.InTransit:
+                            dt.Status = DeliveryVehicleStatus.InTransit;
+                            dt.Note = "Vehicle is on the way to dealer";
+                            break;
+
+                        case DeliveryStatus.Arrived:
+                            dt.Status = DeliveryVehicleStatus.Delivered;
+                            dt.Note = "Vehicle has arrived at dealer";
+                            break;
                     }
+
+                    _unitOfWork.VehicleDeliveryDetailRepository.Update(dt);
                 }
-                else if (newStatus == DeliveryStatus.Accident)
+
+                if (newStatus == DeliveryStatus.Accident)
                 {
-                    await UpdateStatusAccidentAsync(delivery, reason!);
+                    await ReportAccidentAsync(delivery, reason!);
                 }
                 else if (newStatus == DeliveryStatus.Confirmed)
                 {
@@ -269,28 +366,205 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        private async Task<ResponseDTO> UpdateStatusAccidentAsync(VehicleDelivery delivery, string reason)
+        private async Task<ResponseDTO> ReportAccidentAsync(VehicleDelivery delivery, string reason)
         {
+            delivery.Status = DeliveryStatus.Accident;
             delivery.Description = reason;
-
-            foreach (var dt in delivery.BookingEV.BookingEVDetails)
-            {
-                var vehicles = await _unitOfWork.ElectricVehicleRepository
-                    .GetBookedVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
-
-                foreach (var ev in vehicles.Take(dt.Quantity))
-                {
-                    ev.Status = ElectricVehicleStatus.Maintenance;
-                    _unitOfWork.ElectricVehicleRepository.Update(ev);
-                }
-            }
+            delivery.UpdateAt = DateTime.UtcNow;
+            _unitOfWork.VehicleDeliveryRepository.Update(delivery);
+            await _unitOfWork.SaveAsync();
 
             return new ResponseDTO
             {
                 IsSuccess = true,
-                Message = "Update status successfully",
-                StatusCode = 200,
+                Message = "Accident report successfully",
+                StatusCode = 200
             };
+
+        }
+
+        public async Task<ResponseDTO> InspectAccidentVehicleAsync(ClaimsPrincipal user, Guid deliveryId, List<Guid> damagedVehicleIds, CancellationToken ct)
+        {
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
+                if (role != StaticUserRole.Admin && role != StaticUserRole.EVMStaff)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Only EVMStaff and Admin can inspect accident vehicles",
+                        StatusCode = 403
+                    };
+                }
+
+                var delivery = await _unitOfWork.VehicleDeliveryRepository.GetVehicleDeliveryById(deliveryId, ct);
+                if (delivery == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Delivery not found",
+                        StatusCode = 400
+                    };
+                }
+
+                foreach (var dt in delivery.VehicleDeliveryDetails)
+                {
+                    if (damagedVehicleIds.Contains(dt.ElectricVehicleId))
+                    {
+                        dt.Status = DeliveryVehicleStatus.Damaged;
+                        dt.ElectricVehicle.Status = ElectricVehicleStatus.Maintenance;
+                        dt.Note = "Vehicle damaged in accident, needs replacement.";
+                    }
+                    else
+                    {
+                        dt.Status = DeliveryVehicleStatus.InTransit;
+                        dt.ElectricVehicle.Status = ElectricVehicleStatus.InTransit;
+                        dt.Note = "Vehicle checked and continues in-transit";
+                    }
+
+                    _unitOfWork.VehicleDeliveryDetailRepository.Update(dt);
+                    _unitOfWork.ElectricVehicleRepository.Update(dt.ElectricVehicle);
+                }
+
+                delivery.Status = damagedVehicleIds.Any() ? DeliveryStatus.Accident : DeliveryStatus.InTransit;
+                delivery.UpdateAt = DateTime.UtcNow;
+                _unitOfWork.VehicleDeliveryRepository.Update(delivery);
+
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Inspection successfully",
+                    StatusCode = 200
+                };
+                
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> ReplaceDamagedVehicleAsync(ClaimsPrincipal user, Guid deliveryId, CancellationToken ct)
+        {
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 401
+                    };
+                }
+
+                var role = user.FindFirst(ClaimTypes.Role)?.Value;
+                if(role != StaticUserRole.Admin && role != StaticUserRole.EVMStaff)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Only EVMStaff or Admin can replace vehicle",
+                        StatusCode = 404
+                    };
+                }
+
+                var delivery = await _unitOfWork.VehicleDeliveryRepository.GetVehicleDeliveryById(deliveryId, ct);
+                if(delivery == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Delivery not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var damagedVehicle = delivery.VehicleDeliveryDetails
+                    .Where(v => v.Status == DeliveryVehicleStatus.Damaged)
+                    .ToList();
+                if (!damagedVehicle.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No damaged vehicle found",
+                        StatusCode = 400
+                    };
+                }
+                 
+                var usedReplacementIds = new HashSet<Guid>();
+
+                foreach (var dt in damagedVehicle)
+                {
+                    var template = dt.ElectricVehicle.ElectricVehicleTemplate;
+
+                    var replacement = await _unitOfWork.ElectricVehicleRepository
+                        .GetFirstAvailableVehicleAsync(template.VersionId, template.ColorId, usedReplacementIds, ct);
+                    if(replacement == null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "No available replacement vehicle found for delivery",
+                            StatusCode = 400
+                        };
+                    }
+
+                    dt.ElectricVehicleId = replacement.Id;
+                    dt.Status = DeliveryVehicleStatus.InTransit;
+                    dt.Note = $"Replaced damaged vehicle with VIN {replacement.VIN}";
+                    replacement.Status = ElectricVehicleStatus.InTransit;
+
+                    _unitOfWork.ElectricVehicleRepository.Update(replacement);
+                    _unitOfWork.VehicleDeliveryDetailRepository.Update(dt);
+
+                    usedReplacementIds.Add(replacement.Id);
+                }
+
+                delivery.Status = DeliveryStatus.InTransit;
+                delivery.UpdateAt = DateTime.UtcNow;
+                _unitOfWork.VehicleDeliveryRepository.Update(delivery); 
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Replace damaged vehicle successfully",
+                    StatusCode = 200
+                };
+
+            }
+            catch(Exception ex) 
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
         }
     }
 }

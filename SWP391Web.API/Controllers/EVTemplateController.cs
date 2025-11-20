@@ -26,9 +26,17 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpGet("Get-all-template-vehicles")]
-        public async Task<ActionResult<ResponseDTO>> GetAllEVTemplate()
+        public async Task<IActionResult> GetAllVehicleTemplates(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? search = null,
+        [FromQuery] Guid? templateId = null,
+        [FromQuery] decimal? minPrice = null,
+        [FromQuery] decimal? maxPrice = null,
+        [FromQuery] bool sortByPriceAsc = true,
+        CancellationToken ct = default)
         {
-            var response = await _evTemplateService.GetAllVehicleTemplateAsync();
+            var response = await _evTemplateService.GetAllVehicleTemplateAsync(pageNumber, pageSize, search, templateId,minPrice,maxPrice,sortByPriceAsc , ct);
             return StatusCode(response.StatusCode,response);
         }
 

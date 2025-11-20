@@ -17,7 +17,6 @@ namespace SWP391Web.Infrastructure.IRepository
         public IElectricVehicleVersionRepository ElectricVehicleVersionRepository { get; }
         public IElectricVehicleRepository ElectricVehicleRepository { get; }
         public IEContractTemplateRepository EContractTemplateRepository { get; }
-        public IEContractTermRepository EContractTermRepository { get; }
         public IEContractRepository EContractRepository { get; }
         public IBookingEVRepository BookingEVRepository { get; }
         public IEVCInventoryRepository EVCInventoryRepository { get; }
@@ -43,7 +42,13 @@ namespace SWP391Web.Infrastructure.IRepository
         public IDealerPolicyOverrideRepository DealerPolicyOverrideRepository { get; }
         public IDealerDebtRepository DealerDebtRepository { get; }
         public IVehicleDeliveryRepository VehicleDeliveryRepository { get; }
+        public IDealerDebtTransactionRepository DealerDebtTransactionRepository { get; }
+        public IVehicleDeliveryDetailRepository VehicleDeliveryDetailRepository { get; }
+        public IDealerDailyInventoryRepository DealerDailyInventoryRepository { get; }
+        public IDealerInventoryForecastRepository DealerInventoryForecastRepository { get; }
+        public IDealerInventoryRiskRepository DealerInventoryRiskRepository { get; }
 
-        Task<int> SaveAsync();
+        Task<int> SaveAsync(CancellationToken ct = default);
+        Task ExecuteInTransactionAsync(Func<Task> action, CancellationToken ct = default);
     }
 }

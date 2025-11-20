@@ -36,7 +36,6 @@ namespace SWP391Web.Infrastructure.Repository
                         .ThenInclude(v => v.Model)
                 .Include(ev => ev.ElectricVehicleTemplate.Color)
                 .Include(ev => ev.Warehouse)
-                .Where(ev => ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
                 .ToListAsync();
         }
 
@@ -101,7 +100,7 @@ namespace SWP391Web.Infrastructure.Repository
                 .ToListAsync();
         }
 
-        public async Task<List<ElectricVehicle>> GetAvailableVehicleByModelIdAsync(Guid modelId)
+        public async Task<List<ElectricVehicle>> GetAvailableVehicleForBookingByModelIdAsync(Guid modelId)
         {
             return await _context.ElectricVehicles
                 .Include(ev => ev.ElectricVehicleTemplate)
@@ -123,7 +122,6 @@ namespace SWP391Web.Infrastructure.Repository
                              && ev.ElectricVehicleTemplate.VersionId == versionId
                              && ev.ElectricVehicleTemplate.ColorId == colorId
                              && ev.Status == ElectricVehicleStatus.Available
-                             && ev.WarehouseId != null
                              && ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
                 .OrderBy(ev => ev.ImportDate)
                 .ToListAsync();
@@ -226,7 +224,7 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<List<ElectricVehicle>> GetBookedVehicleByModelVersionColorAsync(Guid modelId, Guid versionId, Guid colorId)
         {
             return await _context.ElectricVehicles
-                .Include(ev => ev.Warehouse) 
+                .Include(ev => ev.Warehouse)
                 .Include(ev => ev.ElectricVehicleTemplate)
                 .Where(ev => ev.ElectricVehicleTemplate.Version.ModelId == modelId
                              && ev.ElectricVehicleTemplate.VersionId == versionId
@@ -249,6 +247,112 @@ namespace SWP391Web.Infrastructure.Repository
                              && ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
                                 .OrderBy(ev => ev.ImportDate)
                 .ToListAsync();
+        }
+
+        public async Task<ElectricVehicle?> GetFirstAvailableVehicleAsync(Guid versionId, Guid colorId, IEnumerable<Guid>? excludeVehicleIds, CancellationToken ct)
+        {
+            var query = _context.ElectricVehicles
+                .Include(ev => ev.ElectricVehicleTemplate)
+                .Where(ev => ev.Status == ElectricVehicleStatus.Available
+                    && ev.ElectricVehicleTemplate.VersionId == versionId
+                    && ev.ElectricVehicleTemplate.ColorId == colorId);
+            if (excludeVehicleIds != null && excludeVehicleIds.Any())
+            {
+                query = query.Where(ev => !excludeVehicleIds.Contains(ev.Id));
+            }
+
+            return await query.OrderBy(ev => ev.ImportDate).FirstOrDefaultAsync(ct);
+        }
+
+        public Task<int> CountAvailableByDealerAsync(Guid dealerId, CancellationToken ct)
+        {
+            return _context.ElectricVehicles
+        .Where(ev => ev.Warehouse.DealerId == dealerId && ev.Status == ElectricVehicleStatus.AtDealer)
+        .CountAsync(ct);
+        }
+
+        public async Task<int> GetTotalVehiclesInEVCAsync(CancellationToken ct)
+        {
+            return await _context.ElectricVehicles
+                .Include(ev => ev.Warehouse)
+                .CountAsync(ev => ev.Warehouse.WarehouseType == WarehouseType.EVInventory, ct);
+        }
+
+        public async Task<IReadOnlyDictionary<(Guid DealerId, Guid EVTemplateId), int>> GetInflowAsync(DateTime dayUtc, CancellationToken ct)
+        {
+            var dayOnly = dayUtc.Date;
+            var query =
+                from vdd in _context.VehicleDeliveryDetails
+                join vd in _context.VehicleDeliveries on vdd.VehicleDeliveryId equals vd.Id
+                join b in _context.BookingEVs on vd.BookingEVId equals b.Id
+                join ev in _context.ElectricVehicles on vdd.ElectricVehicleId equals ev.Id
+                where vd.Status == DeliveryStatus.Confirmed
+                      && vdd.Status == DeliveryVehicleStatus.Delivered
+                      && vd.UpdateAt.HasValue && vd.UpdateAt.Value.Date == dayOnly
+                group vdd by new { b.DealerId, ev.ElectricVehicleTemplateId } into g
+                select new
+                {
+                    g.Key.DealerId,
+                    g.Key.ElectricVehicleTemplateId,
+                    Qty = g.Count()
+                };
+
+            var list = await query.AsNoTracking().ToListAsync(ct);
+
+            return list.ToDictionary(x => (x.DealerId, x.ElectricVehicleTemplateId), x => x.Qty);
+        }
+
+        public async Task<IReadOnlyDictionary<(Guid DealerId, Guid EVTemplateId), int>> GetOutflowAsync(DateTime dayUtc, CancellationToken ct)
+        {
+            var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
+            var vnStart = DateTime.SpecifyKind(dayUtc.Date, DateTimeKind.Unspecified);
+            var vnEnd = vnStart.AddDays(1);
+
+            var utcStart = TimeZoneInfo.ConvertTimeToUtc(vnStart, vnTimeZone);
+            var utcEnd = TimeZoneInfo.ConvertTimeToUtc(vnEnd, vnTimeZone);
+            var query =
+                from od in _context.OrderDetails
+                join ev in _context.ElectricVehicles on od.ElectricVehicleId equals ev.Id
+                join w in _context.Warehouses on ev.WarehouseId equals w.Id
+                where od.CreatedAt >= utcStart && od.CreatedAt < utcEnd
+                group od by new { w.DealerId, ev.ElectricVehicleTemplateId } into g
+                select new
+                {
+                    g.Key.DealerId,
+                    g.Key.ElectricVehicleTemplateId,
+                    Qty = g.Count()
+                };
+
+            var list = await query.AsNoTracking().ToListAsync(ct);
+
+            return list.ToDictionary(x => (x.DealerId!.Value, x.ElectricVehicleTemplateId), x => x.Qty);
+        }
+
+        public async Task<IReadOnlyDictionary<(Guid DealerId, Guid EVTemplateId), int>> GetDealerOnHandStockAsync(CancellationToken ct)
+        {
+            var validStatuses = new[]
+            {
+                ElectricVehicleStatus.AtDealer,
+                ElectricVehicleStatus.DealerPending,
+                ElectricVehicleStatus.DepositBooked
+            };
+
+            var query =
+                from ev in _context.ElectricVehicles
+                join w in _context.Warehouses on ev.WarehouseId equals w.Id
+                where w.WarehouseType == WarehouseType.Dealer
+                      && validStatuses.Contains(ev.Status)
+                group ev by new { w.DealerId, ev.ElectricVehicleTemplateId } into g
+                select new
+                {
+                    DealerId = g.Key.DealerId!.Value,
+                    g.Key.ElectricVehicleTemplateId,
+                    Qty = g.Count()
+                };
+
+            var list = await query.AsNoTracking().ToListAsync(ct);
+            return list.ToDictionary(x => (x.DealerId, x.ElectricVehicleTemplateId), x => x.Qty);
         }
     }
 }

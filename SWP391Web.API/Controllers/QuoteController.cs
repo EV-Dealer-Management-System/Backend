@@ -5,6 +5,7 @@ using SWP391Web.Application.DTO.Quote;
 using SWP391Web.Application.IServices;
 using SWP391Web.Application.Services;
 using SWP391Web.Domain.Enums;
+using System.Security.Claims;
 
 namespace SWP391Web.API.Controllers
 {
@@ -24,9 +25,9 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet("get-all-quote")]
-        public async Task<ActionResult<ResponseDTO>> GetAllQuoteAsync([FromQuery] QuoteStatus? status)
+        public async Task<ActionResult<ResponseDTO>> GetAllQuoteAsync([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, QuoteStatus? status = default, bool onlyToday = false, CancellationToken ct = default)
         {
-            var response = await _quoteService.GetAllAsync(User, status);
+            var response = await _quoteService.GetAllAsync(User,pageNumber,pageSize, status,onlyToday,ct);
             return StatusCode(response.StatusCode, response);
         }
 

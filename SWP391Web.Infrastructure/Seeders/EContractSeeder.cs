@@ -16,6 +16,10 @@ namespace SWP391Web.Infrastructure.Seeders
 
             private static readonly Guid BookingTemplateId = Guid.Parse("2e932187-140c-4ccf-807f-5e7cc1061663");
 
+            private static readonly Guid CustomerDepositTemplateId = Guid.Parse("a3b5ed56-8d8f-4fd1-9f0a-4dbe2a0a44b7");
+            private static readonly Guid CustomerFullPaymentTemplateId = Guid.Parse("d3f5c6e1-1f4e-4f4a-9f7a-2b6e8f0c3c9d");
+            private static readonly Guid CustomerPayRemainderTemplateId = Guid.Parse("c7e8f9a2-3b4c-4d5e-8f9a-1b2c3d4e5f6a");
+
             private static readonly DateTime CreatedAtUtc = new DateTime(2025, 10, 06, 0, 0, 0, DateTimeKind.Utc);
 
             private const string CommonPartiesBlock = @"
@@ -646,6 +650,451 @@ namespace SWP391Web.Infrastructure.Seeders
 </html>
 ";
 
+
+            private const string CustomerDepositContractHtml = @"
+<!doctype html>
+<html lang=""vi"">
+<head>
+  <meta charset=""utf-8"" />
+  <title>HỢP ĐỒNG ĐẶT CỌC MUA XE – ĐƠN HÀNG #{{ order.no }}</title>
+  <style>
+    @page { size:A4; margin:10mm 14mm 14mm 14mm; }
+    body { background:#fff; font-family:'Noto Sans','DejaVu Sans','Arial',sans-serif; font-size:12pt; line-height:1.5; color:#000; }
+    h1,h2,h3,h4 { text-align:center; margin:4px 0; }
+    p { margin:4px 0; }
+    .muted { color:#777; font-size:10pt; }
+    .section-title { margin-top:12px; font-weight:bold; text-transform:uppercase; }
+    table { width:100%; border-collapse:collapse; margin-top:8px; }
+    th,td { border:1px solid #444; padding:6px 8px; vertical-align:top; }
+    thead { display: table-header-group; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 16px; }
+    .signature-table { width:100%; margin-top:24px; table-layout:fixed; border-collapse:collapse; }
+    .signature-table td { width:50%; vertical-align:bottom; padding:0 6px; }
+    .sign-slot { position:relative; padding:10px; }
+    .anchor { position:absolute; bottom:10px; left:10px; font-size:1pt; line-height:1; color:#ffffff; opacity:0.01; letter-spacing:-0.2pt; user-select:none; }
+  </style>
+</head>
+<body>
+  <h2>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</h2>
+  <h4>Độc lập - Tự do - Hạnh phúc</h4>
+  <h2>HỢP ĐỒNG ĐẶT CỌC MUA XE</h2>
+  <p style=""text-align:center""><b>Mã đơn hàng: #{{ order.no }} • Ngày lập: {{ order.date }}</b></p>
+
+  <div class=""section-title"">Các bên</div>
+  <div class=""grid"">
+    <div>
+      <p><b>BÊN A (ĐẠI LÝ / ĐƠN VỊ BÁN):</b></p>
+      <p>- Tên đơn vị: {{ dealer.name }}</p>
+      <p>- Địa chỉ: {{ dealer.address }}</p>
+      <p>- MST: {{ dealer.taxNo }}</p>
+      <p>- Điện thoại: {{ dealer.phone }}</p>
+      <p>- Email: {{ dealer.email }}</p>
+      <p>- Đại diện: {{ roles.A.representative }} ({{ roles.A.title }})</p>
+      <p>- Tài khoản: {{ dealer.bankAccount }} tại {{ dealer.bankName }}</p>
+    </div>
+    <div>
+      <p><b>BÊN B (KHÁCH HÀNG):</b></p>
+      <p>- Họ và tên: {{ customer.fullName }}</p>
+      <p>- Số ĐT: {{ customer.phone }}</p>
+      <p>- Email: {{ customer.email }}</p>
+      <p>- CCCD/Hộ chiếu: {{ customer.idNo }}</p>
+      <p>- Địa chỉ: {{ customer.address }}</p>
+    </div>
+  </div>
+
+  <div class=""section-title"">Điều 1. Thông tin đơn hàng và khoản đặt cọc</div>
+  <div class=""grid"">
+    <div><b>Tổng giá trị đơn hàng (dự kiến):</b> {{ money.orderTotal }}</div>
+    <div><b>Số tiền đặt cọc:</b> {{ money.deposit }}</div>
+    <div><b>Số tiền còn lại:</b> {{ money.remaining }}</div>
+    <div><b>Phương thức đặt cọc:</b> {{ order.paymentMethod }}</div>
+  </div>
+  <p><i>Ghi chú:</i> Giá trị đơn hàng có thể thay đổi theo cấu hình/màu sắc/thời điểm giao nhận. Mọi điều chỉnh giá sẽ được hai bên xác nhận bằng phụ lục/phiếu điều chỉnh đính kèm.</p>
+
+  <div class=""section-title"">Điều 2. Danh mục xe đặt mua</div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Mẫu xe / Phiên bản</th>
+        <th>Màu</th>
+        <th>Số lượng</th>
+        <th>Ghi chú</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ order.vehicleRows }}
+    </tbody>
+  </table>
+
+  <div class=""section-title"">Điều 3. Thời hạn giữ hàng & giao hàng</div>
+  <p>3.1. Bên A giữ hàng tương ứng số lượng trong Điều 2 tối đa <b>{{ policy.holdDays }}</b> ngày kể từ ngày đặt cọc, trừ khi hai bên có thỏa thuận khác bằng văn bản.</p>
+  <p>3.2. Dự kiến giao/nhận tại: {{ logistics.place }} • Thời gian dự kiến: {{ logistics.eta }} (có thể điều chỉnh theo tồn kho & vận chuyển).</p>
+
+  <div class=""section-title"">Điều 4. Thanh toán</div>
+  <p>4.1. Bên B thanh toán phần còn lại <b>trước hoặc tại thời điểm nhận xe</b> theo một trong các hình thức: chuyển khoản, thẻ, tiền mặt (tuân thủ quy định pháp luật về hạn mức tiền mặt).</p>
+  <p>4.2. Quá hạn thanh toán quá <b>{{ policy.lateDays }}</b> ngày so với lịch dự kiến, Bên A có quyền: (i) chấm dứt giữ hàng; và/hoặc (ii) áp dụng phí lưu kho/chi phí phát sinh thực tế (nếu có).</p>
+
+  <div class=""section-title"">Điều 5. Chính sách đặt cọc & hoàn hủy</div>
+  <p>5.1. Khoản đặt cọc mang tính <b>bảo đảm nghĩa vụ mua</b>; nếu Bên B đơn phương hủy không do lỗi của Bên A, khoản cọc <b>không hoàn lại</b>.</p>
+  <p>5.2. Trường hợp Bên A không thể cung ứng xe đúng cấu hình đã xác nhận trong thời hạn giữ hàng (Điều 3.1) và Bên B không đồng ý phương án thay thế, Bên A hoàn trả toàn bộ tiền cọc trong vòng <b>07 ngày làm việc</b>.</p>
+  <p>5.3. Nếu hai bên thống nhất thay đổi cấu hình/phiên bản/màu, hợp đồng này vẫn có hiệu lực và được điều chỉnh bằng phụ lục.</p>
+
+  <div class=""section-title"">Điều 6. Bảo hành, chất lượng & trách nhiệm</div>
+  <p>6.1. Xe được bảo hành theo chính sách bảo hành hiện hành của hãng/nhà sản xuất.</p>
+  <p>6.2. Khi nhận xe, Bên B có trách nhiệm kiểm tra ngoại quan, phụ kiện, chứng từ; mọi khiếu nại sai khác phải thông báo trong vòng <b>03 ngày</b> để được hỗ trợ.</p>
+
+  <div class=""section-title"">Điều 7. Bảo mật & dữ liệu</div>
+  <p>7.1. Bên B đồng ý để Bên A sử dụng thông tin liên hệ nhằm phục vụ bảo hành, nhắc bảo dưỡng, thông báo chương trình (có thể hủy đăng ký bất kỳ lúc nào).</p>
+
+  <div class=""section-title"">Điều 8. Hiệu lực, chấm dứt & giải quyết tranh chấp</div>
+  <p>8.1. Hợp đồng có hiệu lực từ ngày ký đến khi hai bên hoàn tất nghĩa vụ, hoặc được thay thế bởi hợp đồng mua bán chính thức khi giao xe.</p>
+  <p>8.2. Tranh chấp ưu tiên thương lượng; không thành sẽ đưa ra cơ quan có thẩm quyền tại <b>TP. Hồ Chí Minh</b> theo pháp luật Việt Nam.</p>
+
+  <table class=""signature-table"">
+    <tr>
+      <td>
+        <div class=""sign-slot"">
+          <div class=""muted""><b>ĐẠI DIỆN BÊN A (ĐẠI LÝ)</b></div>
+          <div><b>{{ roles.A.representative }}</b></div>
+          <div>{{ roles.A.title }}</div>
+          <div class=""muted"">Ký, ghi rõ họ tên, đóng dấu</div>
+          <div class=""anchor"">{{ roles.A.signatureAnchor }}</div>
+        </div>
+      </td>
+      <td>
+        <div class=""sign-slot"">
+          <div class=""muted""><b>ĐẠI DIỆN BÊN B (KHÁCH HÀNG)</b></div>
+          <div><b>{{ customer.fullName }}</b></div>
+          <div class=""muted"">Ký, ghi rõ họ tên</div>
+          <div class=""anchor"">{{ roles.B.signatureAnchor }}</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <div class=""muted"">Trang {{ page }} / {{ pages }}</div>
+</body>
+</html>";
+            private const string CustomerPayFullEContractHtml = @"
+
+<!doctype html>
+<html lang=""vi"">
+<head>
+<meta charset=""utf-8""/>
+<title>Phiếu xác nhận thanh toán đầy đủ</title>
+<style>
+  *{box-sizing:border-box} html,body{font-family:DejaVu Sans, Arial, sans-serif;font-size:12px;color:#111}
+  .wrap{max-width:820px;margin:0 auto;padding:28px}
+  .tc{text-align:center} .tr{text-align:right} .b{font-weight:700} .muted{color:#666}
+  .hr{height:1px;background:#000;margin:6px auto 0;width:240px}
+  .sep{margin:6px 0 14px;text-align:center;color:#000} .sep span{display:inline-block;padding:0 10px}
+  .head-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0 8px}
+  .box{border:1px solid #ddd;border-radius:8px;padding:12px}
+  .box h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.2px}
+  .kv p{margin:3px 0}
+  table{width:100%;border-collapse:collapse;margin:10px 0}
+  th,td{border:1px solid #ddd;padding:8px;vertical-align:top}
+  th{background:#f6f6f6;font-weight:700}
+  .right{text-align:right}
+  .sig{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
+  .sigbox{border:1px dashed #aaa;border-radius:8px;padding:12px;min-height:150px;position:relative}
+  .sigttl{font-weight:700;margin-bottom:6px}
+  .anchor{position:absolute;bottom:8px;left:12px;font-size:10px;color:#999}
+  .small{font-size:11px;color:#555}
+</style>
+</head>
+<body>
+<div class=""wrap"">
+
+  <!-- TIÊU NGỮ QUỐC GIA -->
+  <div class=""tc"">
+    <div class=""b"" style=""font-size:14px;letter-spacing:.5px"">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+    <div style=""margin-top:2px"">Độc lập • Tự do • Hạnh phúc</div>
+    <div class=""hr""></div>
+  </div>
+
+  <!-- THÔNG TIN DOANH NGHIỆP/ĐƠN VỊ PHÁT HÀNH -->
+  <div class=""head-grid"" style=""margin-top:12px"">
+    <div>
+      <div class=""b"">ĐƠN VỊ: {{dealer.name}}</div>
+      <div>Địa chỉ: {{dealer.address}}</div>
+      <div>MST: {{dealer.taxNo}}</div>
+      <div>Điện thoại: {{dealer.phone}} &nbsp;|&nbsp; Email: {{dealer.email}}</div>
+      <div>TK: {{dealer.bankAccount}} &nbsp;|&nbsp; Ngân hàng: {{dealer.bankName}}</div>
+    </div>
+    <div class=""tr"">
+      <div>Số: <b>{{order.no}}</b></div>
+      <div>Ngày lập: <b>{{order.date}}</b></div>
+      <div>Hình thức thanh toán: <b>{{order.paymentMethod}}</b></div>
+    </div>
+  </div>
+
+  <!-- TIÊU ĐỀ VĂN BẢN -->
+  <div class=""tc"" style=""margin-top:6px"">
+    <div class=""b"" style=""font-size:18px;text-transform:uppercase"">PHIẾU XÁC NHẬN THANH TOÁN ĐẦY ĐỦ</div>
+    <div class=""muted"">Căn cứ đơn đặt hàng số: <b>{{order.no}}</b></div>
+  </div>
+
+  <!-- CĂN CỨ & THỜI ĐỊA ĐIỂM -->
+  <div style=""margin-top:12px"">
+    <div><i>Căn cứ</i> Bộ luật Dân sự 2015 và các quy định pháp luật có liên quan;</div>
+    <div><i>Căn cứ</i> nhu cầu mua bán giữa các bên;</div>
+    <div style=""margin-top:6px"">Hôm nay, ngày <b>{{order.date}}</b>, tại <b>{{dealer.address}}</b>, chúng tôi gồm có:</div>
+  </div>
+
+  <!-- THÔNG TIN CÁC BÊN -->
+  <div class=""head-grid"" style=""margin-top:10px"">
+    <div class=""box"">
+      <h3>Bên A (Đơn vị bán)</h3>
+      <div class=""kv"">
+        <p>Tên: <b>{{dealer.name}}</b></p>
+        <p>Địa chỉ: {{dealer.address}}</p>
+        <p>MST: {{dealer.taxNo}}</p>
+        <p>Đại diện: <b>{{roles.A.representative}}</b> — Chức vụ: {{roles.A.title}}</p>
+        <p>Điện thoại: {{dealer.phone}} — Email: {{dealer.email}}</p>
+      </div>
+    </div>
+    <div class=""box"">
+      <h3>Bên B (Khách hàng)</h3>
+      <div class=""kv"">
+        <p>Họ tên: <b>{{customer.fullName}}</b></p>
+        <p>CCCD/CMND: {{customer.idNo}}</p>
+        <p>Địa chỉ: {{customer.address}}</p>
+        <p>Điện thoại: {{customer.phone}} — Email: {{customer.email}}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- NỘI DUNG XÁC NHẬN -->
+  <div class=""box"" style=""margin-top:12px"">
+    <h3>Nội dung xác nhận</h3>
+    <p>Bên A xác nhận đã <b>nhận đủ</b> tiền thanh toán cho đơn hàng số <b>{{order.no}}</b> với giá trị:</p>
+    <table>
+      <tbody>
+        <tr><td>Tổng giá trị đơn hàng</td><td class=""right""><b>{{money.orderTotal}}</b></td></tr>
+        <tr><td>Số tiền Bên B đã thanh toán (đợt này)</td><td class=""right"">{{money.deposit}}</td></tr>
+        <tr><td>Số tiền còn lại sau xác nhận</td><td class=""right""><b>{{money.remaining}}</b></td></tr>
+      </tbody>
+    </table>
+    <p>Chi tiết xe theo đơn hàng:</p>
+    <table>
+      <thead>
+        <tr>
+          <th style=""width:80px"" class=""right"">STT</th>
+          <th>Model – Version</th>
+          <th style=""width:160px"">Màu</th>
+          <th style=""width:120px"" class=""right"">Số lượng</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{order.vehicleRows}}
+      </tbody>
+    </table>
+    <div class=""head-grid"" style=""margin-top:6px"">
+      <div>
+        <div class=""b"">Logistics</div>
+        <div>Nơi bàn giao: <b>{{logistics.place}}</b></div>
+        <div>Dự kiến: <b>{{logistics.eta}}</b></div>
+      </div>
+      <div>
+        <div class=""b"">Lưu ý chính sách</div>
+        <div>Giữ hàng tối đa: <b>{{policy.holdDays}}</b> ngày; quá hạn <b>{{policy.lateDays}}</b> ngày có thể phát sinh chi phí lưu kho/điều phối.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ĐIỀU KHOẢN -->
+  <div class=""box"" style=""margin-top:10px"">
+    <h3>Điều khoản và cam kết</h3>
+    <ol class=""small"">
+      <li>Phiếu xác nhận này là một phần không tách rời hồ sơ mua bán/đơn đặt hàng số <b>{{order.no}}</b>.</li>
+      <li>Bên A sẽ sắp xếp bàn giao theo tiến độ logistics nêu trên.</li>
+      <li>Hai bên cam kết cung cấp thông tin trung thực và phối hợp đầy đủ trong quá trình giao nhận.</li>
+    </ol>
+  </div>
+
+  <!-- CHỮ KÝ -->
+  <div class=""sig"">
+    <div class=""sigbox tc"">
+      <div class=""sigttl"">ĐẠI DIỆN BÊN A</div>
+      <div><i>(Ký, ghi rõ họ tên, đóng dấu)</i></div>
+      <div class=""anchor"">ĐẠI_DIỆN_BÊN_A</div>
+    </div>
+    <div class=""sigbox tc"">
+      <div class=""sigttl"">ĐẠI DIỆN BÊN B</div>
+      <div><b>{{customer.fullName}}</b></div>
+      <div><i>(Ký, ghi rõ họ tên)</i></div>
+      <div class=""anchor"">ĐẠI_DIỆN_BÊN_B</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
+";
+
+            private const string CustomerPayRemainderEContractHtml = @"
+<!doctype html>
+<html lang=""vi"">
+<head>
+<meta charset=""utf-8""/>
+<title>Phiếu xác nhận thanh toán phần còn lại</title>
+<style>
+  *{box-sizing:border-box} html,body{font-family:DejaVu Sans, Arial, sans-serif;font-size:12px;color:#111}
+  .wrap{max-width:820px;margin:0 auto;padding:28px}
+  .tc{text-align:center} .tr{text-align:right} .b{font-weight:700} .muted{color:#666}
+  .hr{height:1px;background:#000;margin:6px auto 0;width:240px}
+  .head-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0 8px}
+  .box{border:1px solid #ddd;border-radius:8px;padding:12px}
+  .box h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.2px}
+  .kv p{margin:3px 0}
+  table{width:100%;border-collapse:collapse;margin:10px 0}
+  th,td{border:1px solid #ddd;padding:8px;vertical-align:top}
+  th{background:#f6f6f6;font-weight:700}
+  .right{text-align:right}
+  .sig{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
+  .sigbox{border:1px dashed #aaa;border-radius:8px;padding:12px;min-height:150px;position:relative}
+  .sigttl{font-weight:700;margin-bottom:6px}
+  .anchor{position:absolute;bottom:8px;left:12px;font-size:10px;color:#999}
+  .small{font-size:11px;color:#555}
+</style>
+</head>
+<body>
+<div class=""wrap"">
+
+  <!-- TIÊU NGỮ QUỐC GIA -->
+  <div class=""tc"">
+    <div class=""b"" style=""font-size:14px;letter-spacing:.5px"">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+    <div style=""margin-top:2px"">Độc lập • Tự do • Hạnh phúc</div>
+    <div class=""hr""></div>
+  </div>
+
+  <!-- THÔNG TIN DOANH NGHIỆP/ĐƠN VỊ PHÁT HÀNH -->
+  <div class=""head-grid"" style=""margin-top:12px"">
+    <div>
+      <div class=""b"">ĐƠN VỊ: {{dealer.name}}</div>
+      <div>Địa chỉ: {{dealer.address}}</div>
+      <div>MST: {{dealer.taxNo}}</div>
+      <div>Điện thoại: {{dealer.phone}} &nbsp;|&nbsp; Email: {{dealer.email}}</div>
+      <div>TK: {{dealer.bankAccount}} &nbsp;|&nbsp; Ngân hàng: {{dealer.bankName}}</div>
+    </div>
+    <div class=""tr"">
+      <div>Số: <b>{{order.no}}</b></div>
+      <div>Ngày lập: <b>{{order.date}}</b></div>
+      <div>Hình thức thanh toán: <b>{{order.paymentMethod}}</b></div>
+    </div>
+  </div>
+
+  <!-- TIÊU ĐỀ VĂN BẢN -->
+  <div class=""tc"" style=""margin-top:6px"">
+    <div class=""b"" style=""font-size:18px;text-transform:uppercase"">PHIẾU XÁC NHẬN THANH TOÁN PHẦN CÒN LẠI</div>
+    <div class=""muted"">Căn cứ đơn đặt hàng số: <b>{{order.no}}</b></div>
+  </div>
+
+  <!-- CĂN CỨ & THỜI ĐỊA ĐIỂM -->
+  <div style=""margin-top:12px"">
+    <div><i>Căn cứ</i> Bộ luật Dân sự 2015 và các quy định pháp luật có liên quan;</div>
+    <div><i>Căn cứ</i> các thỏa thuận thanh toán giữa các bên;</div>
+    <div style=""margin-top:6px"">Hôm nay, ngày <b>{{order.date}}</b>, tại <b>{{dealer.address}}</b>, chúng tôi gồm có:</div>
+  </div>
+
+  <!-- THÔNG TIN CÁC BÊN -->
+  <div class=""head-grid"" style=""margin-top:10px"">
+    <div class=""box"">
+      <h3>Bên A (Đơn vị bán)</h3>
+      <div class=""kv"">
+        <p>Tên: <b>{{dealer.name}}</b></p>
+        <p>Địa chỉ: {{dealer.address}}</p>
+        <p>MST: {{dealer.taxNo}}</p>
+        <p>Đại diện: <b>{{roles.A.representative}}</b> — Chức vụ: {{roles.A.title}}</p>
+        <p>Điện thoại: {{dealer.phone}} — Email: {{dealer.email}}</p>
+      </div>
+    </div>
+    <div class=""box"">
+      <h3>Bên B (Khách hàng)</h3>
+      <div class=""kv"">
+        <p>Họ tên: <b>{{customer.fullName}}</b></p>
+        <p>CCCD/CMND: {{customer.idNo}}</p>
+        <p>Địa chỉ: {{customer.address}}</p>
+        <p>Điện thoại: {{customer.phone}} — Email: {{customer.email}}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- NỘI DUNG XÁC NHẬN -->
+  <div class=""box"" style=""margin-top:12px"">
+    <h3>Nội dung xác nhận</h3>
+    <p>Bên A xác nhận đã <b>nhận thanh toán phần còn lại</b> cho đơn hàng số <b>{{order.no}}</b> với giá trị như sau:</p>
+    <table>
+      <tbody>
+        <tr><td>Tổng giá trị đơn hàng</td><td class=""right""><b>{{money.orderTotal}}</b></td></tr>
+        <tr><td>Số tiền thanh toán trong kỳ (phần còn lại)</td><td class=""right"">{{money.deposit}}</td></tr>
+        <tr><td>Số tiền còn lại sau xác nhận</td><td class=""right""><b>{{money.remaining}}</b></td></tr>
+      </tbody>
+    </table>
+    <p>Chi tiết xe theo đơn hàng:</p>
+    <table>
+      <thead>
+        <tr>
+          <th style=""width:80px"" class=""right"">STT</th>
+          <th>Model – Version</th>
+          <th style=""width:160px"">Màu</th>
+          <th style=""width:120px"" class=""right"">Số lượng</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{order.vehicleRows}}
+      </tbody>
+    </table>
+    <div class=""head-grid"" style=""margin-top:6px"">
+      <div>
+        <div class=""b"">Logistics</div>
+        <div>Nơi bàn giao: <b>{{logistics.place}}</b></div>
+        <div>Dự kiến: <b>{{logistics.eta}}</b></div>
+      </div>
+      <div>
+        <div class=""b"">Lưu ý chính sách</div>
+        <div>Giữ hàng tối đa: <b>{{policy.holdDays}}</b> ngày; quá hạn <b>{{policy.lateDays}}</b> ngày có thể phát sinh chi phí lưu kho/điều phối.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ĐIỀU KHOẢN -->
+  <div class=""box"" style=""margin-top:10px"">
+    <h3>Điều khoản và cam kết</h3>
+    <ol class=""small"">
+      <li>Phiếu xác nhận là căn cứ bổ sung cho hồ sơ thanh toán của đơn đặt hàng số <b>{{order.no}}</b>.</li>
+      <li>Sau khi hoàn tất, Bên A thực hiện bàn giao theo tiến độ logistics nêu trên.</li>
+      <li>Hai bên chịu trách nhiệm về tính chính xác của thông tin và thực hiện đầy đủ nghĩa vụ liên quan.</li>
+    </ol>
+  </div>
+
+  <!-- CHỮ KÝ -->
+  <div class=""sig"">
+    <div class=""sigbox tc"">
+      <div class=""sigttl"">ĐẠI DIỆN BÊN A</div>
+      <div><i>(Ký, ghi rõ họ tên, đóng dấu)</i></div>
+      <div class=""anchor"">ĐẠI_DIỆN_BÊN_A</div>
+    </div>
+    <div class=""sigbox tc"">
+      <div class=""sigttl"">ĐẠI DIỆN BÊN B</div>
+      <div><b>{{customer.fullName}}</b></div>
+      <div><i>(Ký, ghi rõ họ tên)</i></div>
+      <div class=""anchor"">ĐẠI_DIỆN_BÊN_B</div>
+    </div>
+  </div>
+
+  <div class=""small"" style=""margin-top:10px"">
+    Phiếu được lập thành 02 (hai) bản có giá trị pháp lý như nhau, mỗi bên giữ 01 (một) bản.
+  </div>
+
+</div>
+</body>
+</html>
+
+";
+
             public static void SeedDealerEContract(ModelBuilder modelBuilder)
             {
                 modelBuilder.Entity<EContractTemplate>().HasData(
@@ -700,6 +1149,33 @@ namespace SWP391Web.Infrastructure.Seeders
                         Code = "BOOKINGECONTRACT",
                         Name = "Xác nhận đặt xe – điều xe về đại lý",
                         ContentHtml = BookingContractHtml,
+                        CreatedAt = CreatedAtUtc,
+                        IsDeleted = false
+                    },
+                    new
+                    {
+                        Id = CustomerDepositTemplateId,
+                        Code = "CUSTOMER_DEPOSIT_CONTRACT",
+                        Name = "Hợp đồng đặt cọc mua xe (Khách hàng)",
+                        ContentHtml = CustomerDepositContractHtml,
+                        CreatedAt = CreatedAtUtc,
+                        IsDeleted = false
+                    },
+                    new
+                    {
+                        Id = CustomerFullPaymentTemplateId,
+                        Code = "CUSTOMER_PAY_FULL_E_CONTRACT",
+                        Name = "Phiếu xác nhận thanh toán đầy đủ (Khách hàng)",
+                        ContentHtml = CustomerPayFullEContractHtml,
+                        CreatedAt = CreatedAtUtc,
+                        IsDeleted = false
+                    },
+                    new
+                    {
+                        Id = CustomerPayRemainderTemplateId,
+                        Code = "CUSTOMER_PAY_REMAINDER_E_CONTRACT",
+                        Name = "Phiếu xác nhận thanh toán phần còn lại (Khách hàng)",
+                        ContentHtml = CustomerPayRemainderEContractHtml,
                         CreatedAt = CreatedAtUtc,
                         IsDeleted = false
                     }

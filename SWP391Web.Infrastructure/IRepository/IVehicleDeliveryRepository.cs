@@ -10,6 +10,8 @@ namespace SWP391Web.Infrastructure.IRepository
     public interface IVehicleDeliveryRepository : IRepository<VehicleDelivery>
     {
         Task<VehicleDelivery?> GetVehicleDeliveryById(Guid deliveryId , CancellationToken ct);
-        Task<VehicleDelivery?> VehicleDeliveryByBookingId(Guid BookingId , CancellationToken ct);
+        Task<VehicleDelivery?> GetVehicleDeliveryByBookingId(Guid BookingId , CancellationToken ct);
+        Task<int> CountByDealerIdAsync(Guid dealerId, CancellationToken ct);
+        Task<int> GetTotalDeliveriesAsync(CancellationToken ct);
     }
 }

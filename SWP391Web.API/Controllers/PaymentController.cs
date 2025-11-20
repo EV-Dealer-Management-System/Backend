@@ -37,5 +37,21 @@ namespace SWP391Web.API.Controllers
 
             return new JsonResult(new VNPayIpnResponse("99", "Unknown error"));
         }
+
+        [HttpPost]
+        [Route("create-vnpay-mobile/{amount:long}")]
+        public async Task<ActionResult<ResponseDTO>> CreateVNPayLinkMobile(long amount, CancellationToken ct)
+        {
+            var response = await _paymentService.CreateVNPayLinkMobile(amount, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpGet]
+        [Route("get-all-transactions-mobile")]
+        public async Task<ActionResult<ResponseDTO>> GetAllTransactionsMobile(int pageNumber = 1, int pageSize = 10, CancellationToken ct = default)
+        {
+            var respones = await _paymentService.GetAllMobile(pageNumber, pageSize, ct);
+            return StatusCode(respones.StatusCode, respones);
+        }
     }
 }

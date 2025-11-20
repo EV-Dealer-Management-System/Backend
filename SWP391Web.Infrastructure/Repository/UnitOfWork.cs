@@ -17,7 +17,6 @@ namespace SWP391Web.Infrastructure.Repository
         public IElectricVehicleVersionRepository ElectricVehicleVersionRepository { get; private set; }
         public IElectricVehicleRepository ElectricVehicleRepository { get; private set; }
         public IEContractTemplateRepository EContractTemplateRepository { get; private set; }
-        public IEContractTermRepository EContractTermRepository { get; private set; }
         public IEContractRepository EContractRepository { get; private set; }
         public IBookingEVRepository BookingEVRepository { get; private set; }
         public IEVCInventoryRepository EVCInventoryRepository { get; private set; }
@@ -43,6 +42,12 @@ namespace SWP391Web.Infrastructure.Repository
         public IDealerPolicyOverrideRepository DealerPolicyOverrideRepository { get; private set; }
         public IDealerDebtRepository DealerDebtRepository { get; private set; }
         public IVehicleDeliveryRepository VehicleDeliveryRepository { get; private set; }
+        public IDealerDebtTransactionRepository DealerDebtTransactionRepository { get; private set; }
+        public IVehicleDeliveryDetailRepository VehicleDeliveryDetailRepository { get; private set; }
+        public IDealerDailyInventoryRepository DealerDailyInventoryRepository { get; private set; }
+        public IDealerInventoryForecastRepository DealerInventoryForecastRepository { get; private set; }
+        public IDealerInventoryRiskRepository DealerInventoryRiskRepository { get; private set; }
+
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -56,7 +61,6 @@ namespace SWP391Web.Infrastructure.Repository
             ElectricVehicleVersionRepository = new ElectricVehicleVersionRepository(_context);
             ElectricVehicleRepository = new ElectricVehicleRepository(_context);
             EContractTemplateRepository = new EContractTemplateRepository(_context);
-            EContractTermRepository = new EContractTermRepository(_context);
             EContractRepository = new EContractRepository(_context);
             BookingEVRepository = new BookingEVRepository(_context);
             EVCInventoryRepository = new EVCInventoryRepository(_context);
@@ -82,10 +86,35 @@ namespace SWP391Web.Infrastructure.Repository
             DealerPolicyOverrideRepository = new DealerPolicyOverrideRepository(_context);
             DealerDebtRepository = new DealerDebtRepository(_context);
             VehicleDeliveryRepository = new VehicleDeliveryRepository(_context);
+            DealerDebtTransactionRepository = new DealerDebtTransactionRepository(_context);
+            VehicleDeliveryDetailRepository = new VehicleDeliveryDetailRepository(_context);
+            DealerDailyInventoryRepository = new DealerDailyInventoryRepository(_context);
+            DealerInventoryForecastRepository = new DealerInventoryForecastRepository(_context);
+            DealerInventoryRiskRepository = new DealerInventoryRiskRepository(_context);
         }
         public async Task<int> SaveAsync()
         {
             return await _context.SaveChangesAsync();
+        }
+
+        public async Task<int> SaveAsync(CancellationToken ct = default)
+        {
+            return await _context.SaveChangesAsync(ct);
+        }
+
+        public async Task ExecuteInTransactionAsync(Func<Task> action, CancellationToken ct = default)
+        {
+           await using var transaction = await _context.Database.BeginTransactionAsync(ct);
+            try
+            {
+                await action();
+                await transaction.CommitAsync(ct);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
         }
     }
 }

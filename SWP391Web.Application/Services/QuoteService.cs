@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Quote;
 using SWP391Web.Application.IServices;
@@ -212,7 +213,7 @@ namespace SWP391Web.Application.Services
 
             }
 
-        public async Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user, QuoteStatus? status = null)
+        public async Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user, int pageNumber , int pageSize ,　QuoteStatus? status , bool onlyToday = false, CancellationToken ct = default)
         {
             try
             {
@@ -233,12 +234,12 @@ namespace SWP391Web.Application.Services
                 if (status.HasValue)
                     filter = q => q.Status == status.Value;
 
-                List<Quote> quotes;
+                Guid? dealerId = null;
 
                 if (role == StaticUserRole.DealerManager || role == StaticUserRole.DealerStaff)
                 {
                     var dealer = await _unitOfWork.DealerRepository
-                        .GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
+                        .GetDealerByManagerOrStaffAsync(userId, ct);
                     if (dealer == null)
                     {
                         return new ResponseDTO
@@ -248,57 +249,85 @@ namespace SWP391Web.Application.Services
                             StatusCode = 404
                         };
                     }
-
-                    if (filter != null)
-                        filter = q => q.DealerId == dealer.Id && q.Status == status.Value;
-                    else
-                        filter = q => q.DealerId == dealer.Id;
-
-                    quotes = await _unitOfWork.QuoteRepository.GetAllQuotesWithDetailAsync(filter);
+                    dealerId = dealer.Id;
                 }
-                else
+
+                var query = _unitOfWork.QuoteRepository.Query();
+                if (status.HasValue)
                 {
-                    quotes = await _unitOfWork.QuoteRepository.GetAllQuotesWithDetailAsync(filter);
+                    query = query.Where(q => q.Status == status.Value);
                 }
 
-
-                //filterd quote status
-                var filteredQuotes = new List<GetQuoteDTO>();
-                foreach (var q in quotes)
+                if (dealerId.HasValue)
                 {
-                    bool isShow = true;
-
-                    foreach (var dt in q.QuoteDetails)
-                    {
-                        if (dt.Promotion != null && dt.Promotion.EndDate.HasValue &&
-                            dt.Promotion.EndDate < DateTime.UtcNow)
-                        {
-                            isShow = false;
-                            break;
-                        }
-
-                        var availableVehicles = await _unitOfWork.ElectricVehicleRepository
-                            .GetAvailableVehicleByDealerAsync(q.DealerId, dt.VersionId, dt.ColorId);
-
-                        if (availableVehicles.Count() < dt.Quantity)
-                        {
-                            isShow = false;
-                            break;
-                        }
-                    }
-
-                    if (isShow)
-                    {
-                        filteredQuotes.Add(_mapper.Map<GetQuoteDTO>(q));
-                    }
+                    query = query.Where(q => q.DealerId == dealerId.Value);
                 }
+
+                if (onlyToday)
+                {
+                    var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                    var nowVN = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+                    var todayVN = nowVN.Date;
+                    var tomorrowVN = todayVN.AddDays(1);
+
+                    var todayUTC = TimeZoneInfo.ConvertTimeToUtc(todayVN, vnTimeZone);
+                    var tomorrowUTC = TimeZoneInfo.ConvertTimeToUtc(tomorrowVN, vnTimeZone);
+
+                    query = query.Where(q => q.CreatedAt >= todayUTC && q.CreatedAt < tomorrowUTC);
+                }
+
+                query = query
+                    .Include(x => x.QuoteDetails)
+                        .ThenInclude(d => d.Promotion)
+                    .Include(x => x.QuoteDetails)
+                        .ThenInclude(d => d.ElectricVehicleVersion)
+                            .ThenInclude(v => v.Model)
+                    .Include(x => x.QuoteDetails)
+                        .ThenInclude(d => d.ElectricVehicleColor)
+                    .Include(x => x.Dealer);
+
+                var totalItems = await query.CountAsync(ct);
+                var quotes = await query
+                    .OrderByDescending(q => q.CreatedAt)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync(ct);
+
+                if (!quotes.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No quotes found for specified criteria",
+                        StatusCode = 404
+                    };
+                }
+
+                var filteredQuotes = quotes
+                    .Where(q =>
+                        q.QuoteDetails.All(dt =>
+                            dt.Promotion == null ||
+                            !dt.Promotion.EndDate.HasValue ||
+                            dt.Promotion.EndDate >= DateTime.UtcNow))
+                    .Select(q => _mapper.Map<GetQuoteDTO>(q))
+                    .ToList();
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     Message = "Get all quotes successfully",
                     StatusCode = 200,
-                    Result = filteredQuotes
+                    Result = new
+                    {
+                        data = filteredQuotes,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = pageSize,
+                            TotalItems = totalItems,
+                            TotalPages = (int)Math.Ceiling((double)totalItems / pageSize)
+                        }
+                    }
                 };
             }
             catch (Exception ex)

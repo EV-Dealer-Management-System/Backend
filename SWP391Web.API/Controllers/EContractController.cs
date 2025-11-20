@@ -162,10 +162,10 @@ namespace SWP391Web.API.Controllers
         [HttpPost]
         [Route("update-econtract")]
         [Consumes("application/json")]
-        [Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
+        [Authorize(Roles = StaticUserRole.AllRolesInSystem)]
         public async Task<ActionResult<ResponseDTO>> UpdateEContract([FromBody] UpdateEContractDTO dto, CancellationToken ct)
         {
-            var r = await _econtractService.UpdateEContract(dto, ct);
+            var r = await _econtractService.UpdateEContract(User, dto, ct);
             return Ok(r);
         }
 
@@ -204,19 +204,27 @@ namespace SWP391Web.API.Controllers
             return StatusCode((int)r.StatusCode, r);
         }
 
-        //[HttpPost]
-        //[Route("create-booking-confirm-econtract")]
-        //public async Task<ActionResult<ResponseDTO>> CreateBookingConfirmEcontract([FromQuery] Guid bookingId, CancellationToken ct)
-        //{
-        //    var response = await _econtractService.CreateBookingEContractAsync(User, bookingId, ct);
-        //    return StatusCode(response.StatusCode, response);
-        //}
-
         [HttpDelete]
         [Route("delete-econtract-draft/{econtractId}")]
         public async Task<ActionResult<ResponseDTO>> DeleteEContractDraft([FromRoute] Guid econtractId, CancellationToken ct)
         {
             var r = await _econtractService.DeleteEContractDraft(econtractId, ct);
+            return StatusCode(r.StatusCode, r);
+        }
+
+        [HttpPost]
+        [Route("ready-customerorder-econtract")]
+        public async Task<ActionResult<ResponseDTO>> ReadyCustomerOrderEcontract([FromQuery] Guid eContractId, CancellationToken ct)
+        {
+            var r = await _econtractService.ReadyCustomerOrderEcontract(eContractId, ct);
+            return StatusCode(r.StatusCode, r);
+        }
+
+        [HttpPost]
+        [Route("confirm-booking-econtract")]
+        public async Task<ActionResult<ResponseDTO>> ConfirmBookingEVEContract([FromQuery] Guid EContractId, CancellationToken ct)
+        {
+            var r = await _econtractService.ConfirmBookingEVEContract(User, EContractId, ct);
             return StatusCode(r.StatusCode, r);
         }
     }

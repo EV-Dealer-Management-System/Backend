@@ -1,13 +1,18 @@
 ﻿using Aspose.Words;
+using AutoMapper;
 using Microsoft.AspNetCore.Http.HttpResults;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.DealerDebt;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -16,78 +21,43 @@ namespace SWP391Web.Application.Services
     public class DealerDebtService : IDealerDebtService
     {
         private readonly IUnitOfWork _unitOfWork;
-        public DealerDebtService(IUnitOfWork unitOfWork)
+        private readonly IDealerDebtTransactionService _dealerDebtTransactionService;
+        private readonly IMapper _mapper;
+        public DealerDebtService(IUnitOfWork unitOfWork, IDealerDebtTransactionService dealerDebtTransactionService, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _dealerDebtTransactionService = dealerDebtTransactionService;
+            _mapper = mapper;
         }
 
         public async Task<ResponseDTO> AddPurchaseForDealerAsync(Guid dealerId, RecordDebtDTO debtDTO, CancellationToken ct)
         {
             try
             {
-                var confirmDateUtc = debtDTO.ConfirmDateUtc;
-                var year = debtDTO.ConfirmDateUtc.Year;
-                var quarter = GetQuarter(confirmDateUtc);
+                var now = DateTime.SpecifyKind(debtDTO.ConfirmDateUtc, DateTimeKind.Utc);
 
-                if (IsLastMonthOfQuarter(confirmDateUtc))
+                var create = new CreateDealerDebtTransactionDTO
                 {
-                    (year, quarter) = MoveToNextQuarter(confirmDateUtc);
-                }
+                    DealerId = dealerId,
+                    Type = DealerDebtTransactionType.Purchase,
+                    Amount = debtDTO.Amount,
+                    OccurredAtUtc = now,
+                    ExternalId = BuildExtId("PURCHASE", debtDTO.ReferenceNo, dealerId, now),
+                    SourceType = debtDTO.SourceType,
+                    SourceId = debtDTO.SourceId,
+                    SourceNo = debtDTO.ReferenceNo,
+                    ReferenceNo = debtDTO.ReferenceNo,
+                    Note = debtDTO.Note
+                };
 
-                var (periodFrom, periodTo) = _unitOfWork.DealerDebtRepository.GetQuarterRangeUtc(confirmDateUtc);
-
-                var debt = await _unitOfWork.DealerDebtRepository
-                    .GetByDealerAndPeriodAsync(dealerId, periodFrom, periodTo, ct);
-
-                var isNew = false;
-                if (debt == null)
-                {
-                    decimal openingBalance = 0m;
-
-                    var lastDebt = await _unitOfWork.DealerDebtRepository
-                        .GetLatestByDealerAsync(dealerId, ct);
-
-                    if (lastDebt != null)
-                    {
-                        openingBalance = lastDebt.ClosingBalance;
-                    }
-
-                    debt = new DealerDebt
-                    {
-                        Id = Guid.NewGuid(),
-                        DealerId = dealerId,
-                        PeriodFrom = periodFrom,
-                        PeriodTo = periodTo,
-                        OpeningBalance = openingBalance,
-                        PurchasesAmount = 0m,
-                        PaymentsAmount = 0m,
-                        CommissionsAmount = 0m,
-                        PenaltiesAmount = 0m,
-                        ClosingBalance = openingBalance,
-                        ReferenceNo = debtDTO.ReferenceNo,
-                        Note = $"Auto-create debt for Q{quarter}/{year}",
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await _unitOfWork.DealerDebtRepository.AddAsync(debt, ct);
-                    isNew = true;
-                }
-
-                debt.PurchasesAmount += debtDTO.Amount;
-
-                Recalc(debt);
-
-                if (!isNew)
-                {
-                    _unitOfWork.DealerDebtRepository.Update(debt);
-                }
-
+                await _dealerDebtTransactionService.CraeteDealerDebtTransaction(create, ct);
                 await _unitOfWork.SaveAsync();
                 return new ResponseDTO
                 {
-                    StatusCode = 200,
+                    StatusCode = 201,
                     IsSuccess = true,
-                    Message = "Successfully added purchase for dealer debt."
+                    Message = "Successfully added purchase for dealer debt.",
+                    Result = create
                 };
             }
             catch (Exception ex)
@@ -101,55 +71,36 @@ namespace SWP391Web.Application.Services
             }
         }
 
+        private static string BuildExtId(string kind, string? referenceNo, Guid dealerId, DateTime now)
+        {
+            if (!string.IsNullOrWhiteSpace(referenceNo))
+                return $"{kind}:{referenceNo}".Trim();
+
+            return $"{kind}:{dealerId}:{now:yyyyMMddHHmmss}";
+        }
+
         public async Task<ResponseDTO> AddPaymentForDealerAsync(Guid dealerId, RecordPaymentDTO paymentDTO, CancellationToken ct)
         {
             try
             {
-                var targetPeriod = ResolveQuarterPeriod(paymentDTO.PaidAtUtc);
+                var now = DateTime.SpecifyKind(paymentDTO.PaidAtUtc, DateTimeKind.Utc);
 
-                var debt = await _unitOfWork.DealerDebtRepository
-                    .GetByDealerAndPeriodAsync(dealerId, targetPeriod.PeriodFrom, targetPeriod.PeriodTo, ct);
-
-                var isNew = false;
-                if (debt is null)
+                var create = new CreateDealerDebtTransactionDTO
                 {
-                    var openingBalance = await GetOpeningBalanceFromLastPeriod(dealerId, ct);
+                    DealerId = dealerId,
+                    Type = DealerDebtTransactionType.Payment,
+                    Amount = paymentDTO.Amount,
+                    OccurredAtUtc = now,
+                    ExternalId = BuildExtId("PAYMENT", paymentDTO.ReferenceNo, dealerId, now),
+                    Method = paymentDTO.Method,
+                    SourceType = paymentDTO.SourceType,
+                    SourceId = paymentDTO.SourceId,
+                    SourceNo = paymentDTO.ReferenceNo,
+                    ReferenceNo = paymentDTO.ReferenceNo,
+                    Note = paymentDTO.Note
+                };
 
-                    debt = new DealerDebt
-                    {
-                        Id = Guid.NewGuid(),
-                        DealerId = dealerId,
-                        PeriodFrom = targetPeriod.PeriodFrom,
-                        PeriodTo = targetPeriod.PeriodTo,
-                        OpeningBalance = openingBalance,
-                        PurchasesAmount = 0m,
-                        PaymentsAmount = 0m,
-                        CommissionsAmount = 0m,
-                        PenaltiesAmount = 0m,
-                        ClosingBalance = openingBalance,
-                        OverpaidAmount = 0m,
-                        ReferenceNo = paymentDTO.ReferenceNo,
-                        Note = $"Auto-create debt for Q{targetPeriod.Quarter}/{targetPeriod.Year} (payment)",
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await _unitOfWork.DealerDebtRepository.AddAsync(debt, ct);
-                    isNew = true;
-                }
-
-                debt.PaymentsAmount += paymentDTO.Amount;
-
-                if (!string.IsNullOrWhiteSpace(paymentDTO.Method))
-                {
-                    debt.Note = (debt.Note ?? string.Empty) + $" | Payment: {paymentDTO.Method} - {(int)paymentDTO.Amount}";
-                }
-
-                Recalc(debt);
-
-                if (!isNew)
-                {
-                    _unitOfWork.DealerDebtRepository.Update(debt);
-                }
+                await _dealerDebtTransactionService.CraeteDealerDebtTransaction(create, ct);
 
                 return new ResponseDTO(true)
                 {
@@ -171,52 +122,25 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var targetPeriod = ResolveQuarterPeriod(dto.AtUtc);
+                var now = DateTime.SpecifyKind(dto.AtUtc, DateTimeKind.Utc);
 
-                var debt = await _unitOfWork.DealerDebtRepository
-                    .GetByDealerAndPeriodAsync(dealerId, targetPeriod.PeriodFrom, targetPeriod.PeriodTo, ct);
-                var isNew = false;
-                if (debt is null)
+                var create = new CreateDealerDebtTransactionDTO
                 {
-                    var openingBalance = await GetOpeningBalanceFromLastPeriod(dealerId, ct);
+                    DealerId = dealerId,
+                    Type = DealerDebtTransactionType.Commission,
+                    Amount = dto.Amount,
+                    OccurredAtUtc = now,
+                    ExternalId = BuildExtId("COMMISSION", dto.ReferenceNo, dealerId, now),
+                    SourceType = dto.SourceType,
+                    SourceId = dto.SourceId,
+                    SourceNo = dto.ReferenceNo,
+                    ReferenceNo = dto.ReferenceNo,
+                    Note = dto.Note
+                };
 
-                    debt = new DealerDebt
-                    {
-                        Id = Guid.NewGuid(),
-                        DealerId = dealerId,
-                        PeriodFrom = targetPeriod.PeriodFrom,
-                        PeriodTo = targetPeriod.PeriodTo,
-                        OpeningBalance = openingBalance,
-                        PurchasesAmount = 0m,
-                        PaymentsAmount = 0m,
-                        CommissionsAmount = 0m,
-                        PenaltiesAmount = 0m,
-                        ClosingBalance = openingBalance,
-                        OverpaidAmount = 0m,
-                        ReferenceNo = dto.ReferenceNo,
-                        Note = $"Auto-create debt for Q{targetPeriod.Quarter}/{targetPeriod.Year} (commission)",
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await _unitOfWork.DealerDebtRepository.AddAsync(debt, ct);
-                    isNew = true;
-                }
-
-                debt.CommissionsAmount += dto.Amount;
-
-                if (!string.IsNullOrWhiteSpace(dto.Note))
-                {
-                    debt.Note = (debt.Note ?? string.Empty) + $" | Commission: {dto.Note}";
-                }
-
-                Recalc(debt);
-
-                if (!isNew)
-                {
-                    _unitOfWork.DealerDebtRepository.Update(debt);
-                }
-
-                return new ResponseDTO(true)
+                await _dealerDebtTransactionService.CraeteDealerDebtTransaction(create, ct);
+                await _unitOfWork.SaveAsync();
+                return new ResponseDTO
                 {
                     StatusCode = 200,
                     Message = "Successfully recorded commission for dealer."
@@ -232,66 +156,206 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        private async Task<decimal> GetOpeningBalanceFromLastPeriod(Guid dealerId, CancellationToken ct)
+        public async Task<ResponseDTO> GetDealerDebtBalanceAtQuarterNow(ClaimsPrincipal userClaim, Guid? dealerId, CancellationToken ct)
         {
-            var lastDebt = await _unitOfWork.DealerDebtRepository.GetLatestByDealerAsync(dealerId, ct);
-            if (lastDebt != null)
+            try
             {
-                if (lastDebt.OverpaidAmount > 0)
-                    return 0m;
-                return lastDebt.ClosingBalance;
+                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "The user not login yet."
+                    };
+                }
+
+                var role = userClaim.FindFirst(ClaimTypes.Role)!.Value;
+                if (role is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 403,
+                        Message = "The user has no role assigned."
+                    };
+                }
+
+                Dealer? dealer;
+                if (role.Equals(StaticUserRole.Admin) || role.Equals(StaticUserRole.EVMStaff))
+                {
+                    if (dealerId is null)
+                    {
+                        return new ResponseDTO(false)
+                        {
+                            StatusCode = 400,
+                            Message = "DealerId is required for admin or staff users."
+                        };
+                    }
+
+                    dealer = await _unitOfWork.DealerRepository.GetByIdAsync(dealerId.Value, ct);
+                    if (dealer is null)
+                    {
+                        return new ResponseDTO(false)
+                        {
+                            StatusCode = 404,
+                            Message = "Dealer not found."
+                        };
+                    }
+                }
+                else
+                {
+                    dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                    if (dealer is null)
+                    {
+                        dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId, ct);
+                        if (dealer is null)
+                        {
+                            return new ResponseDTO(false)
+                            {
+                                StatusCode = 404,
+                                Message = "Dealer not found for the current user."
+                            };
+                        }
+                    }
+                }
+
+                var dealerDebt = await _unitOfWork.DealerDebtRepository.GetOrCreateQuarterAsync(dealer.Id, DateTime.Now, ct);
+                if (dealerDebt is null)
+                {
+                    return new ResponseDTO(false)
+                    {
+                        StatusCode = 404,
+                        Message = "Dealer debt record not found."
+                    };
+                }
+
+                var getDealerDebt = _mapper.Map<GetDealerDebtDTO>(dealerDebt);
+                return new ResponseDTO
+                {
+                    StatusCode = 200,
+                    Message = "Successfully retrieved dealer debt balance.",
+                    Result = getDealerDebt
+                };
             }
-            return 0m;
-        }
-
-        private (DateTime PeriodFrom, DateTime PeriodTo, int Quarter, int Year) ResolveQuarterPeriod(DateTime atUtc)
-        {
-            var year = atUtc.Year;
-            var quarter = GetQuarter(atUtc);
-
-            if (IsLastMonthOfQuarter(atUtc))
+            catch (Exception ex)
             {
-                (year, quarter) = MoveToNextQuarter(atUtc);
+                return new ResponseDTO(false)
+                {
+                    StatusCode = 500,
+                    Message = $"Failed to retrieve dealer debt balance: {ex.Message}"
+                };
             }
-
-            var (from, to) = _unitOfWork.DealerDebtRepository.GetQuarterRangeUtc(new DateTime(year, (quarter - 1) * 3 + 1, 1, 0, 0, 0, DateTimeKind.Utc));
-            return (from, to, quarter, year);
         }
 
-        private int GetQuarter(DateTime date)
+        public async Task<ResponseDTO> GetDealerDebtDetails(ClaimsPrincipal userClaim, Guid? dealerId, DateTime fromDateUtc, DateTime toDateUtc, int pageNumber, int pageSize, CancellationToken ct)
         {
-            return ((date.Month - 1) / 3) + 1;
-        }
-
-        private static void Recalc(DealerDebt debt)
-        {
-            var raw = debt.ClosingBalance = debt.OpeningBalance + debt.PurchasesAmount - debt.PaymentsAmount - debt.CommissionsAmount + debt.PenaltiesAmount;
-            if (raw < 0)
+            try
             {
-                debt.ClosingBalance = 0;
-                debt.OverpaidAmount = Math.Abs(raw);
+                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)!.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO()
+                    {
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "The user not login yet."
+                    };
+                }
+
+                var role = userClaim.FindFirst(ClaimTypes.Role)!.Value;
+                if (role is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 403,
+                        Message = "The user has no role assigned."
+                    };
+                }
+
+                Dealer? dealer;
+                if (role.Equals(StaticUserRole.Admin) || role.Equals(StaticUserRole.EVMStaff))
+                {
+                    if (dealerId is null)
+                    {
+                        return new ResponseDTO(false)
+                        {
+                            StatusCode = 400,
+                            Message = "DealerId is required for admin or staff users."
+                        };
+                    }
+
+                    dealer = await _unitOfWork.DealerRepository.GetByIdAsync(dealerId.Value, ct);
+                    if (dealer is null)
+                    {
+                        return new ResponseDTO(false)
+                        {
+                            StatusCode = 404,
+                            Message = "Dealer not found."
+                        };
+                    }
+                }
+                else
+                {
+                    dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                    if (dealer is null)
+                    {
+                        dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId, ct);
+                        if (dealer is null)
+                        {
+                            return new ResponseDTO(false)
+                            {
+                                StatusCode = 404,
+                                Message = "Dealer not found for the current user."
+                            };
+                        }
+                    }
+                }
+
+                Expression<Func<DealerDebtTransaction, bool>> filter = ddt => ddt
+                    .DealerId == dealer.Id &&
+                    ddt.CreatedAtUtc >= fromDateUtc &&
+                    ddt.CreatedAtUtc <= toDateUtc;
+
+                (IReadOnlyList<DealerDebtTransaction> items, int total) result;
+
+                result = await _unitOfWork.DealerDebtTransactionRepository.GetPagedAsync(
+                            filter: filter,
+                            includes: null,
+                            orderBy: dm => dm.CreatedAtUtc,
+                            ascending: false,
+                            pageNumber: pageNumber,
+                            pageSize: pageSize,
+                            ct: ct);
+
+                var dealerDebtDetails = _mapper.Map<List<GetDealerDebtTransactionDTO>>(result.items);
+                return new ResponseDTO
+                {
+                    StatusCode = 200,
+                    Message = "Successfully retrieved dealer debt details.",
+                    Result = new
+                    {
+                        data = dealerDebtDetails,
+                        Pagination = new
+                        {
+                            PageNumber = pageNumber,
+                            PageSize = pageSize,
+                            TotalItems = result.total,
+                            TotalPages = (int)Math.Ceiling((double)result.total / pageSize)
+                        }
+                    }
+                };
             }
-            else
+            catch (Exception ex)
             {
-                debt.ClosingBalance = raw;
-                debt.OverpaidAmount = 0;
+                return new ResponseDTO(false)
+                {
+                    StatusCode = 500,
+                    Message = $"Failed to retrieve dealer debt details: {ex.Message}"
+                };
             }
-        }
-
-
-
-        public static bool IsLastMonthOfQuarter(DateTime dt)
-        {
-            return dt.Month % 3 == 0;
-        }
-
-        public static (int year, int quarter) MoveToNextQuarter(DateTime asOfUtc)
-        {
-            var quarter = (asOfUtc.Month - 1) / 3 + 1;
-            if (quarter == 4)
-                return (asOfUtc.Year + 1, 1);
-
-            return (asOfUtc.Year, quarter + 1);
         }
     }
 }

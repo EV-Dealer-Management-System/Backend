@@ -9,7 +9,6 @@ namespace SWP391Web.Domain.Entities
     public class DealerDebt
     {
         public Guid Id { get; set; }
-
         public Guid DealerId { get; set; }
         public DateTime PeriodFrom { get; set; }
         public DateTime PeriodTo { get; set; }

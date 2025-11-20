@@ -22,6 +22,9 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<Dealer?> GetByIdAsync(Guid dealerId, CancellationToken ct)
         {
             return await _context.Dealers
+                .Include(dl => dl.Manager)
+                .Include(dl => dl.DealerMembers)
+                    .ThenInclude(dm => dm.ApplicationUser)
                 .Include(dl => dl.Warehouse)
                 .Include(dl => dl.DealerTier)
                 .Include(dl => dl.PolicyOverrides)
@@ -31,7 +34,6 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<Dealer?> GetDealerByUserIdAsync(string userId, CancellationToken ct)
         {
             return await _context.Dealers
-                .AsNoTracking()
                 .Include(dl => dl.Warehouse)
                 .Where(dl => dl.DealerMembers.Any(dm => dm.ApplicationUserId == userId && dm.IsActive == true))
                 .FirstOrDefaultAsync(ct);
@@ -40,7 +42,7 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<Dealer?> GetDealerByManagerIdAsync(string managerId, CancellationToken ct)
         {
             return await _context.Dealers
-                .AsNoTracking()
+                .Include(dl => dl.DealerTier)
                 .Include(dl => dl.Manager)
                 .Where(dl => dl.ManagerId == managerId)
                 .FirstOrDefaultAsync(ct);
@@ -77,6 +79,7 @@ namespace SWP391Web.Infrastructure.Repository
         {
             return await _context.Dealers
                 .AsNoTracking()
+                .Include(dl => dl.Customers)
                 .Include(dl => dl.Manager)
                 .Where(dl => dl.ManagerId == userdId
                         || dl.DealerMembers.Any(dm => dm.ApplicationUserId == userdId && dm.IsActive))
@@ -91,6 +94,11 @@ namespace SWP391Web.Infrastructure.Repository
                 .Where(dl => dl.ManagerId == userId
                         || dl.DealerMembers.Any(dm => dm.ApplicationUserId == userId && dm.IsActive))
                 .FirstOrDefaultAsync(ct);
+        }
+
+        public async Task<int> GetTotalDealersAsync(CancellationToken ct)
+        {
+            return await _context.Dealers.CountAsync(ct);
         }
     }
 }

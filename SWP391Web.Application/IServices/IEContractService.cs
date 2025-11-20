@@ -20,7 +20,7 @@ namespace SWP391Web.Application.IServices
         Task<VnptResult<VnptSmartCAResponse>> AddSmartCA(AddNewSmartCADTO addNewSmartCADTO);
         Task<VnptResult<VnptFullUserData>> GetSmartCAInformation(int userId);
         Task<VnptResult<VnptSmartCAResponse>> UpdateSmartCA(UpdateSmartDTO updateSmartDTO);
-        Task<VnptResult<UpdateEContractResponse>> UpdateEContract(UpdateEContractDTO updateEContractDTO, CancellationToken ct);
+        Task<VnptResult<UpdateEContractResponse>> UpdateEContract(ClaimsPrincipal userClaim, UpdateEContractDTO updateEContractDTO, CancellationToken ct);
         Task<ResponseDTO<EContract>> GetAllEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus = default, EcontractType econtractType = default);
         Task<ResponseDTO> CreateDraftEContractAsync(ClaimsPrincipal userClaim, CreateDealerDTO createDealerDTO, CancellationToken ct);
         Task<VnptResult<VnptDocumentDto>> GetVnptEContractByIdAsync(string eContractId, CancellationToken ct);
@@ -29,5 +29,9 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> CreateBookingEContractAsync(ClaimsPrincipal userClaim, Guid bookingId, CancellationToken ct);
         Task<ResponseDTO> DeleteEContractDraft(Guid EContractId, CancellationToken ct);
         Task<VnptResult<DeleteSmartCAResponse>> DeleteSmartCA(DeleteSmartCARequest deleteSmartCARequest);
+        Task<ResponseDTO> CreateDepositEContractConfirm(Guid customerOderId, CancellationToken ct);
+        Task<ResponseDTO> ReadyCustomerOrderEcontract(Guid eContractId, CancellationToken ct);
+        Task<ResponseDTO> CreatePayFullConfirmationEContract(Guid customerOderId, CancellationToken ct);
+        Task<ResponseDTO> ConfirmBookingEVEContract(ClaimsPrincipal userClaim, Guid EContractId, CancellationToken ct);
     }
 }

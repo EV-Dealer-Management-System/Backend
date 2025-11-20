@@ -1,5 +1,6 @@
 ﻿using Aspose.Words.XAttr;
 using AutoMapper;
+using Microsoft.AspNetCore.DataProtection.XmlEncryption;
 using SWP391Web.Application.DTO.Appointment;
 using SWP391Web.Application.DTO.AppointmentSetting;
 using SWP391Web.Application.DTO.Auth;
@@ -9,6 +10,7 @@ using SWP391Web.Application.DTO.Customer;
 using SWP391Web.Application.DTO.CustomerFeedback;
 using SWP391Web.Application.DTO.CustomerOrder;
 using SWP391Web.Application.DTO.Dealer;
+using SWP391Web.Application.DTO.DealerDebt;
 using SWP391Web.Application.DTO.DealerFeedBackDTO;
 using SWP391Web.Application.DTO.DepositSetting;
 using SWP391Web.Application.DTO.EContract;
@@ -21,10 +23,12 @@ using SWP391Web.Application.DTO.EVCInventory;
 using SWP391Web.Application.DTO.EVTemplate;
 using SWP391Web.Application.DTO.Notification;
 using SWP391Web.Application.DTO.OrderDetail;
+using SWP391Web.Application.DTO.Payment;
 using SWP391Web.Application.DTO.Promotion;
 using SWP391Web.Application.DTO.Quote;
 using SWP391Web.Application.DTO.QuoteDetail;
 using SWP391Web.Application.DTO.VehicleDelivery;
+using SWP391Web.Application.DTO.VehicleDeliveryDetail;
 using SWP391Web.Application.DTO.Warehouse;
 using SWP391Web.Domain.Entities;
 
@@ -42,7 +46,8 @@ namespace SWP391Web.Application.Mappings
             .ForMember(d => d.QuoteDetails,
                 opt => opt.MapFrom(s => s.Quote != null ? s.Quote.QuoteDetails : new List<QuoteDetail>()))
             .ForMember(d => d.Customer, opt => opt.MapFrom(s => s.Customer))
-            .ForMember(d => d.OrderDetails, opt => opt.MapFrom(s => s.OrderDetails)).ReverseMap();
+            .ForMember(d => d.OrderDetails, opt => opt.MapFrom(s => s.OrderDetails))
+            .ForMember(d => d.Econtracts, opt => opt.MapFrom(s => s.EContracts)).ReverseMap();
 
             CreateMap<OrderDetail, GetOrderDetailDTO>()
             .ForMember(d => d.ElectricVehicle, opt => opt.MapFrom(s => s.ElectricVehicle)).ReverseMap();
@@ -153,7 +158,8 @@ namespace SWP391Web.Application.Mappings
 
             CreateMap<Dealer, GetDealerDTO>()
                 .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager.FullName))
-                .ForMember(dest => dest.ManagerEmail, opt => opt.MapFrom(src => src.Manager.Email)).ReverseMap();
+                .ForMember(dest => dest.ManagerEmail, opt => opt.MapFrom(src => src.Manager.Email))
+                .ForMember(dest => dest.Level, opt => opt.MapFrom(src => src.DealerTier.Level)).ReverseMap();
 
             CreateMap<AppointmentSetting, GetAppointSettingDTO>().ReverseMap();
 
@@ -198,7 +204,25 @@ namespace SWP391Web.Application.Mappings
             CreateMap<Notification, GetNotificationDTO>().ReverseMap();
 
             CreateMap<DealerTier, GetDealerTierDTO>().ReverseMap();
-            CreateMap<VehicleDelivery, GetVehicleDeliveryDTO>().ReverseMap();
+
+            CreateMap<DealerDebtTransaction, GetDealerDebtTransactionDTO>().ReverseMap();
+
+            CreateMap<Transaction, GetTransactionDTO>().ReverseMap();
+            
+            CreateMap<VehicleDelivery, GetVehicleDeliveryDTO>()
+                .ForMember(dest => dest.VehicleDeliveryDetails,opt => opt.MapFrom(src => src.VehicleDeliveryDetails))
+                .ReverseMap();
+                
+            CreateMap<VehicleDeliveryDetail, GetVehicleDeliveryDetailDTO>()
+                .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.ElectricVehicle.VIN));
+
+            CreateMap<DealerDebt, GetDealerDebtDTO>().ReverseMap();
+
+            CreateMap<DealerDailyInventory, DemandSeriesPointDTO>()
+                .ForMember(dest => dest.Ds, opt => opt.MapFrom(src => src.SnapshotDate))
+                .ForMember(dest => dest.Y, opt => opt.MapFrom(src => src.Outflow)).ReverseMap();
+
+            CreateMap<DealerDailyInventory, ForecastTargetDTO>().ReverseMap();
         }
     }
 }

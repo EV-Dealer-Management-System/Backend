@@ -127,7 +127,44 @@ namespace SWP391Web.Application.Services
         {
             try
             {
-                var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAvailableVehicleByModelIdAsync(modelId);
+                var versions = await _unitOfWork.ElectricVehicleVersionRepository.GetAllVersionsByModelIdAsync(modelId);
+
+                if (!versions.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No versions found for the specified model.",
+                        StatusCode = 404
+                    };
+                }
+
+                var getVersions = _mapper.Map<List<GetElectricVehicleVersionDTO>>(versions);
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Get all versions by model successfully.",
+                    StatusCode = 200,
+                    Result = getVersions
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetAllAvailableVersionsForBookingByModelIdAsync(Guid modelId)
+        {
+            try
+            {
+                var vehicles = await _unitOfWork.ElectricVehicleRepository.GetAvailableVehicleForBookingByModelIdAsync(modelId);
                 if (!vehicles.Any())
                 {
                     return new ResponseDTO()

@@ -12,7 +12,7 @@ namespace SWP391Web.Application.IServices
 {
     public interface IQuoteService
     {
-        Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user, QuoteStatus? status = null);
+        Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user, int pageNumber, int pageSize, QuoteStatus? status, bool onlyToday = false, CancellationToken ct = default);
         Task<ResponseDTO> GetQuoteByIdAsync(ClaimsPrincipal user , Guid id);
         Task<ResponseDTO> CreateQuoteAsync(ClaimsPrincipal user , CreateQuoteDTO createQuoteDTO);
         Task<ResponseDTO> UpdateQuoteStatusAsync(ClaimsPrincipal user , Guid id, QuoteStatus newStatus);

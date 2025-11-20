@@ -15,6 +15,8 @@ using SWP391Web.Infrastructure.IRepository;
 using SWP391Web.Infrastructure.SignlR;
 using System.Linq.Expressions;
 using System.Security.Claims;
+using SWP391Web.Application.DTO.VehicleDeliveryDetail;
+using StackExchange.Redis;
 
 namespace SWP391Web.Application.Services
 {
@@ -104,30 +106,33 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                foreach (var dt in bookingEV.BookingEVDetails)
+                var vehicleDelivery = await _unitOfWork.VehicleDeliveryRepository.GetVehicleDeliveryByBookingId(bookingEV.Id, ct);
+                if (vehicleDelivery == null)
                 {
-                    var inTransitVehicles = await _unitOfWork.ElectricVehicleRepository
-                        .GetInTransitVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
-                    if (inTransitVehicles is null || !inTransitVehicles.Any())
+                    return new ResponseDTO
                     {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "No vehicles in in-transit status.",
-                            StatusCode = 404
-                        };
-                    }
-                    var selectedVehicles = inTransitVehicles
-                        .OrderBy(ev => ev.ImportDate)
-                        .Take(dt.Quantity)
-                        .ToList();
-                    foreach (var ev in selectedVehicles)
+                        IsSuccess = false,
+                        Message = "Delivery not found",
+                        StatusCode = 400
+                    };
+                }
+
+                foreach (var dt in vehicleDelivery.VehicleDeliveryDetails)
+                {
+                    if (dt.ElectricVehicle != null)
                     {
-                        ev.Status = ElectricVehicleStatus.AtDealer;
-                        ev.WarehouseId = warehouse.Id;
-                        _unitOfWork.ElectricVehicleRepository.Update(ev);
+                        dt.ElectricVehicle.Status = ElectricVehicleStatus.AtDealer;
+                        dt.ElectricVehicle.WarehouseId = warehouse.Id;
+                        _unitOfWork.ElectricVehicleRepository.Update(dt.ElectricVehicle);
+
+                        dt.Status = DeliveryVehicleStatus.Delivered;
+                        _unitOfWork.VehicleDeliveryDetailRepository.Update(dt);
                     }
                 }
+
+                vehicleDelivery.Status = DeliveryStatus.Confirmed;
+                vehicleDelivery.UpdateAt = DateTime.UtcNow;
+                _unitOfWork.VehicleDeliveryRepository.Update(vehicleDelivery);
 
                 var amount = await CalPriceBookingEV(bookingEV);
                 var newPurchase = new RecordDebtDTO
@@ -233,7 +238,9 @@ namespace SWP391Web.Application.Services
                     var availableVehicles = (await _unitOfWork.ElectricVehicleRepository
                         .GetAvailableVehicleByModelVersionColorAsync(version.ModelId, dt.VersionId, dt.ColorId))
                         .Where(ev => ev.Warehouse.WarehouseType == WarehouseType.EVInventory)
+                        .OrderBy(ev => ev.ImportDate)
                         .ToList();
+
                     if (availableVehicles == null || !availableVehicles.Any())
                     {
                         return new ResponseDTO
@@ -244,7 +251,7 @@ namespace SWP391Web.Application.Services
                         };
                     }
 
-                    if (availableVehicles.Count() < dt.Quantity)
+                    if (availableVehicles.Count < dt.Quantity)
                     {
                         return new ResponseDTO
                         {
@@ -676,7 +683,7 @@ namespace SWP391Web.Application.Services
                     }
                 }
 
-                if(newStatus == BookingStatus.SignedByAdmin)
+                if (newStatus == BookingStatus.SignedByAdmin)
                 {
                     if (role != StaticUserRole.Admin)
                     {
@@ -767,20 +774,47 @@ namespace SWP391Web.Application.Services
                 UpdateAt = DateTime.UtcNow,
             };
 
-            await _unitOfWork.VehicleDeliveryRepository.AddAsync(vehicleDelivery,CancellationToken.None);
-
-            foreach(var dt in bookingEV.BookingEVDetails)
+            await _unitOfWork.VehicleDeliveryRepository.AddAsync(vehicleDelivery, CancellationToken.None);
+            await _unitOfWork.SaveAsync();
+            foreach (var dt in bookingEV.BookingEVDetails)
             {
                 var bookedVehicles = await _unitOfWork.ElectricVehicleRepository
                     .GetBookedVehicleByModelVersionColorAsync(dt.Version.ModelId, dt.VersionId, dt.ColorId);
 
-                foreach(var ev in bookedVehicles.Take(dt.Quantity))
+                if (bookedVehicles.Count() < dt.Quantity)
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = $"Not enough booked vehicles ",
+                        StatusCode = 400
+                    };
+
+                var selectedVehicles = bookedVehicles
+                    .OrderBy(ev => ev.ImportDate)
+                    .Take(dt.Quantity)
+                    .ToList();
+
+                foreach (var ev in selectedVehicles)
                 {
                     ev.Status = ElectricVehicleStatus.InTransit;
                     _unitOfWork.ElectricVehicleRepository.Update(ev);
+
+                    var deliveryDetail = new VehicleDeliveryDetail
+                    {
+                        VehicleDeliveryId = vehicleDelivery.Id,
+                        ElectricVehicleId = ev.Id,
+                        Status = DeliveryVehicleStatus.Preparing,
+                        Note = "Vehicle is being prepared for shipment"
+                    };
+                    await _unitOfWork.VehicleDeliveryDetailRepository.AddAsync(deliveryDetail, CancellationToken.None);
                 }
             }
+
             await _unitOfWork.SaveAsync();
+
+            var delivery = await _unitOfWork.VehicleDeliveryRepository.GetVehicleDeliveryById(vehicleDelivery.Id, CancellationToken.None);
+
+            var getDelivery = _mapper.Map<GetVehicleDeliveryDTO>(delivery);
             return new ResponseDTO
             {
                 IsSuccess = true,

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Dealer;
+using SWP391Web.Application.DTO.EContract;
 using SWP391Web.Application.IService;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Constants;
@@ -66,8 +67,6 @@ namespace SWP391Web.Application.Services
                         Email = createDealerStaffDTO.Email,
                         FullName = createDealerStaffDTO.FullName,
                         PhoneNumber = createDealerStaffDTO.PhoneNumber,
-                        EmailConfirmed = true,
-                        PhoneNumberConfirmed = true
                     };
 
                     var randomPassword = "Staff@" + Guid.NewGuid().ToString()[..6].ToUpper();
@@ -82,6 +81,13 @@ namespace SWP391Web.Application.Services
                             Message = "Failed to create Dealer Staff."
                         };
                     }
+
+                    user.LockoutEnabled = false;
+                    user.EmailConfirmed = true;
+                    user.PhoneNumberConfirmed = true;
+
+                    _unitOfWork.UserManagerRepository.Update(user);
+                    await _unitOfWork.SaveAsync();
 
                     await _emailService.SendDealerStaffAaccountEmail(createDealerStaffDTO.Email, createDealerStaffDTO.FullName, randomPassword, dealer.Name);
                 }
@@ -111,7 +117,9 @@ namespace SWP391Web.Application.Services
                     }
 
                     user = staff;
-                    await _emailService.NotifyAddedToDealerExistingUser(createDealerStaffDTO.Email, createDealerStaffDTO.FullName, $"Nhân viên đại lý", dealer.Name); // After can open more role
+                    await _emailService.NotifyAddedToDealerExistingUser(createDealerStaffDTO.Email, createDealerStaffDTO.FullName, $"Nhân viên đại lý", dealer.Name);
+                    user.LockoutEnabled = false;
+                    _unitOfWork.UserManagerRepository.Update(user);
                 }
 
                 await _unitOfWork.UserManagerRepository.AddToRoleAsync(user, StaticUserRole.DealerStaff);
@@ -144,30 +152,37 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> GetAllDealerAsync(string? filterOn, string? filterQuery, string? sortBy, bool? isAcsending, int pageNumber, int PageSize, CancellationToken ct)
+        public async Task<ResponseDTO> GetAllDealerAsync(string? filterOn, string? filterQuery, string? sortBy, DealerStatus? status, bool? isAcsending, int pageNumber, int PageSize, CancellationToken ct)
         {
             try
             {
-                Expression<Func<Dealer, bool>> baseFilter = d => d.DealerStatus == DealerStatus.Active;
+
+                Expression<Func<Dealer, bool>>? baseFilter = null;
+                if (status is not null)
+                {
+                    baseFilter = d => d.DealerStatus == status;
+                }
 
                 if (!string.IsNullOrWhiteSpace(filterOn) && (!string.IsNullOrWhiteSpace(filterQuery)))
                 {
                     var query = filterQuery.Trim().ToLower();
                     baseFilter = filterOn.Trim().ToLower() switch
                     {
-                        "name" => d => d.DealerStatus == DealerStatus.Active &&
-                                       d.Name != null &&
+                        "name" => d => d.Name != null &&
                                        d.Name.ToLower().Contains(query),
 
-                        _ => d => d.DealerStatus == DealerStatus.Active
+                        _ => baseFilter
                     };
                 }
 
                 string sortField = (sortBy ?? "createdat").Trim().ToLower();
-                bool asc = isAcsending ?? true;
+                //bool asc = isAcsending ?? true;
 
                 (IReadOnlyList<Dealer> items, int total) result = (new List<Dealer>(), 0);
-                Func<IQueryable<Dealer>, IQueryable<Dealer>> includes = q => q.Include(dm => dm.Manager);
+                Func<IQueryable<Dealer>, IQueryable<Dealer>> includes = q => q
+                    .Include(dm => dm.Manager)
+                    .Include(dm => dm.DealerTier);
+
 
                 switch (sortField)
                 {
@@ -175,8 +190,8 @@ namespace SWP391Web.Application.Services
                         result = _unitOfWork.DealerRepository.GetPagedAsync(
                             filter: baseFilter,
                             includes: includes,
-                            orderBy: d => d.Name!,
-                            ascending: asc,
+                            orderBy: d => d.DealerStatus,
+                            ascending: true,
                             pageNumber: pageNumber,
                             pageSize: PageSize,
                             ct: ct).Result;
@@ -186,8 +201,8 @@ namespace SWP391Web.Application.Services
                         result = _unitOfWork.DealerRepository.GetPagedAsync(
                             filter: baseFilter,
                             includes: includes,
-                            orderBy: d => d.Id,
-                            ascending: asc,
+                            orderBy: d => d.DealerStatus,
+                            ascending: true,
                             pageNumber: pageNumber,
                             pageSize: PageSize,
                             ct: ct).Result;
@@ -339,6 +354,211 @@ namespace SWP391Web.Application.Services
                     IsSuccess = false,
                     StatusCode = 500,
                     Message = $"Error to get all dealer staffs at DealerService:  {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> DealerInformationAsync(ClaimsPrincipal claimUser, CancellationToken ct)
+        {
+            try
+            {
+                var userId = claimUser.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "User not login yet"
+                    };
+                }
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Users do not own any dealers"
+                    };
+                }
+
+                var memberTotal = await _unitOfWork.DealerMemberRepository.TotalDealerMember(dealer.Id, ct);
+                var econtractDealer = await _unitOfWork.EContractRepository.GetEContractDealerByDealerIdAsync(userId, ct);
+                if (econtractDealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer e-contract information not found"
+                    };
+                }
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Get dealer information successfully.",
+                    Result = new
+                    {
+                        dealer = _mapper.Map<GetDealerDTO>(dealer),
+                        memberTotal = memberTotal,
+                        econtractDealer = _mapper.Map<List<GetEContractDTO>>(econtractDealer)
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to get dealer information at DealerService:  {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> UpdateStatusDealer(Guid DealerId, DealerStatus status, CancellationToken ct)
+        {
+            try
+            {
+                var dealer = await _unitOfWork.DealerRepository.GetByIdAsync(DealerId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer not found"
+                    };
+                }
+                dealer.DealerStatus = status;
+                _unitOfWork.DealerRepository.Update(dealer);
+
+                if (status.Equals(DealerStatus.Inactive))
+                {
+                    dealer.Manager!.LockoutEnabled = true;
+                    _unitOfWork.UserManagerRepository.Update(dealer.Manager);
+
+                    foreach (var staff in dealer.DealerMembers)
+                    {
+                        staff.ApplicationUser.LockoutEnabled = true;
+                        _unitOfWork.UserManagerRepository.Update(staff.ApplicationUser);
+                    }
+                }
+                else if (status.Equals(DealerStatus.Active))
+                {
+                    dealer.Manager!.LockoutEnabled = false;
+                    _unitOfWork.UserManagerRepository.Update(dealer.Manager);
+                    foreach (var staff in dealer.DealerMembers)
+                    {
+                        if (staff.IsActive)
+                        {
+                            staff.ApplicationUser.LockoutEnabled = false;
+                            _unitOfWork.UserManagerRepository.Update(staff.ApplicationUser);
+                        }
+                    }
+                }
+
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Dealer status updated successfully."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error updating dealer status: {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> UpdateStatusDealerStaff(ClaimsPrincipal userClaim, bool isActive, string applicationUserId, CancellationToken ct)
+        {
+            try
+            {
+                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "User not login yet"
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Users do not own any dealers"
+                    };
+                }
+
+                var dealerMember = await _unitOfWork.DealerMemberRepository.IsDealerMemberBelongDealer(dealer.Id, applicationUserId, ct);
+                if (!dealerMember)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer staff not found in your dealer"
+                    };
+                }
+
+                var dealerStaff = await _unitOfWork.DealerMemberRepository.GetByApplicationId(applicationUserId, ct);
+                if (dealerStaff is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer staff not found"
+                    };
+                }
+
+                dealerStaff.IsActive = isActive;
+
+                if (isActive)
+                {
+                    dealerStaff.ApplicationUser.LockoutEnabled = false;
+                }
+                else
+                {
+                    dealerStaff.ApplicationUser.LockoutEnabled = true;
+                }
+
+                _unitOfWork.DealerMemberRepository.Update(dealerStaff);
+                _unitOfWork.UserManagerRepository.Update(dealerStaff.ApplicationUser);
+
+                await _unitOfWork.SaveAsync();
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Dealer staff status updated successfully."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error updating dealer staff status: {ex.Message}"
                 };
             }
         }

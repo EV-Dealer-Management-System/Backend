@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Infrastructure.Context;
 using SWP391Web.Infrastructure.IRepository;
@@ -123,6 +124,36 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<IList<UserLoginInfo>> HasLogin(ApplicationUser user)
         {
             return await _userManager.GetLoginsAsync(user);
+        }
+
+        public async Task<ApplicationUser?> GetByUserNameAsync(string userName)
+        {
+            return await _userManager.FindByNameAsync(userName);
+        }
+
+        public async Task<bool> IsExistUserName(string userName)
+        {
+            return await _userManager.Users.AnyAsync(u => u.UserName == userName);
+        }
+
+        public async Task<int> GetTotalEVMStaffAsync(CancellationToken ct)
+        {
+            var roleId = await _context.Roles
+                .Where(r => r.Name == StaticUserRole.EVMStaff)
+                .Select(r => r.Id)
+                .FirstOrDefaultAsync(ct);
+
+            if (roleId == null)
+                return 0;
+
+            var total = await (
+                from ur in _context.UserRoles
+                join u in _context.Users on ur.UserId equals u.Id
+                where ur.RoleId == roleId && u.LockoutEnabled == false
+                select u
+            ).CountAsync(ct);
+
+            return total;
         }
     }
 }
