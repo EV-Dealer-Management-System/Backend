@@ -7,7 +7,7 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<bool> IsExistTransactionAsync(string method, string orderRef, CancellationToken ct);
         Task<decimal> GetDealerRevenueAsync(Guid dealerId, CancellationToken ct);
         Task<List<Transaction>> GetDealerTransactionsByYearAsync(Guid dealerId, int year, CancellationToken ct);
-
+        Task<long> GetTotalAmountQuater(Guid dealerId, DateTime now, CancellationToken ct);
         Task<Transaction?> GetByCustomerOrderIdAsync(Guid customerOrderId, CancellationToken ct);
     }
 }

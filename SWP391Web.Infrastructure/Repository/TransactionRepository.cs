@@ -53,5 +53,37 @@ namespace SWP391Web.Infrastructure.Repository
                 .AsNoTracking()
                 .AnyAsync(t => t.Provider == method && t.OrderRef == orderRef, ct);
         }
+
+        private (DateTime from, DateTime to) GetQuarterRangeUtc(DateTime asOfUtc)
+        {
+            var dt = DateTime.SpecifyKind(asOfUtc, DateTimeKind.Utc);
+
+            int firstMonthOfQuarter = ((dt.Month - 1) / 3) * 3 + 1;
+
+            var start = new DateTime(dt.Year, firstMonthOfQuarter, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            if ((dt.Month - firstMonthOfQuarter) == 2)
+            {
+                start = start.AddMonths(3);
+            }
+
+            var from = start;
+            var to = from.AddMonths(3).AddTicks(-1);
+            return (from, to);
+        }
+
+        public async Task<long> GetTotalAmountQuater(Guid dealerId, DateTime now, CancellationToken ct)
+        {
+            var (from, to) = GetQuarterRangeUtc(now);
+
+            return await _context.Transactions
+                .Include(t => t.CustomerOrder)
+                    .ThenInclude(co => co.Quote)
+                .Where(t => t.CustomerOrder.Quote.DealerId == dealerId
+                            && t.Status == TransactionStatus.Success
+                            && t.CreatedAt >= from
+                            && t.CreatedAt <= to)
+                .SumAsync(t => (long)t.Amount, ct);
+        }
     }
 }

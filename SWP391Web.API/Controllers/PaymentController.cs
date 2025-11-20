@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Payment;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Enums;
 
 namespace SWP391Web.API.Controllers
 {
@@ -38,20 +40,14 @@ namespace SWP391Web.API.Controllers
             return new JsonResult(new VNPayIpnResponse("99", "Unknown error"));
         }
 
-        [HttpPost]
-        [Route("create-vnpay-mobile/{amount:long}")]
-        public async Task<ActionResult<ResponseDTO>> CreateVNPayLinkMobile(long amount, CancellationToken ct)
-        {
-            var response = await _paymentService.CreateVNPayLinkMobile(amount, ct);
-            return StatusCode(response.StatusCode, response);
-        }
-
         [HttpGet]
-        [Route("get-all-transactions-mobile")]
-        public async Task<ActionResult<ResponseDTO>> GetAllTransactionsMobile(int pageNumber = 1, int pageSize = 10, CancellationToken ct = default)
+        [Route("get-all-transactions")]
+        [Authorize]
+        public async Task<ActionResult<ResponseDTO>> GetAllPaymentTransaction([FromQuery] int pageNumber, [FromQuery] int pageSize, [FromQuery] DateOnly? from, 
+            [FromQuery] DateOnly? to, [FromQuery] TransactionStatus? status, CancellationToken ct)
         {
-            var respones = await _paymentService.GetAllMobile(pageNumber, pageSize, ct);
-            return StatusCode(respones.StatusCode, respones);
+            var response = await _paymentService.GetAllPaymentTransaction(User, pageNumber, pageSize, from, to, status, ct);
+            return StatusCode(response.StatusCode, response);
         }
     }
 }
