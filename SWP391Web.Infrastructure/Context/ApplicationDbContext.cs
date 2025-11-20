@@ -52,6 +52,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<DealerDailyInventory> DealerDailyInventories { get; set; }
         public DbSet<DealerInventoryForecast> DealerInventoryForecasts { get; set; }
         public DbSet<DealerInventoryRisk> DealerInventoryRisks { get; set; }
+        public DbSet<Log> Logs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -580,6 +581,21 @@ namespace SWP391Web.Infrastructure.Context
                  .OnDelete(DeleteBehavior.Restrict);
             });
 
+            /******************************************************************************/
+            // Configure Log entity
+
+            modelBuilder.Entity<Log>(e =>
+            {
+                e.HasOne(l => l.User)
+                 .WithMany(u => u.Logs)
+                 .HasForeignKey(l => l.UserId)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(l => l.Dealer)
+                 .WithMany(d => d.Logs)
+                 .HasForeignKey(l => l.DealerId)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
         }
     }
 }

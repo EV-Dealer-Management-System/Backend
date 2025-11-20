@@ -18,5 +18,7 @@ namespace SWP391Web.Domain.Entities
         public string? AdditionalInfo { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        public Dealer? Dealer { get; set; }
+        public ApplicationUser User { get; set; } = null!;
     }
 }
