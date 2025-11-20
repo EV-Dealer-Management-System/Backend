@@ -13,8 +13,10 @@ namespace SWP391Web.Domain.Entities
         public Guid? DealerId { get; set; }
         public string ManagerId { get; set; } = null!;
         public string? Description { get; set; }
-        public string? EntityName { get; set; }
+        public Guid? EntityId { get; set; }
+        public Guid? EntityName { get; set; }
         public LogType LogType { get; set; }
+        public string? AdditionalInfo { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     }
