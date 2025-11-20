@@ -209,11 +209,11 @@ namespace SWP391Web.Application.Mappings
             CreateMap<DealerDebtTransaction, GetDealerDebtTransactionDTO>().ReverseMap();
 
             CreateMap<Transaction, GetTransactionDTO>().ReverseMap();
-            
+
             CreateMap<VehicleDelivery, GetVehicleDeliveryDTO>()
-                .ForMember(dest => dest.VehicleDeliveryDetails,opt => opt.MapFrom(src => src.VehicleDeliveryDetails))
+                .ForMember(dest => dest.VehicleDeliveryDetails, opt => opt.MapFrom(src => src.VehicleDeliveryDetails))
                 .ReverseMap();
-                
+
             CreateMap<VehicleDeliveryDetail, GetVehicleDeliveryDetailDTO>()
                 .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.ElectricVehicle.VIN));
 
@@ -224,6 +224,8 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.Y, opt => opt.MapFrom(src => src.Outflow)).ReverseMap();
 
             CreateMap<DealerDailyInventory, ForecastTargetDTO>().ReverseMap();
+
+            CreateMap<DealerInventoryForecast, GetForecastSeriesPointDTO>().ReverseMap();
             CreateMap<Log, GetLogDTO>().ReverseMap();
         }
     }
