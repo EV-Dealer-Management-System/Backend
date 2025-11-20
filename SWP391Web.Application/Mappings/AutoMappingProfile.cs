@@ -21,6 +21,7 @@ using SWP391Web.Application.DTO.ElectricVehicleModel;
 using SWP391Web.Application.DTO.ElectricVehicleVersion;
 using SWP391Web.Application.DTO.EVCInventory;
 using SWP391Web.Application.DTO.EVTemplate;
+using SWP391Web.Application.DTO.Log;
 using SWP391Web.Application.DTO.Notification;
 using SWP391Web.Application.DTO.OrderDetail;
 using SWP391Web.Application.DTO.Payment;
@@ -225,6 +226,7 @@ namespace SWP391Web.Application.Mappings
             CreateMap<DealerDailyInventory, ForecastTargetDTO>().ReverseMap();
 
             CreateMap<DealerInventoryForecast, GetForecastSeriesPointDTO>().ReverseMap();
+            CreateMap<Log, GetLogDTO>().ReverseMap();
         }
     }
 }

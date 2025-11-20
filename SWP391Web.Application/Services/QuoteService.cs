@@ -213,7 +213,7 @@ namespace SWP391Web.Application.Services
 
             }
 
-        public async Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user, int pageNumber , int pageSize ,　QuoteStatus? status , bool onlyToday = false, CancellationToken ct = default)
+        public async Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user, int pageNumber , int pageSize , Guid? modelId,Guid? versionId,Guid? colorId, QuoteStatus? status, bool onlyToday = false, CancellationToken ct = default)
         {
             try
             {
@@ -276,6 +276,15 @@ namespace SWP391Web.Application.Services
                     query = query.Where(q => q.CreatedAt >= todayUTC && q.CreatedAt < tomorrowUTC);
                 }
 
+                if (modelId.HasValue || versionId.HasValue || colorId.HasValue)
+                {
+                    query = query.Where(q => q.QuoteDetails.Any(dt =>
+                        (!modelId.HasValue || dt.ElectricVehicleVersion.ModelId == modelId.Value) &&
+                        (!versionId.HasValue || dt.VersionId == versionId.Value) &&
+                        (!colorId.HasValue || dt.ColorId == colorId.Value)
+                    ));
+                }
+
                 query = query
                     .Include(x => x.QuoteDetails)
                         .ThenInclude(d => d.Promotion)
@@ -303,14 +312,39 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var filteredQuotes = quotes
-                    .Where(q =>
-                        q.QuoteDetails.All(dt =>
-                            dt.Promotion == null ||
-                            !dt.Promotion.EndDate.HasValue ||
-                            dt.Promotion.EndDate >= DateTime.UtcNow))
-                    .Select(q => _mapper.Map<GetQuoteDTO>(q))
-                    .ToList();
+                var filteredQuotes = new List<GetQuoteDTO>();
+
+                foreach (var q in quotes)
+                {
+                    bool isShow = true;
+
+                    foreach (var dt in q.QuoteDetails)
+                    {
+                        // Check promotion expiration
+                        if (dt.Promotion != null &&
+                            dt.Promotion.EndDate.HasValue &&
+                            dt.Promotion.EndDate < DateTime.UtcNow)
+                        {
+                            isShow = false;
+                            break;
+                        }
+
+                        // Check vehicle availability
+                        var availableVehicles = await _unitOfWork.ElectricVehicleRepository
+                            .GetAvailableVehicleByDealerAsync(q.DealerId, dt.VersionId, dt.ColorId);
+
+                        if (!availableVehicles.Any())
+                        {
+                            isShow = false;
+                            break;
+                        }
+                    }
+
+                    if (isShow)
+                    {
+                        filteredQuotes.Add(_mapper.Map<GetQuoteDTO>(q));
+                    }
+                }
 
                 return new ResponseDTO
                 {
@@ -416,6 +450,65 @@ namespace SWP391Web.Application.Services
             }
         }
 
+        public async Task<ResponseDTO> UpdateExpiredQuoteAsync(ClaimsPrincipal user, CancellationToken ct)
+        {
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 400
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                if(dealer == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                var todayVN = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone).Date;
+
+                // Take all quote that status != Expired
+                var quotes = await _unitOfWork.QuoteRepository.Query()
+                    .Where(q => q.Status != QuoteStatus.Expired &&
+                                TimeZoneInfo.ConvertTimeFromUtc(q.CreatedAt, vnTimeZone).Date < todayVN)
+                    .ToListAsync(ct);
+
+                foreach (var quote in quotes)
+                {
+                    quote.Status = QuoteStatus.Expired;
+                }
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = $"Updated successfully",
+                    StatusCode = 200,
+                };
+
+            }
+            catch(Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500,
+                };
+            }
+        }
+
         public async Task<ResponseDTO> UpdateQuoteStatusAsync(ClaimsPrincipal user, Guid id, QuoteStatus newStatus)
         {
             try
@@ -508,13 +601,6 @@ namespace SWP391Web.Application.Services
                             .OrderBy(ev => ev.ImportDate)
                             .Take(dt.Quantity)
                             .ToList();
-
-                        //Change status to InTransit
-                        foreach( var ev in selectedVehicle)
-                        {
-                            ev.Status = ElectricVehicleStatus.InTransit;
-                            _unitOfWork.ElectricVehicleRepository.Update(ev);
-                        }
                     }
                 }
 
