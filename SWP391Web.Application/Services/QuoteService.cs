@@ -213,7 +213,7 @@ namespace SWP391Web.Application.Services
 
             }
 
-        public async Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user, int pageNumber , int pageSize ,　QuoteStatus? status , bool onlyToday = false, CancellationToken ct = default)
+        public async Task<ResponseDTO> GetAllAsync(ClaimsPrincipal user, int pageNumber , int pageSize , Guid? modelId,Guid? versionId,Guid? colorId, QuoteStatus? status, bool onlyToday = false, CancellationToken ct = default)
         {
             try
             {
@@ -274,6 +274,15 @@ namespace SWP391Web.Application.Services
                     var tomorrowUTC = TimeZoneInfo.ConvertTimeToUtc(tomorrowVN, vnTimeZone);
 
                     query = query.Where(q => q.CreatedAt >= todayUTC && q.CreatedAt < tomorrowUTC);
+                }
+
+                if (modelId.HasValue || versionId.HasValue || colorId.HasValue)
+                {
+                    query = query.Where(q => q.QuoteDetails.Any(dt =>
+                        (!modelId.HasValue || dt.ElectricVehicleVersion.ModelId == modelId.Value) &&
+                        (!versionId.HasValue || dt.VersionId == versionId.Value) &&
+                        (!colorId.HasValue || dt.ColorId == colorId.Value)
+                    ));
                 }
 
                 query = query
