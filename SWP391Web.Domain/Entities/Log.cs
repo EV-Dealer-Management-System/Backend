@@ -11,10 +11,9 @@ namespace SWP391Web.Domain.Entities
     {
         public Guid Id { get; set; }
         public Guid? DealerId { get; set; }
-        public string ManagerId { get; set; } = null!;
-        public string? Description { get; set; }
-        public Guid? EntityId { get; set; }
-        public Guid? EntityName { get; set; }
+        public string UserId { get; set; } = null!;
+        public string Description { get; set; } = null!;
+        public string EntityName { get; set; } = null!;
         public LogType LogType { get; set; }
         public string? AdditionalInfo { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
