@@ -542,13 +542,6 @@ namespace SWP391Web.Application.Services
                             .OrderBy(ev => ev.ImportDate)
                             .Take(dt.Quantity)
                             .ToList();
-
-                        //Change status to InTransit
-                        foreach( var ev in selectedVehicle)
-                        {
-                            ev.Status = ElectricVehicleStatus.InTransit;
-                            _unitOfWork.ElectricVehicleRepository.Update(ev);
-                        }
                     }
                 }
 
