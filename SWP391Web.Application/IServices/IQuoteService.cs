@@ -16,6 +16,7 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> GetQuoteByIdAsync(ClaimsPrincipal user , Guid id);
         Task<ResponseDTO> CreateQuoteAsync(ClaimsPrincipal user , CreateQuoteDTO createQuoteDTO);
         Task<ResponseDTO> UpdateQuoteStatusAsync(ClaimsPrincipal user , Guid id, QuoteStatus newStatus);
+        Task<ResponseDTO> UpdateExpiredQuoteAsync(ClaimsPrincipal user , CancellationToken ct);
 
     }
 }

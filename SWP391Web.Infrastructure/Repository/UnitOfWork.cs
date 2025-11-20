@@ -47,6 +47,7 @@ namespace SWP391Web.Infrastructure.Repository
         public IDealerDailyInventoryRepository DealerDailyInventoryRepository { get; private set; }
         public IDealerInventoryForecastRepository DealerInventoryForecastRepository { get; private set; }
         public IDealerInventoryRiskRepository DealerInventoryRiskRepository { get; private set; }
+        public ILogRepository LogRepository { get; private set; }
 
         public UnitOfWork(ApplicationDbContext context, UserManager<ApplicationUser> userManagerRepository)
         {
@@ -91,6 +92,7 @@ namespace SWP391Web.Infrastructure.Repository
             DealerDailyInventoryRepository = new DealerDailyInventoryRepository(_context);
             DealerInventoryForecastRepository = new DealerInventoryForecastRepository(_context);
             DealerInventoryRiskRepository = new DealerInventoryRiskRepository(_context);
+            LogRepository = new LogRepository(_context);
         }
         public async Task<int> SaveAsync()
         {

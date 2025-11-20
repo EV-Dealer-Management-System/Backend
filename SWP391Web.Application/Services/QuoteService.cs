@@ -450,6 +450,65 @@ namespace SWP391Web.Application.Services
             }
         }
 
+        public async Task<ResponseDTO> UpdateExpiredQuoteAsync(ClaimsPrincipal user, CancellationToken ct)
+        {
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 400
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                if(dealer == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                var todayVN = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone).Date;
+
+                // Take all quote that status != Expired
+                var quotes = await _unitOfWork.QuoteRepository.Query()
+                    .Where(q => q.Status != QuoteStatus.Expired &&
+                                TimeZoneInfo.ConvertTimeFromUtc(q.CreatedAt, vnTimeZone).Date < todayVN)
+                    .ToListAsync(ct);
+
+                foreach (var quote in quotes)
+                {
+                    quote.Status = QuoteStatus.Expired;
+                }
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = $"Updated successfully",
+                    StatusCode = 200,
+                };
+
+            }
+            catch(Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500,
+                };
+            }
+        }
+
         public async Task<ResponseDTO> UpdateQuoteStatusAsync(ClaimsPrincipal user, Guid id, QuoteStatus newStatus)
         {
             try

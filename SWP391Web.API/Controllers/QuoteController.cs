@@ -44,5 +44,11 @@ namespace SWP391Web.API.Controllers
             var response = await _quoteService.UpdateQuoteStatusAsync(User, quoteId, newStatus);
             return StatusCode(response.StatusCode, response);
         }
+        [HttpPut("Update-expired-quote")]
+        public async Task<ActionResult<ResponseDTO>> UpdateExpiredQuoteAsync(CancellationToken ct = default)
+        {
+            var response = await _quoteService.UpdateExpiredQuoteAsync(User, ct);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }
