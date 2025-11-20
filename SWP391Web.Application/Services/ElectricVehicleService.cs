@@ -288,7 +288,8 @@ namespace SWP391Web.Application.Services
                         VersionId = ev.ElectricVehicleTemplate.Version.Id,
                         VersionName = ev.ElectricVehicleTemplate.Version.VersionName,
                         ColorId = ev.ElectricVehicleTemplate.Color.Id,
-                        ColorName = ev.ElectricVehicleTemplate.Color.ColorName
+                        ColorName = ev.ElectricVehicleTemplate.Color.ColorName,
+                        EVTemplateId = ev.ElectricVehicleTemplate.Id
                     })
                     .Select(g => new
                     {
@@ -298,6 +299,7 @@ namespace SWP391Web.Application.Services
                         VersionName = g.Key.VersionName,
                         ColorId = g.Key.ColorId,
                         ColorName = g.Key.ColorName,
+                        EVTemplateId = g.Key.EVTemplateId,
                         Quantity = g.Count(),
                         VINs = g.Select(v => v.VIN).ToList()
                     })
