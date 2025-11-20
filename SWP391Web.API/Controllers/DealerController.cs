@@ -14,12 +14,12 @@ namespace SWP391Web.API.Controllers
     {
         private readonly IDealerService _dealerService;
         private readonly IDealerTierService _dealerTierService;
-        private readonly IDealerForecastService _dealerDailyInventoryService;
+        private readonly IDealerForecastService _dealerForecastService;
         public DealerController(IDealerService dealerService, IDealerTierService dealerTierService, IDealerForecastService dealerDailyInventoryService)
         {
             _dealerService = dealerService;
             _dealerTierService = dealerTierService;
-            _dealerDailyInventoryService = dealerDailyInventoryService;
+            _dealerForecastService = dealerDailyInventoryService;
         }
 
         [HttpPost]
@@ -120,7 +120,7 @@ namespace SWP391Web.API.Controllers
         [Route("build-daily-inventory-snapshot")]
         public async Task<IActionResult> BuildDailyInventorySnapshot([FromQuery] DateTime utcDate, CancellationToken ct)
         {
-            var response = await _dealerDailyInventoryService.BuildDailySnapshotAsync(utcDate, ct);
+            var response = await _dealerForecastService.BuildDailySnapshotAsync(utcDate, ct);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -130,7 +130,7 @@ namespace SWP391Web.API.Controllers
         public async Task<IActionResult> GetDemandSeries([FromQuery] Guid dealerId, [FromQuery] Guid evTemplateId,
             [FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct)
         {
-            var response = await _dealerDailyInventoryService.GetDemandSeriesAsync(User, dealerId, evTemplateId, from, to, ct);
+            var response = await _dealerForecastService.GetDemandSeriesAsync(User, dealerId, evTemplateId, from, to, ct);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -138,7 +138,7 @@ namespace SWP391Web.API.Controllers
         [Route("upsert-forecast-batch")]
         public async Task<IActionResult> UpsertForecastBatch([FromBody] List<UpsertDealerInventoryForecastDTO> upsertsDTO, CancellationToken ct)
         {
-            var response = await _dealerDailyInventoryService.UpsertForecastBatchAsync(upsertsDTO, ct);
+            var response = await _dealerForecastService.UpsertForecastBatchAsync(upsertsDTO, ct);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -146,7 +146,7 @@ namespace SWP391Web.API.Controllers
         [Route("evaluate-inventory-risk/{horizonDays:int}")]
         public async Task<IActionResult> EvaluateInventoryRisk(int horizonDays, CancellationToken ct)
         {
-            var response = await _dealerDailyInventoryService.EvaluateInventoryRiskAsync(horizonDays, ct);
+            var response = await _dealerForecastService.EvaluateInventoryRiskAsync(horizonDays, ct);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -154,7 +154,17 @@ namespace SWP391Web.API.Controllers
         [Route("get-forecast-targets")]
         public async Task<IActionResult> GetForecastTargets(CancellationToken ct)
         {
-            var response = await _dealerDailyInventoryService.GetForecastTargetsAsync(ct);
+            var response = await _dealerForecastService.GetForecastTargetsAsync(ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpGet]
+        [Route("get-forecast-series")]
+        [Authorize]
+        public async Task<IActionResult> GetForecastSeries([FromQuery] Guid dealerId, [FromQuery] Guid evTemplateId,
+            [FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct)
+        {
+            var response = await _dealerForecastService.GetForecastSeriesAsync(User, dealerId, evTemplateId, from, to, ct);
             return StatusCode(response.StatusCode, response);
         }
     }

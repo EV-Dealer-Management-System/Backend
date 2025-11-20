@@ -434,5 +434,107 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
+
+        public async Task<ResponseDTO> GetForecastSeriesAsync(ClaimsPrincipal userClaim, Guid? dealerId, Guid evTemplateId, DateTime from, DateTime to, CancellationToken ct)
+        {
+            try
+            {
+                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not login yet.",
+                        StatusCode = 401
+                    };
+                }
+
+                var role = userClaim.FindFirst(ClaimTypes.Role)?.Value;
+                if (role is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User role not found.",
+                        StatusCode = 403
+                    };
+                }
+
+                Guid effectiveDealerId;
+                if (role.Equals(StaticUserRole.EVMStaff) || role.Equals(StaticUserRole.Admin))
+                {
+                    if (dealerId is null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            StatusCode = 400,
+                            Message = "DealerId is required for Admin/EVMStaff."
+                        };
+                    }
+
+                    effectiveDealerId = dealerId.Value;
+                }
+                else
+                {
+                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                    if (dealer is null)
+                    {
+                        dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId, ct);
+                        if (dealer is null)
+                        {
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                Message = "Dealer not found for the user.",
+                                StatusCode = 404
+                            };
+                        }
+                    }
+
+                    effectiveDealerId = dealer.Id;
+                }
+
+                var fromDate = from.Date;
+                var toDate = to.Date;
+
+                if (fromDate > toDate)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 400,
+                        Message = "From date must be <= To date."
+                    };
+                }
+
+                var forecastsInRange = await _unitOfWork.DealerInventoryForecastRepository.GetForecastsInRangeAsync(fromDate, toDate, ct);
+
+                var filtered = forecastsInRange
+                    .Where(f => f.DealerId == effectiveDealerId && f.EVTemplateId == evTemplateId)
+                    .OrderBy(f => f.TargetDate)
+                    .ToList();
+
+                var dto = _mapper.Map<List<GetForecastSeriesPointDTO>>(filtered);
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Forecast series retrieved successfully.",
+                    Result = dto
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error retrieving forecast series: {ex.Message}"
+                };
+            }
+        }
     }
 }
