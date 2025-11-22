@@ -493,9 +493,9 @@ namespace SWP391Web.Application.Services
                 {
                     return new ResponseDTO
                     {
-                        IsSuccess = true,
+                        IsSuccess = false,
                         Message = "No quotes to update",
-                        StatusCode = 200
+                        StatusCode = 400
                     };
                 }
 

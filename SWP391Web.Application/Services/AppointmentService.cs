@@ -449,7 +449,9 @@ namespace SWP391Web.Application.Services
                 var todayStartUTC = TimeZoneInfo.ConvertTimeToUtc(todayVN, vnTimeZone);
 
                 var appointments = await _unitOfWork.AppointmentRepository.Query(
-                    filter: q => q.DealerId == dealer.Id && q.Status != AppointmentStatus.Completed && q.CreatedAt < todayStartUTC,
+                    filter: q => q.DealerId == dealer.Id 
+                    && q.Status == AppointmentStatus.Active 
+                    && q.EndTime < todayStartUTC,
                     includes: null
                 ).ToListAsync(ct);
 

@@ -16,5 +16,6 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> GetAllAppointmentsAsync(ClaimsPrincipal user);
         Task<ResponseDTO> GetAppointmentsByCustomerIdAsync(ClaimsPrincipal user, Guid customerId);
         Task<ResponseDTO> UpdateAppointmentStatusAsync(ClaimsPrincipal user, Guid appointmentId, AppointmentStatus newStatus);
+        Task<ResponseDTO> UpdateCancelStatusAsync(ClaimsPrincipal user, CancellationToken ct);
     }
 }
