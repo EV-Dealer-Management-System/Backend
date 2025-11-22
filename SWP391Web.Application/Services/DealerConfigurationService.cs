@@ -437,5 +437,33 @@ namespace SWP391Web.Application.Services
         }
 
         #endregion
+
+        #region Get default configuration
+        public async Task<ResponseDTO> GetDefaultConfigurationAsync(CancellationToken ct)
+        {
+            try
+            {
+                var defaultConfig = await _unitOfWork.DealerConfigurationRepository.GetByDefaultAsync(ct);
+
+                var getdefaultConfigDTO = _mapper.Map<GetDealerConfigurationDTO>(defaultConfig);
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Default dealer configuration retrieved successfully.",
+                    Result = getdefaultConfigDTO
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"An error occurred when getting default dealer configuration: {ex.Message}"
+                };
+            }
+        }
+        #endregion
     }
 }
