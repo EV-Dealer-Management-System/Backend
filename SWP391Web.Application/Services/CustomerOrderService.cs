@@ -663,6 +663,7 @@ namespace SWP391Web.Application.Services
                 else if (isCash is null)
                 {
                     await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
+                    customerOrder.Status = OrderStatus.RemainingPending;
                     _unitOfWork.CustomerOrderRepository.Update(customerOrder);
                     await _unitOfWork.SaveAsync(ct);
                     return new ResponseDTO
