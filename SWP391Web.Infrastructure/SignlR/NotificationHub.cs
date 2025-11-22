@@ -12,10 +12,21 @@ namespace SWP391Web.Infrastructure.SignlR
         {
             var userId = Context.UserIdentifier;
             var dealerId = Context.User?.FindFirst("DealerId")?.Value;
-            var roles = Context.User?.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
-            Console.WriteLine($"[Hub] Connected user: {userId}, roles: {string.Join(",", roles)}");
+            var roles = Context.User?.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList() ?? new List<string>();
+
+            Console.WriteLine($"[Hub] Connected user: {userId}, dealer: {dealerId}, roles: {string.Join(",", roles)}");
+
+            if (!string.IsNullOrEmpty(dealerId) && (roles.Contains(StaticUserRole.Admin) || roles.Contains(StaticUserRole.EVMStaff)))
+            {
+                var groupName = GetDealerAdminEvmStaffGroupName(dealerId);
+                await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+                Console.WriteLine($"[Hub] Add connection {Context.ConnectionId} to group {groupName}");
+            }
+
             await base.OnConnectedAsync();
         }
 
+        private static string GetDealerAdminEvmStaffGroupName(string dealerId)
+            => $"dealer:{dealerId}:admin+evmstaff";
     }
 }
