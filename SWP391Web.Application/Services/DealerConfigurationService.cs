@@ -205,21 +205,29 @@ namespace SWP391Web.Application.Services
                     config = await _unitOfWork.DealerConfigurationRepository.GetByDealerIdAsync(dealer.Id, ct);
                     if (config is null)
                     {
+                        var defaultConfig = await _unitOfWork.DealerConfigurationRepository.GetByDefaultAsync(ct);
                         config = new DealerConfiguration
                         {
                             ManagerId = userId,
-                            DealerId = dealer.Id
+                            DealerId = dealer.Id,
+                            AllowOverlappingAppointments = defaultConfig?.AllowOverlappingAppointments ?? false,
+                            MaxConcurrentAppointments = defaultConfig?.MaxConcurrentAppointments ?? 1,
+                            OpenTime = defaultConfig?.OpenTime ?? TimeSpan.FromHours(9),
+                            CloseTime = defaultConfig?.CloseTime ?? TimeSpan.FromHours(17),
+                            MinIntervalBetweenAppointments = defaultConfig?.MinIntervalBetweenAppointments ?? 30,
+                            BreakTimeBetweenAppointments = defaultConfig?.BreakTimeBetweenAppointments ?? 0,
+                            MinDepositPercentage = defaultConfig?.MinDepositPercentage ?? 0,
+                            MaxDepositPercentage = defaultConfig?.MaxDepositPercentage ?? 20
                         };
 
                         await _unitOfWork.DealerConfigurationRepository.AddAsync(config, ct);
+                        await _unitOfWork.SaveAsync();
                     }
                 }
                 else
                 {
                     return Error(403, "Only Admin and DealerManager can update configuration.");
                 }
-
-                // --- Apply changes từ DTO vào entity ---
 
                 if (dto.AllowOverlappingAppointments.HasValue)
                     config.AllowOverlappingAppointments = dto.AllowOverlappingAppointments.Value;
