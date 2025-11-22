@@ -26,6 +26,9 @@ namespace SWP391Web.Infrastructure.Repository
                 .Include(c => c.Quote)
                     .ThenInclude(q => q.Dealer)
                         .ThenInclude(d => d.Manager)
+                .Include(c => c.Quote)
+                    .ThenInclude(q => q.Dealer)
+                        .ThenInclude(d => d.Warehouse)
                 .Include(c => c.Customer)
                 .FirstOrDefaultAsync(c => c.Id == customerOrderId);
         }

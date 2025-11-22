@@ -621,8 +621,8 @@ namespace SWP391Web.Application.Services
 
                 if (isCash is not null && isCash.Value)
                 {
-                    await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
-
+                    customerOrder.Status = OrderStatus.Completed;
+                    _unitOfWork.CustomerOrderRepository.Update(customerOrder);
                     await HandleOrderDetail(customerOrder, ct);
 
                     var amount = customerOrder.TotalAmount - customerOrder.DepositAmount;
@@ -633,7 +633,7 @@ namespace SWP391Web.Application.Services
                         Status = TransactionStatus.Success,
                         OrderRef = customerOrder.OrderNo.ToString(),
                         Currency = "VND",
-                        Note = $"Pya remain deposit for order {customerOrder.OrderNo}",
+                        Note = $"Pay remain deposit for order {customerOrder.OrderNo}",
                         Provider = "Cash",
                     };
                     await _unitOfWork.SaveAsync();
