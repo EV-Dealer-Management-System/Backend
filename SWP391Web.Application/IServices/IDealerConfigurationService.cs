@@ -15,5 +15,6 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> UpsertConfigurationAsync(ClaimsPrincipal userClaim, UpsertDealerConfigurationDTO dto, CancellationToken ct);
         Task<ResponseDTO> UpdateAllDepositSettingsAsync(ClaimsPrincipal userClaim, UpdateAllDepositSettingsDTO dto, CancellationToken ct);
         Task<ResponseDTO> GenerateTimeSlotAsync(ClaimsPrincipal userClaim, DateTime? targetDate = null, CancellationToken ct = default);
+        Task<ResponseDTO> GetDefaultConfigurationAsync(CancellationToken ct);
     }
 }
