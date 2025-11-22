@@ -23,12 +23,12 @@ namespace SWP391Web.Application.Services
         public readonly IUnitOfWork _unitOfWork;
         public readonly IMapper _mapper;
         public readonly IPaymentService _paymentService;
-        private readonly IDepositSettingService _depositSetting;
+        private readonly IDealerConfigurationService _depositSetting;
         private readonly IDealerDebtService _dealerDebtService;
         private readonly IDealerDebtTransactionService _dealerDebtTransactionService;
         private readonly IEContractService _eContractService;
         private readonly ILogService _logService;
-        public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService, IDepositSettingService depositSetting,
+        public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService, IDealerConfigurationService depositSetting,
             IDealerDebtService dealerDebtService, IDealerDebtTransactionService dealerDebtTransactionService, IEContractService eContractService, ILogService logService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
@@ -96,7 +96,7 @@ namespace SWP391Web.Application.Services
 
                 if (!createCustomerOrderDTO.IsPayFull)
                 {
-                    var depositRate = await _depositSetting.GetDepositSetting(user, ct);
+                    var depositRate = await _depositSetting.GetCurrentConfigurationAsync(user, ct);
                     deposit = amount * (depositRate.Data!.MaxDepositPercentage / 100);
                 }
 
