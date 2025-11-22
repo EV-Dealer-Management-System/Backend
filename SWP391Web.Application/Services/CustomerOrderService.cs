@@ -260,12 +260,12 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if (customerOrder.Status != OrderStatus.FullPending && customerOrder.Status != OrderStatus.DepositPending)
+                if (customerOrder.Status != OrderStatus.Confirmed && customerOrder.Status != OrderStatus.RemainingConfimmed)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Only orders with FullPending or DepositPending status can confirm cash receipt.",
+                        Message = "Only orders with Confirmed or RemainingConfimmed status can confirm cash receipt.",
                         StatusCode = 400,
                     };
                 }
