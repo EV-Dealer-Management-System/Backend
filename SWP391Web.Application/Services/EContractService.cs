@@ -1658,7 +1658,8 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO<EContract>> GetAllEContractList(ClaimsPrincipal userClaim, int? pageNumber, int? pageSize, EContractStatus eContractStatus = default, EcontractType econtractType = default)
+        public async Task<ResponseDTO<EContract>> GetAllEContractList(ClaimsPrincipal userClaim, int? pageNumber, int? pageSize, EContractStatus eContractStatus = default, 
+            EcontractType econtractType = default, CancellationToken ct = default)
         {
             try
             {
@@ -1675,7 +1676,7 @@ namespace SWP391Web.Application.Services
 
                 var eContractList = await _unitOfWork.EContractRepository.GetAllAsync(includes: e => e.Include(inc => inc.Owner));
 
-                if (role.Equals(StaticUserRole.DealerManager))
+                if (role.Equals(StaticUserRole.DealerManager) || role.Equals(StaticUserRole.DealerStaff))
                 {
                     var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                     if (userId is null)
@@ -1687,7 +1688,18 @@ namespace SWP391Web.Application.Services
                             Message = "Cannot find user ID"
                         };
                     }
-                    eContractList = eContractList.Where(ec => ec.OwnerBy == userId);
+
+                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, ct);
+                    if (dealer is null)
+                    {
+                        return new ResponseDTO<EContract>
+                        {
+                            IsSuccess = false,
+                            StatusCode = 404,
+                            Message = "Cannot find dealer for the user"
+                        };
+                    }
+                    eContractList = eContractList.Where(ec => ec.OwnerBy == dealer.ManagerId);
                 }
 
                 if (eContractStatus != default)
