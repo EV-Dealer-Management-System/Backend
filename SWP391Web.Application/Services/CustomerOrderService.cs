@@ -1,6 +1,6 @@
 using AutoMapper;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using StackExchange.Redis;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.CustomerOrder;
 using SWP391Web.Application.DTO.DealerDebt;
@@ -8,13 +8,9 @@ using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using SWP391Web.Infrastructure.SignlR;
 using System.Linq.Expressions;
 using System.Security.Claims;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SWP391Web.Application.Services
 {
@@ -28,8 +24,10 @@ namespace SWP391Web.Application.Services
         private readonly IDealerDebtTransactionService _dealerDebtTransactionService;
         private readonly IEContractService _eContractService;
         private readonly ILogService _logService;
+        private readonly IHubContext<NotificationHub> _hubContext;
         public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService, IDealerConfigurationService depositSetting,
-            IDealerDebtService dealerDebtService, IDealerDebtTransactionService dealerDebtTransactionService, IEContractService eContractService, ILogService logService)
+            IDealerDebtService dealerDebtService, IDealerDebtTransactionService dealerDebtTransactionService, IEContractService eContractService, ILogService logService,
+            IHubContext<NotificationHub> hubContext)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -39,6 +37,7 @@ namespace SWP391Web.Application.Services
             _dealerDebtTransactionService = dealerDebtTransactionService;
             _eContractService = eContractService;
             _logService = logService;
+            _hubContext = hubContext;
         }
 
         public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
@@ -203,6 +202,7 @@ namespace SWP391Web.Application.Services
                 customerOrder.Status = status;
                 _unitOfWork.CustomerOrderRepository.Update(customerOrder);
                 await _unitOfWork.SaveAsync();
+                await UpdateStatusRealTime(customerOrder.Quote.DealerId);
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -364,6 +364,8 @@ namespace SWP391Web.Application.Services
                 }
 
                 await _unitOfWork.SaveAsync();
+
+                await UpdateStatusRealTime(dealer.Id);
 
                 return new ResponseDTO
                 {
@@ -563,6 +565,8 @@ namespace SWP391Web.Application.Services
                 await _unitOfWork.SaveAsync();
                 await _logService.AddLogAsync(null, LogType.Update, "CustomerOrder", customerOrder.OrderNo.ToString(), ct);
 
+                await UpdateStatusRealTime(customerOrder.Quote.DealerId);
+
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -581,7 +585,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task RestoreVehicleStatus(List<OrderDetail> orderDetails)
+        private async Task RestoreVehicleStatus(List<OrderDetail> orderDetails)
         {
             foreach (var orderDetail in orderDetails)
             {
@@ -637,7 +641,7 @@ namespace SWP391Web.Application.Services
                         Provider = "Cash",
                     };
                     await _unitOfWork.SaveAsync();
-
+                    await UpdateStatusRealTime(customerOrder.Quote.DealerId);
                     return new ResponseDTO
                     {
                         IsSuccess = true,
@@ -662,6 +666,7 @@ namespace SWP391Web.Application.Services
                     customerOrder.Status = OrderStatus.RemainingPending;
                     _unitOfWork.CustomerOrderRepository.Update(customerOrder);
                     await _unitOfWork.SaveAsync(ct);
+                    await UpdateStatusRealTime(customerOrder.Quote.DealerId);
                     return new ResponseDTO
                     {
                         IsSuccess = true,
@@ -688,6 +693,22 @@ namespace SWP391Web.Application.Services
                     StatusCode = 500,
                 };
             }
+        }
+
+        private async Task<ResponseDTO> UpdateStatusRealTime(Guid dealerId)
+        {
+            var groupName = $"dealer:{dealerId}:all";
+
+            await _hubContext.Clients
+                .Group(groupName)
+                .SendAsync("ReceiveVehicleDeliveryStatusUpdate");
+
+            return new ResponseDTO
+            {
+                IsSuccess = true,
+                Message = "Real-time update delivery vehicle status sent successfully",
+                StatusCode = 200
+            };
         }
     }
 }
