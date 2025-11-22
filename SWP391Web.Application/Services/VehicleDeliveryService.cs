@@ -31,7 +31,7 @@ namespace SWP391Web.Application.Services
             _bookingEVService = bookingEVService;
             _logService = logService;
         }
-        public async Task<ResponseDTO> GetAllVehicleDelivery(ClaimsPrincipal user, int pageNumber, int pageSize,DeliveryStatus? status, Guid? templateId, CancellationToken ct)
+        public async Task<ResponseDTO> GetAllVehicleDelivery(ClaimsPrincipal user, int pageNumber, int pageSize,DeliveryStatus? status, Guid? templateId,bool isShow, CancellationToken ct)
         {
             try
             {
@@ -127,6 +127,20 @@ namespace SWP391Web.Application.Services
                     .ToList();
 
                 var getDeliveries = _mapper.Map<List<GetVehicleDeliveryDTO>>(result.items);
+                if (isShow)
+                {
+                    foreach(var d in getDeliveries)
+                    {
+                        d.VehicleDeliveryDetails = d.VehicleDeliveryDetails
+                            .Where(vdd => vdd.Status != DeliveryVehicleStatus.Damaged)
+                            .ToList();
+                    }
+
+                    getDeliveries = getDeliveries
+                        .Where(d => d.VehicleDeliveryDetails != null
+                        && d.VehicleDeliveryDetails.Any())
+                        .ToList();
+                }
 
                 return new ResponseDTO
                 {
