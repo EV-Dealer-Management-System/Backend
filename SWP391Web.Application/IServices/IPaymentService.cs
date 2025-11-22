@@ -1,8 +1,10 @@
 ﻿using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Payment;
+using SWP391Web.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,7 +14,6 @@ namespace SWP391Web.Application.IServices
     {
         Task<ResponseDTO> CreateVNPayLink(Guid customerOrderId, CancellationToken ct);
         Task<ResponseDTO> HandleVNPayIpn(VNPayIPNDTO ipnDTO, CancellationToken ct);
-        Task<ResponseDTO> CreateVNPayLinkMobile(long amount, CancellationToken ct);
-        Task<ResponseDTO> GetAllMobile(int pageNumber, int pageSize, CancellationToken ct);
+        Task<ResponseDTO> GetAllVNPayPaymentTransaction(ClaimsPrincipal userClaim, int pageNumber, int pageSize, TransactionStatus? status, CancellationToken ct);
     }
 }

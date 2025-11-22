@@ -200,15 +200,6 @@ namespace SWP391Web.Application.Services
                     status = OrderStatus.Rejected;
                 }
 
-                if (customerOrder.DepositAmount is not null)
-                {
-                    customerOrder.Status = OrderStatus.DepositPending;
-                }
-                else
-                {
-                    customerOrder.Status = OrderStatus.FullPending;
-                }
-
                 _unitOfWork.CustomerOrderRepository.Update(customerOrder);
                 await _unitOfWork.SaveAsync();
                 return new ResponseDTO
