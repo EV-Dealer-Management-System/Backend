@@ -174,7 +174,7 @@ namespace SWP391Web.Application.Services
                 }
 
                 var status = customerOrder.Status;
-                if (status != OrderStatus.ConfirmPending)
+                if (status != OrderStatus.ConfirmPending || status != OrderStatus.RemainingPending)
                 {
                     return new ResponseDTO
                     {
@@ -184,9 +184,13 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if (isAccept)
+                if (isAccept && customerOrder.Status.Equals(OrderStatus.ConfirmPending))
                 {
                     status = OrderStatus.Confirmed;
+                }
+                else if (isAccept && customerOrder.Status.Equals(OrderStatus.RemainingPending))
+                {
+                    status = OrderStatus.RemainingConfimmed;
                 }
                 else
                 {
@@ -594,7 +598,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> PayDeposit(Guid customerOrderId, bool isCash, CancellationToken ct)
+        public async Task<ResponseDTO> PayDeposit(Guid customerOrderId, bool? isCash, CancellationToken ct)
         {
             try
             {
@@ -619,11 +623,9 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if (isCash)
+                if (isCash is not null && isCash.Value)
                 {
                     await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
-                    customerOrder.Status = OrderStatus.Completed;
-                    _unitOfWork.CustomerOrderRepository.Update(customerOrder);
 
                     await HandleOrderDetail(customerOrder, ct);
 
@@ -647,15 +649,36 @@ namespace SWP391Web.Application.Services
                         StatusCode = 200,
                     };
                 }
-
-                var link = await _paymentService.CreateVNPayLink(customerOrder.Id, ct);
-                return new ResponseDTO
+                else if (isCash is not null && !isCash.Value)
                 {
-                    IsSuccess = true,
-                    Message = "VNPay link for deposit payment created successfully.",
-                    StatusCode = 200,
-                    Result = link
-                };
+                    var link = await _paymentService.CreateVNPayLink(customerOrder.Id, ct);
+                    return new ResponseDTO
+                    {
+                        IsSuccess = true,
+                        Message = "VNPay link for deposit payment created successfully.",
+                        StatusCode = 200,
+                        Result = link
+                    };
+                }
+                else if (isCash is null)
+                {
+                    await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
+                    return new ResponseDTO
+                    {
+                        IsSuccess = true,
+                        Message = "E-Contract for full payment created successfully.",
+                        StatusCode = 200,
+                    };
+                }
+                else
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Invalid payment method.",
+                        StatusCode = 400,
+                    };
+                }
             }
             catch (Exception ex)
             {
