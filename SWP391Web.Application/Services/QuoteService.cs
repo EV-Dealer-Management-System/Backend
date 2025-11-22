@@ -478,17 +478,31 @@ namespace SWP391Web.Application.Services
 
                 var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
                 var todayVN = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone).Date;
+                var todayStartUTC = TimeZoneInfo.ConvertTimeToUtc(todayVN, vnTimeZone);
 
                 // Take all quote that status != Expired
-                var quotes = await _unitOfWork.QuoteRepository.Query()
-                    .Where(q => q.Status != QuoteStatus.Expired &&
-                                TimeZoneInfo.ConvertTimeFromUtc(q.CreatedAt, vnTimeZone).Date < todayVN)
-                    .ToListAsync(ct);
+                var quotes = await _unitOfWork.QuoteRepository.Query(
+                    filter: q => q.DealerId == dealer.Id && q.Status != QuoteStatus.Expired && q.CreatedAt < todayStartUTC,
+                    includes: null,
+                    asNoTracking: false  // quan trọng: cho EF track entity
+                ).ToListAsync(ct);
+
+                if (!quotes.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = true,
+                        Message = "No quotes to update",
+                        StatusCode = 200
+                    };
+                }
 
                 foreach (var quote in quotes)
                 {
                     quote.Status = QuoteStatus.Expired;
                 }
+
+                await _unitOfWork.SaveAsync(ct);
 
                 return new ResponseDTO
                 {

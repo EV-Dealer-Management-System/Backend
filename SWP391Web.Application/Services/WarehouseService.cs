@@ -3,6 +3,7 @@ using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Warehouse;
 using SWP391Web.Application.IServices;
 using SWP391Web.Domain.Entities;
+using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
 using System;
 using System.Collections.Generic;
@@ -52,6 +53,41 @@ namespace SWP391Web.Application.Services
                     StatusCode = 500,
                     Message = "An error occurred while creating the warehouse.",
                     Result = ex.Message
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> GetAllEVCWarehouse()
+        {
+            try
+            {
+                var warehouses = await _unitOfWork.WarehouseRepository.GetAllAsync(w => w.WarehouseType == WarehouseType.EVInventory);
+                if (warehouses == null)
+                {
+                    return new ResponseDTO
+                    {
+                        StatusCode = 404,
+                        Message = "No EVC Warehouses found.",
+                        Result = null
+                    };
+                }
+
+                var getAllEVCWarehouses = _mapper.Map<List<GetWarehouseDTO>>(warehouses);
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "EVC Warehouses retrieved successfully.",
+                    Result = getAllEVCWarehouses
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    StatusCode = 500,
+                    Message = ex.Message,
+                    IsSuccess = false
                 };
             }
         }

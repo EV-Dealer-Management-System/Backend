@@ -26,6 +26,12 @@ namespace SWP391Web.API.Controllers
             var response = await _warehouseService.GetAllWarehousesAsync();
             return StatusCode(response.StatusCode, response);
         }
+        [HttpGet("get-evc-warehouses")]
+        public async Task<ActionResult> GetEVCWarehousesAsync()
+        {
+            var response = await _warehouseService.GetAllEVCWarehouse();
+            return StatusCode(response.StatusCode, response);
+        }
         [HttpGet("get-warehouse-by-id/{warehouseId}")]
         public async Task<ActionResult> GetWarehouseByIdAsync([FromRoute] Guid warehouseId)
         {
