@@ -710,6 +710,7 @@ namespace SWP391Web.Application.Services
                     }
 
                     await CreateVehicleDeliveryAsync(bookingEV);
+                    await _logService.AddLogAsync(user, LogType.Create, "VehicleDelivery", bookingEV.Note, CancellationToken.None);
                 }
 
                 if (bookingEV.Status == BookingStatus.WaitingDealerSign && newStatus == BookingStatus.Pending)
@@ -739,6 +740,7 @@ namespace SWP391Web.Application.Services
                 bookingEV.Status = newStatus;
                 _unitOfWork.BookingEVRepository.Update(bookingEV);
                 await _unitOfWork.SaveAsync();
+                await _logService.AddLogAsync(user, LogType.Update, "Booking", bookingEV.Note, CancellationToken.None);
 
                 string message = newStatus switch
                 {

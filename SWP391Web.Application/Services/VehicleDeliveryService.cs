@@ -22,12 +22,14 @@ namespace SWP391Web.Application.Services
         public readonly IUnitOfWork _unitOfWork;
         public readonly IMapper _mapper;
         public readonly IBookingEVService _bookingEVService;
+        public readonly ILogService _logService;
 
-        public VehicleDeliveryService(IUnitOfWork unitOfWork, IMapper mapper, IBookingEVService bookingEVService)
+        public VehicleDeliveryService(IUnitOfWork unitOfWork, IMapper mapper, IBookingEVService bookingEVService, ILogService logService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _bookingEVService = bookingEVService;
+            _logService = logService;
         }
         public async Task<ResponseDTO> GetAllVehicleDelivery(ClaimsPrincipal user, int pageNumber, int pageSize,DeliveryStatus? status, Guid? templateId, CancellationToken ct)
         {
@@ -344,6 +346,8 @@ namespace SWP391Web.Application.Services
                 }
 
                 await _unitOfWork.SaveAsync();
+                await _logService.AddLogAsync(user, LogType.Update, "VehicleDelivery", delivery.Description, CancellationToken.None);
+
 
                 var getDelivery = _mapper.Map<GetVehicleDeliveryDTO>(delivery);
 
