@@ -606,7 +606,7 @@ namespace SWP391Web.Application.Services
 
         private async Task<ResponseDTO> UpdateStatusRealTime(Guid dealerId)
         {
-            var groupName = $"dealer:{dealerId}:admin+evmstaff";
+            var groupName = $"dealer:{dealerId}:all";
 
             await _hubContext.Clients
                 .Group(groupName)

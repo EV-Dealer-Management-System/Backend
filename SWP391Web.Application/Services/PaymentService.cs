@@ -291,9 +291,7 @@ namespace SWP391Web.Application.Services
                         await _unitOfWork.SaveAsync();
                     }
 
-                    // Sau đó mới cập nhật Order + tạo eContract
                     await HandleVNPayCustomerOrder(order, paidAmount, ct);
-
                     var orderInfo = ipnDTO.vnp_OrderInfo ?? string.Empty;
 
                     if (orderInfo.StartsWith("DEALERPAY|", StringComparison.OrdinalIgnoreCase))
@@ -354,6 +352,8 @@ namespace SWP391Web.Application.Services
                             }
                         };
                     }
+
+                    await UpdateStatusRealTime(order.Quote.DealerId);
                 }
 
                 await _unitOfWork.SaveAsync();
@@ -567,6 +567,22 @@ namespace SWP391Web.Application.Services
                     StatusCode = 500
                 };
             }
+        }
+
+        private async Task<ResponseDTO> UpdateStatusRealTime(Guid dealerId)
+        {
+            var groupName = $"dealer:{dealerId}:all";
+
+            await _hubContext.Clients
+                .Group(groupName)
+                .SendAsync("ReceiveCustomerOrderStatusUpdate");
+
+            return new ResponseDTO
+            {
+                IsSuccess = true,
+                Message = "Real-time update customer order status sent successfully",
+                StatusCode = 200
+            };
         }
     }
 }
