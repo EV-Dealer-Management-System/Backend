@@ -24,7 +24,7 @@ namespace SWP391Web.Application.Services
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
-        public async Task<ResponseDTO> CreateAppointmentAsync(ClaimsPrincipal user, CreateAppointmentDTO createAppointmentDTO)
+        public async Task<ResponseDTO> CreateAppointmentAsync(ClaimsPrincipal user, CreateAppointmentDTO createAppointmentDTO, CancellationToken ct)
         {
             try
             {
@@ -63,10 +63,10 @@ namespace SWP391Web.Application.Services
                         StatusCode = 404 
                     };
 
-                var appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetByDealerIdAsync(dealer.Id);
+                var appointmentSetting = await _unitOfWork.DealerConfigurationRepository.GetByDealerIdAsync(dealer.Id, ct);
                 if (appointmentSetting == null)
                 {
-                    appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetDefaultAsync();
+                    appointmentSetting = await _unitOfWork.DealerConfigurationRepository.GetByDefaultAsync(ct);
                     if (appointmentSetting == null)
                     {
 
@@ -318,7 +318,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> UpdateAppointmentStatusAsync(ClaimsPrincipal user, Guid appointmentId, AppointmentStatus newStatus)
+        public async Task<ResponseDTO> UpdateAppointmentStatusAsync(ClaimsPrincipal user, Guid appointmentId, AppointmentStatus newStatus, CancellationToken ct)
         {
             try
             {
@@ -355,10 +355,10 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetByDealerIdAsync(dealer.Id);
+                var appointmentSetting = await _unitOfWork.DealerConfigurationRepository.GetByDealerIdAsync(dealer.Id, ct);
                 if (appointmentSetting == null)
                 {
-                    appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetDefaultAsync();
+                    appointmentSetting = await _unitOfWork.DealerConfigurationRepository.GetByDefaultAsync(ct);
                     if (appointmentSetting == null)
                     {
                         return new ResponseDTO
