@@ -47,13 +47,14 @@ namespace SWP391Web.Application.Services
                     UserName = createEVMStaffDTO.Email,
                     FullName = createEVMStaffDTO.FullName,
                     PhoneNumber = createEVMStaffDTO.PhoneNumber,
-                    EmailConfirmed = true,
-                    LockoutEnabled = false
+                    EmailConfirmed = true
                 };
 
                 var password = "EVMStaff@" + Guid.NewGuid().ToString()[..6].ToUpper();
                 var result = await _unitOfWork.UserManagerRepository.CreateAsync(user, password);
 
+                user.LockoutEnabled = false;
+                _unitOfWork.UserManagerRepository.Update(user);
                 if (!result.Succeeded)
                 {
                     return new ResponseDTO
@@ -85,8 +86,6 @@ namespace SWP391Web.Application.Services
                     Message = ex.Message
                 };
             }
-
-
         }
 
         public async Task<ResponseDTO> GetAllEVMStaff(string? filterOn, string? filterQuery, string? sortBy, bool? isAcsending, int pageNumber, int pageSize)

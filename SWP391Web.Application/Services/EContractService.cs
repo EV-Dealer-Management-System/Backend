@@ -503,7 +503,7 @@ namespace SWP391Web.Application.Services
             };
 
             request.FileInfo.File = pdfBytes;
-            var fileName = $"Booking_E-Contract_{randomText}_{dealer.Name}.pdf".Trim();
+            var fileName = $"Deposit_E-Contract_{randomText}_{dealer.Name}.pdf".Trim();
             request.FileInfo.FileName = fileName;
 
             var createResult = await _vnpt.CreateDocumentAsync(token, request);
@@ -1050,9 +1050,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public static (string pos, int pageSign) GetVnptEContractPosition(
-            byte[] pdfBytes, AnchorBox anchor,
-            double width = 170, double height = 90,
+        public static (string pos, int pageSign) GetVnptEContractPosition(byte[] pdfBytes, AnchorBox anchor, double width = 170, double height = 90, 
             double offsetY = 36, double margin = 18,
             double xAdjust = 0)
         {
@@ -1068,7 +1066,10 @@ namespace SWP391Web.Application.Services
             double candidateLlx = Math.Clamp(anchor.Left + xAdjust, margin, pw - margin - width);
             double candidateLly = anchor.Bottom - offsetY - height;
 
-            bool enoughSpaceSamePage = candidateLly >= margin;
+            double availableSpaceBelowAnchor = anchor.Bottom - margin;
+            double requiredSpace = offsetY + height + 20;
+
+            bool enoughSpaceSamePage = availableSpaceBelowAnchor >= requiredSpace;
 
             if (enoughSpaceSamePage)
             {
@@ -1098,6 +1099,7 @@ namespace SWP391Web.Application.Services
                 return (pos3, anchor.Page);
             }
         }
+
 
         private async Task<VnptResult<VnptDocumentDto>> CreateDocumentDealerAsync(ClaimsPrincipal userClaim, string token, Dealer dealer, DealerTier dealerTier, ApplicationUser user, CancellationToken ct)
         {

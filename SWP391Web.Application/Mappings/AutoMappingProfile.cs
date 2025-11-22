@@ -21,7 +21,6 @@ using SWP391Web.Application.DTO.ElectricVehicleModel;
 using SWP391Web.Application.DTO.ElectricVehicleVersion;
 using SWP391Web.Application.DTO.EVCInventory;
 using SWP391Web.Application.DTO.EVTemplate;
-using SWP391Web.Application.DTO.Log;
 using SWP391Web.Application.DTO.Notification;
 using SWP391Web.Application.DTO.OrderDetail;
 using SWP391Web.Application.DTO.Payment;
@@ -209,11 +208,11 @@ namespace SWP391Web.Application.Mappings
             CreateMap<DealerDebtTransaction, GetDealerDebtTransactionDTO>().ReverseMap();
 
             CreateMap<Transaction, GetTransactionDTO>().ReverseMap();
-            
+
             CreateMap<VehicleDelivery, GetVehicleDeliveryDTO>()
-                .ForMember(dest => dest.VehicleDeliveryDetails,opt => opt.MapFrom(src => src.VehicleDeliveryDetails))
+                .ForMember(dest => dest.VehicleDeliveryDetails, opt => opt.MapFrom(src => src.VehicleDeliveryDetails))
                 .ReverseMap();
-                
+
             CreateMap<VehicleDeliveryDetail, GetVehicleDeliveryDetailDTO>()
                 .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.ElectricVehicle.VIN));
 
@@ -228,6 +227,10 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.User.FullName))
                 .ForMember(dest => dest.LogType, opt => opt.MapFrom(src => src.LogType.ToString()));
                 
+
+            CreateMap<DealerInventoryForecast, GetForecastSeriesPointDTO>().ReverseMap();
+            
+            //CreateMap<Log, GetLogDTO>().ReverseMap();
         }
     }
 }

@@ -118,9 +118,8 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var maxDate = await _unitOfWork.DealerDailyInventoryRepository.GetMaxSnapshotDateAsync(ct);
-
-                if (maxDate is null)
+                var snapshotDate = await _unitOfWork.DealerDailyInventoryRepository.GetMaxSnapshotDateAsync(ct);
+                if (snapshotDate is null)
                 {
                     return new ResponseDTO
                     {
@@ -130,9 +129,9 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var snapshotDate = maxDate.Value.Date;
+                snapshotDate = new DateTime(snapshotDate.Value.Year, snapshotDate.Value.Month, snapshotDate.Value.Day, 0, 0, 0, DateTimeKind.Utc);
 
-                var latestInventories = await _unitOfWork.DealerDailyInventoryRepository.GetByDateAsync(snapshotDate, ct);
+                var latestInventories = await _unitOfWork.DealerDailyInventoryRepository.GetByDateAsync(snapshotDate.Value, ct);
 
                 var latestMap = latestInventories.Where(x => x.ClosingStock > 0)
                     .ToDictionary(
@@ -153,11 +152,10 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var from = snapshotDate.AddDays(1);
-                var to = snapshotDate.AddDays(horizonDays);
+                var from = snapshotDate.Value.AddDays(1);
+                var to = snapshotDate.Value.AddDays(horizonDays);
 
-                var forecasts = await _unitOfWork.DealerInventoryForecastRepository
-                    .GetForecastsInRangeAsync(from, to, ct);
+                var forecasts = await _unitOfWork.DealerInventoryForecastRepository.GetForecastsInRangeAsync(from, to, ct);
 
                 var forecastByPair = forecasts.GroupBy(f => new { f.DealerId, f.EVTemplateId })
                     .ToDictionary(
@@ -166,8 +164,9 @@ namespace SWP391Web.Application.Services
 
                 var risks = new List<DealerInventoryRisk>();
 
-                const int DefaultAlertThreshold = 5;
+                const int DefaultAlertThreshold = 10;
                 const int CriticalThreshold = 0;
+                const int MediumThreshold = 5;
 
                 foreach (var kvp in latestMap)
                 {
@@ -190,6 +189,10 @@ namespace SWP391Web.Application.Services
                         if (current <= CriticalThreshold)
                         {
                             level = InventoryRiskLevel.Critical;
+                        }
+                        else if (current <= MediumThreshold)
+                        {
+                            level = InventoryRiskLevel.Medium;
                         }
                         else if (current <= DefaultAlertThreshold)
                         {
@@ -405,7 +408,7 @@ namespace SWP391Web.Application.Services
                 var inventories = await _unitOfWork.DealerDailyInventoryRepository.GetByDateAsync(snapshotDate, ct);
 
                 var targets = inventories.Where(x => x.OpeningStock > 0 || x.ClosingStock > 0).ToList();
-                
+
                 var targetDTOs = _mapper.Map<List<ForecastTargetDTO>>(targets);
 
                 return new ResponseDTO
@@ -432,5 +435,106 @@ namespace SWP391Web.Application.Services
             }
         }
 
+        public async Task<ResponseDTO> GetForecastSeriesAsync(ClaimsPrincipal userClaim, Guid? dealerId, Guid evTemplateId, DateTime from, DateTime to, CancellationToken ct)
+        {
+            try
+            {
+                var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not login yet.",
+                        StatusCode = 401
+                    };
+                }
+
+                var role = userClaim.FindFirst(ClaimTypes.Role)?.Value;
+                if (role is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User role not found.",
+                        StatusCode = 403
+                    };
+                }
+
+                Guid effectiveDealerId;
+                if (role.Equals(StaticUserRole.EVMStaff) || role.Equals(StaticUserRole.Admin))
+                {
+                    if (dealerId is null)
+                    {
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            StatusCode = 400,
+                            Message = "DealerId is required for Admin/EVMStaff."
+                        };
+                    }
+
+                    effectiveDealerId = dealerId.Value;
+                }
+                else
+                {
+                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                    if (dealer is null)
+                    {
+                        dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId, ct);
+                        if (dealer is null)
+                        {
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                Message = "Dealer not found for the user.",
+                                StatusCode = 404
+                            };
+                        }
+                    }
+
+                    effectiveDealerId = dealer.Id;
+                }
+
+                var fromDate = from.Date;
+                var toDate = to.Date;
+
+                if (fromDate > toDate)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 400,
+                        Message = "From date must be <= To date."
+                    };
+                }
+
+                var forecastsInRange = await _unitOfWork.DealerInventoryForecastRepository.GetForecastsInRangeAsync(fromDate, toDate, ct);
+
+                var filtered = forecastsInRange
+                    .Where(f => f.DealerId == effectiveDealerId && f.EVTemplateId == evTemplateId)
+                    .OrderBy(f => f.TargetDate)
+                    .ToList();
+
+                var dto = _mapper.Map<List<GetForecastSeriesPointDTO>>(filtered);
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = "Forecast series retrieved successfully.",
+                    Result = dto
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error retrieving forecast series: {ex.Message}"
+                };
+            }
+        }
     }
 }

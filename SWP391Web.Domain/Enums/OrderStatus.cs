@@ -15,6 +15,8 @@ namespace SWP391Web.Domain.Enums
         Depositing = 4,
         Completed = 5,
         Cancelled = 6,
-        Rejected = 7
+        Rejected = 7,
+        RemainingPending = 8,
+        RemainingConfimmed = 9
     }
 }
