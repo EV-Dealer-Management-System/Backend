@@ -109,7 +109,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, CancellationToken.None);
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, CancellationToken.None);
                 if (dealer == null)
                 {
                     return new ResponseDTO

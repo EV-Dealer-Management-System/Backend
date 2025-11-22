@@ -64,14 +64,21 @@ namespace SWP391Web.Application.Services
 
                 var appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetByDealerIdAsync(dealer.Id);
                 if (appointmentSetting == null)
-                    return new ResponseDTO 
-                    { 
-                        IsSuccess = false, 
-                        Message = "Appointment setting not found", 
-                        StatusCode = 404 
-                    };
+                {
+                    appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetDefaultAsync();
+                    if (appointmentSetting == null)
+                    {
 
-                if (createAppointmentDTO.StartTime <= DateTime.UtcNow)
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Appointment setting not found",
+                            StatusCode = 404
+                        };
+
+                    }
+                }
+                    if (createAppointmentDTO.StartTime <= DateTime.UtcNow)
                     return new ResponseDTO 
                     { 
                         IsSuccess = false, 
