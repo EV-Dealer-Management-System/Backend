@@ -200,6 +200,7 @@ namespace SWP391Web.Application.Services
                     status = OrderStatus.Rejected;
                 }
 
+                customerOrder.Status = status;
                 _unitOfWork.CustomerOrderRepository.Update(customerOrder);
                 await _unitOfWork.SaveAsync();
                 return new ResponseDTO
