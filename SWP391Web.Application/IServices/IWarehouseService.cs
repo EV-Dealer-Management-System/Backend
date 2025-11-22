@@ -13,6 +13,7 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> CreateWarehouseAsync(CreateWarehouseDTO createWarehouseDTO);
         Task<ResponseDTO> GetAllWarehousesAsync();
         Task<ResponseDTO> GetWarehouseByIdAsync(Guid warehouseId);
+        Task<ResponseDTO> GetAllEVCWarehouse();
 
     }
 }
