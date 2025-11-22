@@ -27,14 +27,16 @@ namespace SWP391Web.Application.Services
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IDealerDebtService _dealerDebt;
         private readonly IEContractService _eContractService;
+        private readonly ILogService _logService;
 
-        public BookingEVService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IDealerDebtService dealerDebt, IEContractService eContractService)
+        public BookingEVService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IDealerDebtService dealerDebt, IEContractService eContractService, ILogService logService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
             _dealerDebt = dealerDebt ?? throw new ArgumentNullException(nameof(dealerDebt));
             _eContractService = eContractService ?? throw new ArgumentNullException(nameof(eContractService));
+            _logService = logService ?? throw new ArgumentNullException(nameof(logService));
 
         }
 
@@ -194,7 +196,7 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, CancellationToken.None);
+                var dealer = await _unitOfWork.DealerRepository.GetManagerByUserIdAsync(userId, ct);
 
                 if (dealer == null)
                 {
@@ -276,6 +278,8 @@ namespace SWP391Web.Application.Services
                 await _unitOfWork.BookingEVRepository.AddAsync(bookingEV, CancellationToken.None);
 
                 await _unitOfWork.SaveAsync();
+                await _logService.AddLogAsync(user,LogType.Create, "Booking", bookingEV.CreatedBy, ct);
+
 
                 await _eContractService.CreateBookingEContractAsync(user, bookingEV.Id, ct);
 

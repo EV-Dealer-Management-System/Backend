@@ -11,7 +11,7 @@ namespace SWP391Web.Application.IServices
 {
     public interface ILogService
     {
-        Task<ResponseDTO> AddLogAsync(ClaimsPrincipal user, LogType logType, string entityName, string? additionalInfo, string description, CancellationToken ct);
-        Task<ResponseDTO> GetAllLogsAsync(ClaimsPrincipal user , int pageNumber , int pageSize);
+        Task<ResponseDTO> AddLogAsync(ClaimsPrincipal user, LogType logType, string entityName, string description, CancellationToken ct);
+        Task<ResponseDTO> GetAllLogsAsync(ClaimsPrincipal user , int pageNumber , int pageSize, CancellationToken ct);
     }
 }

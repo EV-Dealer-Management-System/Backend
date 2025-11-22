@@ -383,7 +383,7 @@ namespace SWP391Web.Application.Services
 
         }
 
-        public async Task<ResponseDTO> InspectAccidentVehicleAsync(ClaimsPrincipal user, Guid deliveryId, List<Guid> damagedVehicleIds, CancellationToken ct)
+        public async Task<ResponseDTO> InspectAccidentVehicleAsync(ClaimsPrincipal user, Guid deliveryId, List<Guid> damagedVehicleIds,bool isShow ,CancellationToken ct)
         {
             try
             {
@@ -428,12 +428,6 @@ namespace SWP391Web.Application.Services
                         dt.ElectricVehicle.Status = ElectricVehicleStatus.Maintenance;
                         dt.Note = "Vehicle damaged in accident, needs replacement.";
                     }
-                    else
-                    {
-                        dt.Status = DeliveryVehicleStatus.InTransit;
-                        dt.ElectricVehicle.Status = ElectricVehicleStatus.InTransit;
-                        dt.Note = "Vehicle checked and continues in-transit";
-                    }
 
                     _unitOfWork.VehicleDeliveryDetailRepository.Update(dt);
                     _unitOfWork.ElectricVehicleRepository.Update(dt.ElectricVehicle);
@@ -444,12 +438,30 @@ namespace SWP391Web.Application.Services
                 _unitOfWork.VehicleDeliveryRepository.Update(delivery);
 
                 await _unitOfWork.SaveAsync();
+                var vehicleList = delivery.VehicleDeliveryDetails.AsEnumerable();
+
+                //Only show non-damaged vehicles
+                if (isShow)
+                {
+                    vehicleList = vehicleList
+                        .Where(dt => dt.Status != DeliveryVehicleStatus.Damaged); 
+                }
+
+                var result = vehicleList
+                    .Select(dt => new
+                    {
+                        dt.ElectricVehicleId,
+                        dt.ElectricVehicle.VIN,
+                        dt.Note
+                    })
+                    .ToList();
 
                 return new ResponseDTO
                 {
                     IsSuccess = true,
                     Message = "Inspection successfully",
-                    StatusCode = 200
+                    StatusCode = 200,
+                    Result = result
                 };
                 
             }
@@ -544,6 +556,7 @@ namespace SWP391Web.Application.Services
                 }
 
                 delivery.Status = DeliveryStatus.InTransit;
+                delivery.Description = "Vehicle is on the way to dealer";
                 delivery.UpdateAt = DateTime.UtcNow;
                 _unitOfWork.VehicleDeliveryRepository.Update(delivery); 
                 await _unitOfWork.SaveAsync();
