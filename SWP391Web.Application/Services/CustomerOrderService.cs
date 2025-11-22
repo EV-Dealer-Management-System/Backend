@@ -609,12 +609,12 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if (!customerOrder.Status.Equals(OrderStatus.RemainingConfimmed) && !customerOrder.Status.Equals(OrderStatus.Depositing))
+                if (!customerOrder.Status.Equals(OrderStatus.RemainingConfimmed) && !customerOrder.Status.Equals(OrderStatus.Depositing) && !customerOrder.Status.Equals(OrderStatus.RemainingPending))
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Only orders with RemainingConfimmed or Depositing status can pay deposit.",
+                        Message = "Only orders with RemainingConfimmed or Depositing or RemainingPending status can pay deposit.",
                         StatusCode = 400,
                     };
                 }
