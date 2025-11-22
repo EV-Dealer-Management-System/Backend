@@ -91,8 +91,12 @@ namespace SWP391Web.Application.Services
                 OrderStatus status = OrderStatus.ConfirmPending;
                 var amount = quote.TotalAmount;
                 decimal? deposit = null;
-                var depositRate = await _depositSetting.GetDepositSetting(user, ct);
-                deposit = amount * (depositRate.Data!.MaxDepositPercentage / 100);
+
+                if (!createCustomerOrderDTO.IsPayFull)
+                {
+                    var depositRate = await _depositSetting.GetDepositSetting(user, ct);
+                    deposit = amount * (depositRate.Data!.MaxDepositPercentage / 100);
+                }
 
                 var customerOrder = new CustomerOrder
                 {
