@@ -78,9 +78,12 @@ namespace SWP391Web.Infrastructure.Repository
         public async Task<Dealer?> GetDealerByManagerOrStaffAsync(string userdId, CancellationToken ct)
         {
             return await _context.Dealers
-                .AsNoTracking()
-                .Include(dl => dl.Customers)
                 .Include(dl => dl.Manager)
+                .Include(dl => dl.DealerMembers)
+                    .ThenInclude(dm => dm.ApplicationUser)
+                .Include(dl => dl.Warehouse)
+                .Include(dl => dl.DealerTier)
+                .Include(dl => dl.PolicyOverrides)
                 .Where(dl => dl.ManagerId == userdId
                         || dl.DealerMembers.Any(dm => dm.ApplicationUserId == userdId && dm.IsActive))
                 .FirstOrDefaultAsync();

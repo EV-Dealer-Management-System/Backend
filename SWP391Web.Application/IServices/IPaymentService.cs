@@ -14,6 +14,6 @@ namespace SWP391Web.Application.IServices
     {
         Task<ResponseDTO> CreateVNPayLink(Guid customerOrderId, CancellationToken ct);
         Task<ResponseDTO> HandleVNPayIpn(VNPayIPNDTO ipnDTO, CancellationToken ct);
-        Task<ResponseDTO> GetAllVNPayPaymentTransaction(ClaimsPrincipal userClaim, int pageNumber, int pageSize, TransactionStatus? status, CancellationToken ct);
+        Task<ResponseDTO> GetAllPaymentTransaction(ClaimsPrincipal userClaim, int pageNumber, int pageSize, TransactionStatus? status, CancellationToken ct);
     }
 }
