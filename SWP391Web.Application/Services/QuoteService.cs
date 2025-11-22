@@ -22,11 +22,12 @@ namespace SWP391Web.Application.Services
     {
         public readonly IUnitOfWork _unitOfWork;
         public readonly IMapper _mapper;
-
-        public QuoteService(IUnitOfWork unitOfWork, IMapper mapper)
+        public readonly ILogService _logService;
+        public QuoteService(IUnitOfWork unitOfWork, IMapper mapper, ILogService logService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _logService = logService;
         }
         public async Task<ResponseDTO> CreateQuoteAsync(ClaimsPrincipal user, CreateQuoteDTO createQuoteDTO)
         {
@@ -189,6 +190,7 @@ namespace SWP391Web.Application.Services
 
                 await _unitOfWork.QuoteRepository.AddAsync(quote, CancellationToken.None);
                 await _unitOfWork.SaveAsync();
+                await _logService.AddLogAsync(user, LogType.Create, "Quote", quote.Note, CancellationToken.None);
 
                 var quoteDTO = await _unitOfWork.QuoteRepository.GetQuoteByIdAsync(quote.Id);
                 var getQuoteDTO = _mapper.Map<GetQuoteDTO>(quoteDTO);
@@ -503,6 +505,7 @@ namespace SWP391Web.Application.Services
                 }
 
                 await _unitOfWork.SaveAsync(ct);
+                await _logService.AddLogAsync(user, LogType.Update, "Quote", null, ct);
 
                 return new ResponseDTO
                 {
@@ -621,6 +624,7 @@ namespace SWP391Web.Application.Services
                 quote.Status = newStatus;
                 _unitOfWork.QuoteRepository.Update(quote);
                 await _unitOfWork.SaveAsync();
+                await _logService.AddLogAsync(user, LogType.Update, "Quote", quote.Note, CancellationToken.None);
 
                 string message = newStatus switch
                 {

@@ -231,7 +231,6 @@ namespace SWP391Web.Application.Mappings
 
             CreateMap<DealerInventoryForecast, GetForecastSeriesPointDTO>().ReverseMap();
             
-            //CreateMap<Log, GetLogDTO>().ReverseMap();
         }
     }
 }

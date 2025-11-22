@@ -27,8 +27,9 @@ namespace SWP391Web.Application.Services
         private readonly IDealerDebtService _dealerDebtService;
         private readonly IDealerDebtTransactionService _dealerDebtTransactionService;
         private readonly IEContractService _eContractService;
+        private readonly ILogService _logService;
         public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService, IDepositSettingService depositSetting,
-            IDealerDebtService dealerDebtService, IDealerDebtTransactionService dealerDebtTransactionService, IEContractService eContractService)
+            IDealerDebtService dealerDebtService, IDealerDebtTransactionService dealerDebtTransactionService, IEContractService eContractService,ILogService logService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -37,6 +38,7 @@ namespace SWP391Web.Application.Services
             _dealerDebtService = dealerDebtService;
             _dealerDebtTransactionService = dealerDebtTransactionService;
             _eContractService = eContractService;
+            _logService = logService;
         }
 
         public async Task<ResponseDTO> CreateCustomerOrderAsync(ClaimsPrincipal user, CreateCustomerOrderDTO createCustomerOrderDTO, CancellationToken ct)
@@ -115,6 +117,7 @@ namespace SWP391Web.Application.Services
 
                 await HandleOrderDetail(customerOrder, ct);
                 await _unitOfWork.SaveAsync();
+                await _logService.AddLogAsync(user, LogType.Create, "Customer", customerOrder.OrderNo.ToString(), CancellationToken.None);
                 var getCustomerOrder = _mapper.Map<GetCustomerOrderDTO>(customerOrder);
 
                 if (createCustomerOrderDTO.IsPayFull)
@@ -566,6 +569,7 @@ namespace SWP391Web.Application.Services
                 }
 
                 await _unitOfWork.SaveAsync();
+                await _logService.AddLogAsync(null, LogType.Update, "CustomerOrder", customerOrder.OrderNo.ToString(), ct);
 
                 return new ResponseDTO
                 {
