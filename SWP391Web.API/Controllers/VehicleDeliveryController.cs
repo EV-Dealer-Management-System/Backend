@@ -39,9 +39,9 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpPost("inspect-accident/{deliveryId}")]
-        public async Task<ActionResult<ResponseDTO>> InspectAccidentVehicle([FromRoute] Guid deliveryId, [FromBody] List<Guid> damagedVehicleIds, CancellationToken ct)
+        public async Task<ActionResult<ResponseDTO>> InspectAccidentVehicle([FromRoute] Guid deliveryId, [FromBody] List<Guid> damagedVehicleIds, bool isShow , CancellationToken ct)
         {
-            var response = await _vehicleDeliveryService.InspectAccidentVehicleAsync(User, deliveryId, damagedVehicleIds, ct);
+            var response = await _vehicleDeliveryService.InspectAccidentVehicleAsync(User, deliveryId, damagedVehicleIds,isShow, ct);
             return StatusCode(response.StatusCode, response);
         }
         [HttpPost("replace-damaged-vehicle/{deliveryId}")]

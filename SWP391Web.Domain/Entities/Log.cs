@@ -15,7 +15,6 @@ namespace SWP391Web.Domain.Entities
         public string Description { get; set; } = null!;
         public string EntityName { get; set; } = null!;
         public LogType LogType { get; set; }
-        public string? AdditionalInfo { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public Dealer? Dealer { get; set; }

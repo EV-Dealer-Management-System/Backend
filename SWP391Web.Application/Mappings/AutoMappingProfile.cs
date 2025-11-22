@@ -224,7 +224,10 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.Y, opt => opt.MapFrom(src => src.Outflow)).ReverseMap();
 
             CreateMap<DealerDailyInventory, ForecastTargetDTO>().ReverseMap();
-            CreateMap<Log, GetLogDTO>().ReverseMap();
+            CreateMap<Log, GetLogDTO>()
+                .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.User.FullName))
+                .ForMember(dest => dest.LogType, opt => opt.MapFrom(src => src.LogType.ToString()));
+                
         }
     }
 }
