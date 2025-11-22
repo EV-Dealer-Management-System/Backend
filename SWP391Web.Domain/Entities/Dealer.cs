@@ -22,8 +22,6 @@ namespace SWP391Web.Domain.Entities
         public ICollection<DealerMember> DealerMembers { get; set; } = new List<DealerMember>();
         public ICollection<Customer> Customers { get; set; } = new List<Customer>();
         public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
-        public AppointmentSetting? AppointmentSetting { get; set; }
-        public DepositSetting? DepositSetting { get; set; }
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
         public ICollection<DealerFeedback> DealerFeedbacks { get; set; } = new List<DealerFeedback>();
         public ICollection<CustomerFeedback> CustomerFeedbacks { get; set; } = new List<CustomerFeedback>();
@@ -34,5 +32,6 @@ namespace SWP391Web.Domain.Entities
         public ICollection<DealerInventoryForecast> DealerInventoryForecasts { get; set; } = new List<DealerInventoryForecast>();
         public ICollection<DealerInventoryRisk> DealerInventoryRisks { get; set; } = new List<DealerInventoryRisk>();
         public ICollection<Log>? Logs { get; set; }
+        public DealerConfiguration? DealerConfiguration { get; set; }
     }
 }

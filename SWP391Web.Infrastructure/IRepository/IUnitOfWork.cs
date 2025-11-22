@@ -28,11 +28,9 @@ namespace SWP391Web.Infrastructure.IRepository
         public IEVTemplateRepository EVTemplateRepository { get; }
         public IBookingDetailRepository BookingDetailRepository { get; }
         public ICustomerRepository CustomerRepository { get; }
-        public IAppointmentSettingRepository AppointmentSettingRepository { get; }
         public IAppointmentRepository AppointmentRepository { get; }
         public IDealerFeedbackRepository DealerFeedbackRepository { get; }
         public ITransactionRepository TransactionRepository { get; }
-        public IDepositSettingRepository DepositSettingRepository { get; }
         public INotificationRepository NotificationRepository { get; }
         public IOrderDetailRepository OrderDetailRepository { get; }
         public IDealerFBAttachmentRepository DealerFBAttachmentRepository { get; }
@@ -48,6 +46,7 @@ namespace SWP391Web.Infrastructure.IRepository
         public IDealerInventoryForecastRepository DealerInventoryForecastRepository { get; }
         public IDealerInventoryRiskRepository DealerInventoryRiskRepository { get; }
         public ILogRepository LogRepository { get; }
+        public IDealerConfigurationRepository DealerConfigurationRepository { get; }
 
         Task<int> SaveAsync(CancellationToken ct = default);
         Task ExecuteInTransactionAsync(Func<Task> action, CancellationToken ct = default);

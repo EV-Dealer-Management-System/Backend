@@ -12,9 +12,10 @@ namespace SWP391Web.Application.IServices
 {
     public interface IAppointmentService
     {
-        Task<ResponseDTO> CreateAppointmentAsync(ClaimsPrincipal user, CreateAppointmentDTO createAppointmentDTO);
+        Task<ResponseDTO> CreateAppointmentAsync(ClaimsPrincipal user, CreateAppointmentDTO createAppointmentDTO, CancellationToken ct);
         Task<ResponseDTO> GetAllAppointmentsAsync(ClaimsPrincipal user);
         Task<ResponseDTO> GetAppointmentsByCustomerIdAsync(ClaimsPrincipal user, Guid customerId);
-        Task<ResponseDTO> UpdateAppointmentStatusAsync(ClaimsPrincipal user, Guid appointmentId, AppointmentStatus newStatus);
+        Task<ResponseDTO> UpdateAppointmentStatusAsync(ClaimsPrincipal user, Guid appointmentId, AppointmentStatus newStatus, CancellationToken ct);
+        Task<ResponseDTO> UpdateCancelStatusAsync(ClaimsPrincipal user, CancellationToken ct);
     }
 }

@@ -18,9 +18,9 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPost("create-appointment")]
-        public async Task<ActionResult<ResponseDTO>> CreateAppointmentAsync([FromBody] CreateAppointmentDTO createAppointmentDTO)
+        public async Task<ActionResult<ResponseDTO>> CreateAppointmentAsync([FromBody] CreateAppointmentDTO createAppointmentDTO, CancellationToken ct)
         {
-            var response = await _appointmentService.CreateAppointmentAsync(User, createAppointmentDTO);
+            var response = await _appointmentService.CreateAppointmentAsync(User, createAppointmentDTO, ct);
             return StatusCode(response.StatusCode, response);
         }
 
@@ -37,9 +37,15 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut("update-appointment-by-id/{appointmentId}")]
-        public async Task<ActionResult<ResponseDTO>> UpdateAppointmentAsync([FromRoute] Guid appointmentId, AppointmentStatus newStatus)
+        public async Task<ActionResult<ResponseDTO>> UpdateAppointmentAsync([FromRoute] Guid appointmentId, AppointmentStatus newStatus, CancellationToken ct)
         {
-            var response = await _appointmentService.UpdateAppointmentStatusAsync(User, appointmentId, newStatus);
+            var response = await _appointmentService.UpdateAppointmentStatusAsync(User, appointmentId, newStatus, ct);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut("update-cancel-appointment")]
+        public async Task<ActionResult<ResponseDTO>> UpdateCancelStatusAsync(CancellationToken ct)
+        {
+            var response = await _appointmentService.UpdateCancelStatusAsync(User, ct);
             return StatusCode(response.StatusCode, response);
         }
     }

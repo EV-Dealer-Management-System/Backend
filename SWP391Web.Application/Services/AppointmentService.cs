@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using SWP391Web.Application.DTO.Appointment;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.IServices;
@@ -23,7 +24,7 @@ namespace SWP391Web.Application.Services
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
-        public async Task<ResponseDTO> CreateAppointmentAsync(ClaimsPrincipal user, CreateAppointmentDTO createAppointmentDTO)
+        public async Task<ResponseDTO> CreateAppointmentAsync(ClaimsPrincipal user, CreateAppointmentDTO createAppointmentDTO, CancellationToken ct)
         {
             try
             {
@@ -62,16 +63,23 @@ namespace SWP391Web.Application.Services
                         StatusCode = 404 
                     };
 
-                var appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetByDealerIdAsync(dealer.Id);
+                var appointmentSetting = await _unitOfWork.DealerConfigurationRepository.GetByDealerIdAsync(dealer.Id, ct);
                 if (appointmentSetting == null)
-                    return new ResponseDTO 
-                    { 
-                        IsSuccess = false, 
-                        Message = "Appointment setting not found", 
-                        StatusCode = 404 
-                    };
+                {
+                    appointmentSetting = await _unitOfWork.DealerConfigurationRepository.GetByDefaultAsync(ct);
+                    if (appointmentSetting == null)
+                    {
 
-                if (createAppointmentDTO.StartTime <= DateTime.UtcNow)
+                        return new ResponseDTO
+                        {
+                            IsSuccess = false,
+                            Message = "Appointment setting not found",
+                            StatusCode = 404
+                        };
+
+                    }
+                }
+                    if (createAppointmentDTO.StartTime <= DateTime.UtcNow)
                     return new ResponseDTO 
                     { 
                         IsSuccess = false, 
@@ -310,7 +318,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO> UpdateAppointmentStatusAsync(ClaimsPrincipal user, Guid appointmentId, AppointmentStatus newStatus)
+        public async Task<ResponseDTO> UpdateAppointmentStatusAsync(ClaimsPrincipal user, Guid appointmentId, AppointmentStatus newStatus, CancellationToken ct)
         {
             try
             {
@@ -347,10 +355,10 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetByDealerIdAsync(dealer.Id);
+                var appointmentSetting = await _unitOfWork.DealerConfigurationRepository.GetByDealerIdAsync(dealer.Id, ct);
                 if (appointmentSetting == null)
                 {
-                    appointmentSetting = await _unitOfWork.AppointmentSettingRepository.GetDefaultAsync();
+                    appointmentSetting = await _unitOfWork.DealerConfigurationRepository.GetByDefaultAsync(ct);
                     if (appointmentSetting == null)
                     {
                         return new ResponseDTO
@@ -398,6 +406,77 @@ namespace SWP391Web.Application.Services
                     StatusCode = 200
 
                 };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> UpdateCancelStatusAsync(ClaimsPrincipal user, CancellationToken ct)
+        {
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, ct);
+                if (dealer == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                var todayVN = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone).Date;
+                var todayStartUTC = TimeZoneInfo.ConvertTimeToUtc(todayVN, vnTimeZone);
+
+                var appointments = await _unitOfWork.AppointmentRepository.Query(
+                    filter: q => q.DealerId == dealer.Id 
+                    && q.Status == AppointmentStatus.Active 
+                    && q.EndTime < todayStartUTC,
+                    includes: null
+                ).ToListAsync(ct);
+
+                if (!appointments.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No appointments to cancel",
+                        StatusCode = 404
+                    };
+                }
+                foreach (var appointment in appointments)
+                {
+                    appointment.Status = AppointmentStatus.Canceled;
+                    _unitOfWork.AppointmentRepository.Update(appointment);
+                }
+                await _unitOfWork.SaveAsync();
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Appointments canceled successfully",
+                    StatusCode = 200
+                };
+
             }
             catch (Exception ex)
             {

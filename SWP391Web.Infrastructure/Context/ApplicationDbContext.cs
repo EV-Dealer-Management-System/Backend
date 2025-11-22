@@ -34,9 +34,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<ElectricVehicleTemplate> ElectricVehicleTemplates { get; set; }
         public DbSet<DealerMember> DealerMembers { get; set; }
         public DbSet<OrderDetail> OrderDetails { get; set; }
-        public DbSet<AppointmentSetting> AppointmentSettings { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
-        public DbSet<DepositSetting> DepositSettings { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<CustomerFeedback> CustomerFeedbacks { get; set; }
@@ -53,6 +51,7 @@ namespace SWP391Web.Infrastructure.Context
         public DbSet<DealerInventoryForecast> DealerInventoryForecasts { get; set; }
         public DbSet<DealerInventoryRisk> DealerInventoryRisks { get; set; }
         public DbSet<Log> Logs { get; set; }
+        public DbSet<DealerConfiguration> DealerConfigurations { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -411,44 +410,6 @@ namespace SWP391Web.Infrastructure.Context
                 .OnDelete(DeleteBehavior.Restrict);
 
             /*****************************************************************************/
-            // Configure AppointmentSetting entity
-
-            modelBuilder.Entity<AppointmentSetting>()
-                .HasOne(ap => ap.Dealer)
-                .WithOne(d => d.AppointmentSetting)
-                .HasForeignKey<AppointmentSetting>(ap => ap.DealerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<AppointmentSetting>()
-                .HasOne(ap => ap.Manager)
-                .WithOne(m => m.AppointmentSetting)
-                .HasForeignKey<AppointmentSetting>(ap => ap.ManagerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<AppointmentSetting>()
-                .HasIndex(ap => ap.DealerId)
-                .IsUnique();
-
-            /*****************************************************************************/
-            // Configure DepositSetting entity
-
-            modelBuilder.Entity<DepositSetting>()
-                .HasIndex(ds => ds.Id)
-                .IsUnique();
-
-            modelBuilder.Entity<DepositSetting>()
-                .HasOne(ds => ds.Dealer)
-                .WithOne(d => d.DepositSetting)
-                .HasForeignKey<DepositSetting>(ds => ds.DealerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<DepositSetting>()
-                .HasOne(ds => ds.Manager)
-                .WithOne(m => m.DepositSetting)
-                .HasForeignKey<DepositSetting>(ds => ds.ManagerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            /*****************************************************************************/
             // Configure Notification entity
 
             modelBuilder.Entity<Notification>()
@@ -596,6 +557,21 @@ namespace SWP391Web.Infrastructure.Context
                  .HasForeignKey(l => l.DealerId)
                  .OnDelete(DeleteBehavior.Restrict);
             });
+
+            /******************************************************************************/
+            // Configure DealerConfiguration entity
+
+            modelBuilder.Entity<DealerConfiguration>()
+                .HasOne(dc => dc.Dealer)
+                .WithOne(d => d.DealerConfiguration)
+                .HasForeignKey<DealerConfiguration>(dc => dc.DealerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DealerConfiguration>()
+                .HasOne(dc => dc.Manager)
+                .WithOne(d => d.DealerConfiguration)
+                .HasForeignKey<DealerConfiguration>(dc => dc.ManagerId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
