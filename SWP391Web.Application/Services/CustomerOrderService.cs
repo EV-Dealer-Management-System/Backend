@@ -29,7 +29,7 @@ namespace SWP391Web.Application.Services
         private readonly IEContractService _eContractService;
         private readonly ILogService _logService;
         public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService, IDepositSettingService depositSetting,
-            IDealerDebtService dealerDebtService, IDealerDebtTransactionService dealerDebtTransactionService, IEContractService eContractService,ILogService logService)
+            IDealerDebtService dealerDebtService, IDealerDebtTransactionService dealerDebtTransactionService, IEContractService eContractService, ILogService logService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -609,12 +609,12 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if (!customerOrder.Status.Equals(OrderStatus.Depositing))
+                if (!customerOrder.Status.Equals(OrderStatus.RemainingConfimmed))
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Only orders with Depositing status can pay deposit.",
+                        Message = "Only orders with RemainingConfimmed status can pay deposit.",
                         StatusCode = 400,
                     };
                 }
