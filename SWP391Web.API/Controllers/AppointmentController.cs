@@ -42,5 +42,11 @@ namespace SWP391Web.API.Controllers
             var response = await _appointmentService.UpdateAppointmentStatusAsync(User, appointmentId, newStatus);
             return StatusCode(response.StatusCode, response);
         }
+        [HttpPut("update-cancel-appointment")]
+        public async Task<ActionResult<ResponseDTO>> UpdateCancelStatusAsync(CancellationToken ct)
+        {
+            var response = await _appointmentService.UpdateCancelStatusAsync(User, ct);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

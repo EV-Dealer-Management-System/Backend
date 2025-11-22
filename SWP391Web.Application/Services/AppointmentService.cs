@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using SWP391Web.Application.DTO.Appointment;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.IServices;
@@ -405,6 +406,77 @@ namespace SWP391Web.Application.Services
                     StatusCode = 200
 
                 };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> UpdateCancelStatusAsync(ClaimsPrincipal user, CancellationToken ct)
+        {
+            try
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "User not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, ct);
+                if (dealer == null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "Dealer not found",
+                        StatusCode = 404
+                    };
+                }
+
+                var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                var todayVN = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone).Date;
+                var todayStartUTC = TimeZoneInfo.ConvertTimeToUtc(todayVN, vnTimeZone);
+
+                var appointments = await _unitOfWork.AppointmentRepository.Query(
+                    filter: q => q.DealerId == dealer.Id 
+                    && q.Status == AppointmentStatus.Active 
+                    && q.EndTime < todayStartUTC,
+                    includes: null
+                ).ToListAsync(ct);
+
+                if (!appointments.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        Message = "No appointments to cancel",
+                        StatusCode = 404
+                    };
+                }
+                foreach (var appointment in appointments)
+                {
+                    appointment.Status = AppointmentStatus.Canceled;
+                    _unitOfWork.AppointmentRepository.Update(appointment);
+                }
+                await _unitOfWork.SaveAsync();
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    Message = "Appointments canceled successfully",
+                    StatusCode = 200
+                };
+
             }
             catch (Exception ex)
             {
