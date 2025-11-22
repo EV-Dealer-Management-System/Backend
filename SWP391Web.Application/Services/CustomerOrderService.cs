@@ -174,12 +174,12 @@ namespace SWP391Web.Application.Services
                 }
 
                 var status = customerOrder.Status;
-                if (status != OrderStatus.ConfirmPending || status != OrderStatus.RemainingPending)
+                if (status != OrderStatus.ConfirmPending && status != OrderStatus.RemainingPending)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Only orders with ConfirmPending status can be confirmed by customer.",
+                        Message = "Only orders with ConfirmPending or RemainingPending status can be confirmed by customer.",
                         StatusCode = 400,
                     };
                 }

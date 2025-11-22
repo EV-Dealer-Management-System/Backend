@@ -174,7 +174,7 @@ namespace SWP391Web.API.Controllers
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
         public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default, [FromQuery] EcontractType econtractType = default)
         {
-            var r = await _econtractService.GetAllEContractList(pageNumber, pageSize, eContractStatus, econtractType);
+            var r = await _econtractService.GetAllEContractList(User, pageNumber, pageSize, eContractStatus, econtractType);
             return Ok(r);
         }
 
