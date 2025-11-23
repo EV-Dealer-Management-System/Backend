@@ -1717,14 +1717,14 @@ namespace SWP391Web.Application.Services
                     eContractList = eContractList.Where(ec => ec.Status == eContractStatus).OrderByDescending(ec => ec.CreatedAt);
                 }
 
-                if (econtractType != default)
+                if (econtractType != default && !econtractType.Equals(EcontractType.CustomerOrderDepositContract))
                 {
                     eContractList = eContractList.Where(ec => ec.Type == econtractType).OrderByDescending(ec => ec.CreatedAt);
                 }
 
-                if (econtractType != default && eContractStatus.Equals(EcontractType.CustomerOrderDepositContract))
+                if (econtractType != default && econtractType.Equals(EcontractType.CustomerOrderDepositContract))
                 {
-                    eContractList = eContractList.Where(ec => ec.Type == econtractType && (ec.Status == EContractStatus.Draft || ec.Status == EContractStatus.InProgress)).OrderByDescending(ec => ec.CreatedAt);
+                    eContractList = eContractList.Where(ec => ec.Type == econtractType || ec.Type == EcontractType.CustomerOrderPayFull || ec.Type == EcontractType.CustomerOrderDepositFull).OrderByDescending(ec => ec.CreatedAt);
                 }
 
                 if (pageNumber > 0 && pageSize > 0)

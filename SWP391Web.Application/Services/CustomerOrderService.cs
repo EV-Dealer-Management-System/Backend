@@ -317,7 +317,7 @@ namespace SWP391Web.Application.Services
                     }
                     else if (!confirmCustomerOrderDTO.IsPayFull)
                     {
-                        if (!customerOrder.DepositAmount.HasValue)
+                        if (customerOrder.DepositAmount is null)
                         {
                             return new ResponseDTO
                             {
