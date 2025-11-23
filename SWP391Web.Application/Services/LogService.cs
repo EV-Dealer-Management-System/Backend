@@ -47,9 +47,9 @@ namespace SWP391Web.Application.Services
                 var fullName = user.FindFirst("FullName")?.Value ?? "Unknown User";
 
                 Guid? dealerId = null;
-                if (role == StaticUserRole.DealerManager)
+                if (role == StaticUserRole.DealerManager　|| role == StaticUserRole.DealerStaff)
                 {
-                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, ct);
                     if (dealer == null)
                     {
                         return new ResponseDTO
