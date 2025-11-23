@@ -662,9 +662,9 @@ namespace SWP391Web.Application.Services
                 }
                 else if (isCash is null)
                 {
-                    await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
                     customerOrder.Status = OrderStatus.RemainingPending;
                     _unitOfWork.CustomerOrderRepository.Update(customerOrder);
+                    await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
                     await _unitOfWork.SaveAsync(ct);
                     await UpdateStatusRealTime(customerOrder.Quote.DealerId);
                     return new ResponseDTO

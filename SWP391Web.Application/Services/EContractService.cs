@@ -266,7 +266,8 @@ namespace SWP391Web.Application.Services
             };
 
             request.FileInfo.File = pdfBytes;
-            var fileName = $"Booking_E-Contract_{randomText}_{dealer.Name}.pdf".Trim();
+            var fileNameNoPdf = $"Booking_E-Contract_{randomText}_{dealer.Name}".Trim();
+            var fileName = $"{fileNameNoPdf}.pdf";
             request.FileInfo.FileName = fileName;
 
             var createResult = await _vnpt.CreateDocumentAsync(token, request);
@@ -283,7 +284,7 @@ namespace SWP391Web.Application.Services
 
             var vnptEContractId = Guid.Parse(createResult.Data.Id);
             var status = (EContractStatus)createResult.Data!.Status!.Value;
-            var eContract = new EContract(vnptEContractId, html, fileName, "System", dealer.ManagerId!, status, EcontractType.BookingContract);
+            var eContract = new EContract(vnptEContractId, html, fileNameNoPdf, "System", dealer.ManagerId!, status, EcontractType.BookingContract);
             await _unitOfWork.EContractRepository.AddAsync(eContract, ct);
 
             booking.EContractId = vnptEContractId;
@@ -503,7 +504,8 @@ namespace SWP391Web.Application.Services
             };
 
             request.FileInfo.File = pdfBytes;
-            var fileName = $"Deposit_E-Contract_{randomText}_{dealer.Name}.pdf".Trim();
+            var fileNameNoPdf = $"Deposit_E-Contract_{randomText}_{dealer.Name}".Trim();
+            var fileName = $"{fileNameNoPdf}.pdf";
             request.FileInfo.FileName = fileName;
 
             var createResult = await _vnpt.CreateDocumentAsync(token, request);
@@ -519,7 +521,7 @@ namespace SWP391Web.Application.Services
             createResult.Data.FileName = request.FileInfo.FileName;
 
             var vnptEContractId = Guid.Parse(createResult.Data.Id);
-            var eContract = new EContract(vnptEContractId, html, fileName, "System", dealer.ManagerId!, customerOrder.Id, EContractStatus.Draft, EcontractType.CustomerOrderDepositContract);
+            var eContract = new EContract(vnptEContractId, html, fileNameNoPdf, "System", dealer.ManagerId!, customerOrder.Id, EContractStatus.Draft, EcontractType.CustomerOrderDepositContract);
 
             await _unitOfWork.EContractRepository.AddAsync(eContract, ct);
             await _unitOfWork.SaveAsync();
@@ -694,9 +696,10 @@ namespace SWP391Web.Application.Services
             };
 
             request.FileInfo.File = pdfBytes;
-            var fileName = (hasDeposit
-                ? $"PayRemainder_Confirm_E-Contract_{randomText}_{dealer.Name}.pdf"
-                : $"PayFull_Confirm_E-Contract_{randomText}_{dealer.Name}.pdf").Trim();
+            var fileNameNoPdf = hasDeposit
+                ? $"PayRemainder_Confirm_E-Contract_{randomText}_{dealer.Name}".Trim()
+                : $"PayFull_Confirm_E-Contract_{randomText}_{dealer.Name}".Trim();
+            var fileName = $"{fileNameNoPdf}.pdf";
             request.FileInfo.FileName = fileName;
 
             var access = await GetAccessTokenAsync();
@@ -716,7 +719,7 @@ namespace SWP391Web.Application.Services
                 : EcontractType.CustomerOrderPayFull;
 
             var vnptEContractId = Guid.Parse(createResult.Data.Id);
-            var eContract = new EContract(vnptEContractId, html, fileName, "System", dealer.ManagerId!, customerOrder.Id, EContractStatus.Draft, econtractType);
+            var eContract = new EContract(vnptEContractId, html, fileNameNoPdf, "System", dealer.ManagerId!, customerOrder.Id, EContractStatus.Draft, econtractType);
 
             await _unitOfWork.EContractRepository.AddAsync(eContract, ct);
             await _unitOfWork.SaveAsync();
@@ -1184,7 +1187,8 @@ namespace SWP391Web.Application.Services
             };
 
             request.FileInfo.File = pdfBytes;
-            var fileName = $"Dealer_E-Contract_{randomText}_{dealer.Name}.pdf".Trim();
+            var fileNameNoPdf = $"Dealer_E-Contract_{randomText}_{dealer.Name}".Trim();
+            var fileName = $"{fileNameNoPdf}.pdf";
             request.FileInfo.FileName = fileName;
 
             var createResult = await _vnpt.CreateDocumentAsync(token, request);
@@ -1197,7 +1201,7 @@ namespace SWP391Web.Application.Services
 
             var status = (EContractStatus)createResult.Data.Status.Value;
 
-            var EContract = new EContract(Guid.Parse(createResult.Data.Id), html, fileName, userId, user.Id, status, EcontractType.DealerContract);
+            var EContract = new EContract(Guid.Parse(createResult.Data.Id), html, fileNameNoPdf, userId, user.Id, status, EcontractType.DealerContract);
 
             await _unitOfWork.EContractRepository.AddAsync(EContract, ct);
 
