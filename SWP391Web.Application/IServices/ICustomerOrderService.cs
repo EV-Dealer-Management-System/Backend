@@ -18,5 +18,7 @@ namespace SWP391Web.Application.IServices
         Task<ResponseDTO> PayDeposit(Guid customerOrderId, bool? isCash, CancellationToken ct);
         Task<ResponseDTO> CustomerConfirm(Guid customerOrderId, string email, bool isAccept, CancellationToken ct);
         Task<ResponseDTO> PayCustomerOrder(ClaimsPrincipal userClaim, ConfirmCustomerOrderDTO confirmCustomerOrderDTO, CancellationToken ct);
+        Task<ResponseDTO> AutoCancelExpiredDepositOrders(CancellationToken ct);
+        Task<ResponseDTO> AutoCancelExpiredPendingOrders(CancellationToken ct);
     }
 }

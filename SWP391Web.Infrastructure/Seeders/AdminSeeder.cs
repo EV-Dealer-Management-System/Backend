@@ -27,6 +27,7 @@ namespace SWP391Web.Infrastructure.Seeders
                     BreakTimeBetweenAppointments = 15,
                     MinDepositPercentage = 5.0m,
                     MaxDepositPercentage = 20.0m,
+                    DayCancelDeposit = 7,
                     CreatedAt = new DateTime(2025, 01, 01, 0, 0, 0, DateTimeKind.Utc)
                 }
             );

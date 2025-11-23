@@ -172,7 +172,7 @@ namespace SWP391Web.API.Controllers
         [HttpGet]
         [Route("get-all-econtract-list")]
         //[Authorize(Roles = StaticUserRole.Admin_EVMStaff)]
-        public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default, 
+        public async Task<ActionResult<ResponseDTO>> GetEContractList([FromQuery] int? pageNumber = 1, [FromQuery] int? pageSize = 10, [FromQuery] EContractStatus eContractStatus = default,
             [FromQuery] EcontractType econtractType = default, CancellationToken ct = default)
         {
             var r = await _econtractService.GetAllEContractList(User, pageNumber, pageSize, eContractStatus, econtractType, ct);
@@ -226,6 +226,14 @@ namespace SWP391Web.API.Controllers
         public async Task<ActionResult<ResponseDTO>> ConfirmBookingEVEContract([FromQuery] Guid EContractId, CancellationToken ct)
         {
             var r = await _econtractService.ConfirmBookingEVEContract(User, EContractId, ct);
+            return StatusCode(r.StatusCode, r);
+        }
+
+        [HttpPost]
+        [Route("confirm-vin-bookingev")]
+        public async Task<ActionResult<ResponseDTO>> CreateEContractInvoiceConfirmBookingEV([FromQuery] Guid customerOrderId, CancellationToken ct)
+        {
+            var r = await _econtractService.CreateEContractInvoiceConfirmBookingEV(customerOrderId, ct);
             return StatusCode(r.StatusCode, r);
         }
     }

@@ -594,8 +594,6 @@ namespace SWP391Web.Application.Services
             var template = await _unitOfWork.EContractTemplateRepository.GetbyCodeAsync(templateCode, ct);
             if (template is null) throw new Exception($"Template with code '{templateCode}' is not exist");
 
-            string Vnd(decimal v) => $"{v:#,0} VND";
-
             string BuildRowsHtml(IEnumerable<QuoteDetail> items)
             {
                 var sb = new StringBuilder();
@@ -625,6 +623,7 @@ namespace SWP391Web.Application.Services
             var transaction = await _unitOfWork.TransactionRepository.GetByCustomerOrderIdAsync(customerOrder.Id, ct);
             var method = (transaction?.Provider == "Cash") ? "Tiền mặt" : "Chuyển khoản";
 
+            string Vnd(decimal v) => $"{v:#,0} VND";
             decimal total = Convert.ToDecimal(customerOrder.TotalAmount);
             decimal deposited = Convert.ToDecimal(customerOrder.DepositAmount ?? 0m);
             decimal payNow = hasDeposit ? (total - deposited) : total;
@@ -1335,6 +1334,13 @@ namespace SWP391Web.Application.Services
                     await UpdateBookingStatusAfterSignAsync(econtract.BookingEV!.Id, ct);
                     econtract.BookingEV.Status = BookingStatus.SignedByAdmin;
                 }
+                else if (signResult.Data.Status.Value is (int)EContractStatus.Completed && econtract.Type is EcontractType.CustomerOrderVinConfirm)
+                {
+                    econtract.BookingEV!.Status = BookingStatus.Completed;
+                    econtract.BookingEV!.VehicleDelivery.Status = DeliveryStatus.Confirmed;
+                    _unitOfWork.VehicleDeliveryRepository.Update(econtract.BookingEV.VehicleDelivery);
+                    _unitOfWork.BookingEVRepository.Update(econtract.BookingEV);
+                }
 
                 econtract.UpdateStatus((EContractStatus)signResult.Data.Status.Value);
                 _unitOfWork.EContractRepository.Update(econtract);
@@ -1662,7 +1668,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO<EContract>> GetAllEContractList(ClaimsPrincipal userClaim, int? pageNumber, int? pageSize, EContractStatus eContractStatus = default, 
+        public async Task<ResponseDTO<EContract>> GetAllEContractList(ClaimsPrincipal userClaim, int? pageNumber, int? pageSize, EContractStatus eContractStatus = default,
             EcontractType econtractType = default, CancellationToken ct = default)
         {
             try
@@ -1993,6 +1999,200 @@ namespace SWP391Web.Application.Services
                 StatusCode = 200
             };
         }
+
+        public async Task<ResponseDTO> CreateEContractInvoiceConfirmBookingEV(Guid customerOrderId, CancellationToken ct)
+        {
+            try
+            {
+                var customerOrder = await _unitOfWork.CustomerOrderRepository.GetByIdAsync(customerOrderId);
+                if (customerOrder is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Customer order is not exist"
+                    };
+                }
+
+                if (customerOrder.Customer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Customer is not exist"
+                    };
+                }
+
+                var dealer = await _unitOfWork.DealerRepository.GetByIdAsync(customerOrder.Quote.DealerId, ct);
+                if (dealer is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 404,
+                        Message = "Dealer is not exist"
+                    };
+                }
+
+                var access = await GetAccessTokenAsync();
+                var created = await CreateInvoiceConfirmDocumentAsync(
+                    access.Data!.AccessToken,
+                    dealer,
+                    customerOrder,
+                    ct
+                );
+
+                var customer = customerOrder.Customer;
+                var contract = customerOrder.EContracts!.FirstOrDefault(ec =>
+                    ec.Type == EcontractType.CustomerOrderVinConfirm)
+                    ?? customerOrder.EContracts!.First();
+
+                var vnptUrl = created.Data!.DownloadUrl;
+                var confirmLink = StaticLinkUrl.WebUrl +
+                                  $"/confirm-econtract?downloadUrl={vnptUrl}&customerOrderId={customerOrderId}&email={customer.Email}";
+
+                await _emailService.SendContractReviewAndConfirm(customer.Email!, customer.FullName!, contract.Name!, confirmLink
+                );
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 201,
+                    Message = "VIN confirmation EContract created successfully",
+                    Result = created
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error to create VIN Confirmation EContract: {ex.Message}"
+                };
+            }
+        }
+
+
+        private async Task<VnptResult<VnptDocumentDto>> CreateInvoiceConfirmDocumentAsync(string token, Dealer dealer, CustomerOrder customerOrder, CancellationToken ct)
+        {
+            var templateCode = StaticEContractName.EContractInvoiceConfirmBookingEV;
+            var template = await _unitOfWork.EContractTemplateRepository.GetbyCodeAsync(templateCode, ct);
+            if (template is null) throw new Exception($"Template with code '{templateCode}' is not exist");
+
+            string BuildVinRowsHtml(IEnumerable<OrderDetail> items)
+            {
+                var sb = new StringBuilder();
+                int i = 1;
+                foreach (var item in items)
+                {
+                    var ev = item.ElectricVehicle;
+                    var modelName = ev?.ElectricVehicleTemplate.Version?.Model?.ModelName ?? "(Model)";
+                    var versionName = ev?.ElectricVehicleTemplate.Version?.VersionName ?? "(Version)";
+                    var colorName = ev?.ElectricVehicleTemplate.Color?.ColorName ?? "(Màu)";
+                    var vin = ev?.VIN ?? "(VIN)";
+
+                    sb.AppendLine($@"
+                <tr>
+                    <td class=""right"">{i}</td>
+                    <td>{modelName} – {versionName}</td>
+                    <td>{colorName}</td>
+                    <td>{vin}</td>
+                </tr>");
+                    i++;
+                }
+                return sb.ToString();
+            }
+
+            var rowsHtml = BuildVinRowsHtml(customerOrder.OrderDetails);
+            var quote = customerOrder.Quote;
+            var customer = customerOrder.Customer;
+
+            var data = new Dictionary<string, object?>
+            {
+                ["order.no"] = customerOrder.OrderNo.ToString(),
+                ["order.date"] = ToGmt7String(DateTime.UtcNow, "dd/MM/yyyy"),
+
+                ["dealer.name"] = quote.Dealer?.Name ?? "",
+                ["dealer.address"] = quote.Dealer?.Address ?? "",
+                ["dealer.taxNo"] = quote.Dealer?.TaxNo ?? "",
+                ["dealer.phone"] = quote.Dealer?.Manager.PhoneNumber ?? "",
+                ["dealer.email"] = quote.Dealer?.Manager.Email ?? "",
+
+                ["customer.fullName"] = customer?.FullName ?? "",
+                ["customer.phone"] = customer?.PhoneNumber ?? "",
+                ["customer.email"] = customer?.Email ?? "",
+                ["customer.idNo"] = customer?.CitizenID ?? "",
+                ["customer.address"] = customer?.Address ?? "",
+
+                ["order.vehicleVinRows"] = rowsHtml,
+
+                ["roles.A.representative"] = quote.Dealer?.Manager.FullName ?? "",
+                ["roles.A.title"] = "Đại diện đại lý",
+                ["roles.A.signatureAnchor"] = "ĐẠI_DIỆN_BÊN_A",
+
+                ["roles.B.representative"] = customer?.FullName ?? "",
+                ["roles.B.title"] = "Khách hàng",
+                ["roles.B.signatureAnchor"] = "ĐẠI_DIỆN_BÊN_B"
+            };
+
+            var html = EContractPdf.ReplacePlaceholders(template.ContentHtml, data, htmlEncode: false);
+            var pdfBytes = await EContractPdf.RenderAsync(html);
+
+            var anchors = EContractPdf.FindAnchors(pdfBytes, new[] { "ĐẠI_DIỆN_BÊN_A", "ĐẠI_DIỆN_BÊN_B" });
+
+            var positionA = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_A"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: -28);
+
+            var positionB = GetVnptEContractPosition(pdfBytes, anchors["ĐẠI_DIỆN_BÊN_B"], width: 170, height: 90, offsetY: 60, margin: 18, xAdjust: 0);
+
+            var documentTypeId = int.Parse(_cfg["EContract:DocumentTypeId"] ?? throw new NullReferenceException("EContract:DocumentTypeId is not exist"));
+            var departmentId = int.Parse(_cfg["EContract:DepartmentId"] ?? throw new NullReferenceException("EContract:DepartmentId is not exist"));
+
+            var randomText = Guid.NewGuid().ToString()[..20].ToUpper();
+
+            var request = new CreateDocumentDTO
+            {
+                TypeId = documentTypeId,
+                DepartmentId = departmentId,
+                No = $"EContract-{randomText}",
+                Subject = "VIN Confirm EContract",
+                Description = "EContract confirm VIN numbers for customer order"
+            };
+
+            request.FileInfo.File = pdfBytes;
+            var fileNameNoPdf = $"VIN_Confirm_E-Contract_{randomText}_{dealer.Name}".Trim();
+            var fileName = $"{fileNameNoPdf}.pdf";
+            request.FileInfo.FileName = fileName;
+
+            var createResult = await _vnpt.CreateDocumentAsync(token, request);
+            if (!Enum.IsDefined(typeof(EContractStatus), createResult.Data.Status.Value))
+                throw new Exception("Invalid EContract status value.");
+
+            createResult.Data!.PositionA = positionA.Item1;
+            createResult.Data.PositionB = positionB.Item1;
+            createResult.Data.PageSign = positionA.Item2;
+            createResult.Data.FileName = request.FileInfo.FileName;
+
+            var vnptEContractId = Guid.Parse(createResult.Data.Id);
+            var eContract = new EContract(
+                vnptEContractId,
+                html,
+                fileNameNoPdf,
+                "System",
+                dealer.ManagerId!,
+                customerOrder.Id,
+                EContractStatus.Draft,
+                EcontractType.CustomerOrderVinConfirm
+            );
+
+            await _unitOfWork.EContractRepository.AddAsync(eContract, ct);
+            await _unitOfWork.SaveAsync();
+
+            return createResult;
+        }
+
     }
 }
 

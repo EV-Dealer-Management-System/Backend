@@ -17,5 +17,6 @@ namespace SWP391Web.Domain.Constants
         public const string EContractDepositCustomerOrder = "CUSTOMER_DEPOSIT_CONTRACT";
         public const string EContractPayFullCustomerOrder = "CUSTOMER_PAY_FULL_E_CONTRACT";
         public const string EContractPayRemainderCustomerOrder = "CUSTOMER_PAY_REMAINDER_E_CONTRACT";
+        public const string EContractInvoiceConfirmBookingEV = "E_CONTRACT_INVOICE_CONFIRM_BOOKING_EV";
     }
 }

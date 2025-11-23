@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SWP391Web.Application.DTO.Auth;
@@ -67,5 +68,22 @@ namespace SWP391Web.API.Controllers
             return StatusCode(response.StatusCode, response);
         }
 
+        [HttpPost]
+        [Route("auto-cancel-expired-deposit-orders")]
+        [Authorize]
+        public async Task<ActionResult<ResponseDTO>> AutoCancelExpiredDepositOrders(CancellationToken ct)
+        {
+            var response = await _customerOrderService.AutoCancelExpiredDepositOrders(ct);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        [HttpPost]
+        [Route("auto-cancel-expired-pending-orders")]
+        [Authorize]
+        public async Task<ActionResult<ResponseDTO>> AutoCancelExpiredPendingOrders(CancellationToken ct)
+        {
+            var response = await _customerOrderService.AutoCancelExpiredPendingOrders(ct);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }
