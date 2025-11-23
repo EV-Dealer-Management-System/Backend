@@ -102,7 +102,7 @@ namespace SWP391Web.Application.Services
 
                 await _dealerDebtTransactionService.CraeteDealerDebtTransaction(create, ct);
 
-                return new ResponseDTO(true)
+                return new ResponseDTO()
                 {
                     StatusCode = 200,
                     Message = "Successfully recorded payment for dealer debt."
@@ -110,7 +110,7 @@ namespace SWP391Web.Application.Services
             }
             catch (Exception ex)
             {
-                return new ResponseDTO(false)
+                return new ResponseDTO()
                 {
                     StatusCode = 500,
                     Message = $"Failed to record payment: {ex.Message}"
@@ -148,7 +148,7 @@ namespace SWP391Web.Application.Services
             }
             catch (Exception ex)
             {
-                return new ResponseDTO(false)
+                return new ResponseDTO()
                 {
                     StatusCode = 500,
                     Message = $"Failed to record commission: {ex.Message}"
