@@ -420,7 +420,6 @@ namespace SWP391Web.Application.Services
                 customerOrder.Status = OrderStatus.Completed;
                 _unitOfWork.CustomerOrderRepository.Update(customerOrder);
                 await _unitOfWork.SaveAsync();
-                await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
             }
             else
             {
