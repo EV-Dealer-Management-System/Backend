@@ -2,20 +2,37 @@
 using Microsoft.AspNetCore.SignalR;
 using SWP391Web.Domain.Constants;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 
-namespace SWP391Web.Infrastructure.SignlR
+[Authorize]
+public class NotificationHub : Hub
 {
-    [Authorize]
-    public class NotificationHub : Hub
+    public override async Task OnConnectedAsync()
     {
-        public override async Task OnConnectedAsync()
+        var userId = Context.UserIdentifier;
+        var dealerId = Context.User?.FindFirst("DealerId")?.Value;
+        var roles = Context.User?.FindAll(ClaimTypes.Role)
+                           .Select(r => r.Value)
+                           .ToList()
+                           ?? new List<string>();
+
+        Console.WriteLine($"[Hub] Connected user: {userId}, dealer: {dealerId}, roles: {string.Join(",", roles)}");
+
+        if (!string.IsNullOrEmpty(dealerId) &&
+            (roles.Contains(StaticUserRole.Admin) ||
+             roles.Contains(StaticUserRole.EVMStaff) ||
+             roles.Contains(StaticUserRole.DealerManager) ||
+             roles.Contains(StaticUserRole.DealerStaff)))
         {
-            var userId = Context.UserIdentifier;
-            var dealerId = Context.User?.FindFirst("DealerId")?.Value;
-            var roles = Context.User?.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
-            Console.WriteLine($"[Hub] Connected user: {userId}, roles: {string.Join(",", roles)}");
-            await base.OnConnectedAsync();
+            var groupName = GetDealerGroupName(dealerId);
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+            Console.WriteLine($"[Hub] Added connection {Context.ConnectionId} to group {groupName}");
         }
 
+        await base.OnConnectedAsync();
     }
+
+    private static string GetDealerGroupName(string dealerId)
+        => $"dealer:{dealerId}:all";
 }

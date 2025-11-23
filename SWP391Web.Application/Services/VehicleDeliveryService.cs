@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.VehicleDelivery;
@@ -7,6 +8,7 @@ using SWP391Web.Domain.Constants;
 using SWP391Web.Domain.Entities;
 using SWP391Web.Domain.Enums;
 using SWP391Web.Infrastructure.IRepository;
+using SWP391Web.Infrastructure.SignlR;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,15 +25,17 @@ namespace SWP391Web.Application.Services
         public readonly IMapper _mapper;
         public readonly IBookingEVService _bookingEVService;
         public readonly ILogService _logService;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public VehicleDeliveryService(IUnitOfWork unitOfWork, IMapper mapper, IBookingEVService bookingEVService, ILogService logService)
+        public VehicleDeliveryService(IUnitOfWork unitOfWork, IMapper mapper, IBookingEVService bookingEVService, ILogService logService, IHubContext<NotificationHub> hubContext)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _bookingEVService = bookingEVService;
             _logService = logService;
+            _hubContext = hubContext;
         }
-        public async Task<ResponseDTO> GetAllVehicleDelivery(ClaimsPrincipal user, int pageNumber, int pageSize,DeliveryStatus? status, Guid? templateId,bool isShow, CancellationToken ct)
+        public async Task<ResponseDTO> GetAllVehicleDelivery(ClaimsPrincipal user, int pageNumber, int pageSize, DeliveryStatus? status, Guid? templateId,bool isShow, CancellationToken ct)
         {
             try
             {
@@ -365,6 +369,8 @@ namespace SWP391Web.Application.Services
 
                 var getDelivery = _mapper.Map<GetVehicleDeliveryDTO>(delivery);
 
+                await UpdateStatusRealTime(delivery.BookingEV.DealerId);
+
                 return new ResponseDTO
                 {
                     IsSuccess = true,
@@ -596,6 +602,22 @@ namespace SWP391Web.Application.Services
                     StatusCode = 500
                 };
             }
+        }
+
+        private async Task<ResponseDTO> UpdateStatusRealTime(Guid dealerId)
+        {
+            var groupName = $"dealer:{dealerId}:all";
+
+            await _hubContext.Clients
+                .Group(groupName)
+                .SendAsync("ReceiveVehicleDeliveryStatusUpdate");
+
+            return new ResponseDTO
+            {
+                IsSuccess = true,
+                Message = "Real-time update delivery vehicle status sent successfully",
+                StatusCode = 200
+            };
         }
     }
 }

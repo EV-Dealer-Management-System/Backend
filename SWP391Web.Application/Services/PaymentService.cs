@@ -291,9 +291,7 @@ namespace SWP391Web.Application.Services
                         await _unitOfWork.SaveAsync();
                     }
 
-                    // Sau đó mới cập nhật Order + tạo eContract
                     await HandleVNPayCustomerOrder(order, paidAmount, ct);
-
                     var orderInfo = ipnDTO.vnp_OrderInfo ?? string.Empty;
 
                     if (orderInfo.StartsWith("DEALERPAY|", StringComparison.OrdinalIgnoreCase))
@@ -354,6 +352,8 @@ namespace SWP391Web.Application.Services
                             }
                         };
                     }
+
+                    await UpdateStatusRealTime(order.Quote.DealerId);
                 }
 
                 await _unitOfWork.SaveAsync();
@@ -499,7 +499,7 @@ namespace SWP391Web.Application.Services
             await _hubContext.Clients.Group($"Dealer_{dealerId}_{StaticUserRole.DealerManager}").SendAsync("NotificationChanged");
         }
 
-        public async Task<ResponseDTO> GetAllVNPayPaymentTransaction(ClaimsPrincipal userClaim, int pageNumber, int pageSize, TransactionStatus? status, CancellationToken ct)
+        public async Task<ResponseDTO> GetAllPaymentTransaction(ClaimsPrincipal userClaim, int pageNumber, int pageSize, TransactionStatus? status, CancellationToken ct)
         {
             try
             {
@@ -514,24 +514,21 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerIdAsync(userId, ct);
+                var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, ct);
                 if (dealer is null)
                 {
-                    dealer = await _unitOfWork.DealerRepository.GetDealerByUserIdAsync(userId, ct);
-                    if (dealer is null)
+                    return new ResponseDTO
                     {
-                        return new ResponseDTO
-                        {
-                            IsSuccess = false,
-                            Message = "Dealer not found",
-                            StatusCode = 404
-                        };
-                    }
+                        IsSuccess = false,
+                        Message = "Dealer not found",
+                        StatusCode = 404
+                    };
                 }
-                Expression<Func<Transaction, bool>> filter = t => t.Provider != "VNPay" & t.CustomerOrder.Quote.DealerId == dealer.Id;
+
+                Expression<Func<Transaction, bool>> filter = t => t.CustomerOrder.Quote.DealerId == dealer.Id;
                 if (status.HasValue)
                 {
-                    filter = t => t.Provider != "VNPay" && t.Status == status.Value;
+                    filter = t => t.Status == status.Value & t.CustomerOrder.Quote.DealerId == dealer.Id;
                 }
 
                 (IReadOnlyList<Transaction> items, int total) result;
@@ -570,6 +567,22 @@ namespace SWP391Web.Application.Services
                     StatusCode = 500
                 };
             }
+        }
+
+        private async Task<ResponseDTO> UpdateStatusRealTime(Guid dealerId)
+        {
+            var groupName = $"dealer:{dealerId}:all";
+
+            await _hubContext.Clients
+                .Group(groupName)
+                .SendAsync("ReceiveCustomerOrderStatusUpdate");
+
+            return new ResponseDTO
+            {
+                IsSuccess = true,
+                Message = "Real-time update customer order status sent successfully",
+                StatusCode = 200
+            };
         }
     }
 }

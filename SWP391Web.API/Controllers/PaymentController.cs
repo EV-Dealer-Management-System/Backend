@@ -43,7 +43,7 @@ namespace SWP391Web.API.Controllers
         [Route("get-all-transactions")]
         public async Task<ActionResult<ResponseDTO>> GetAllTransactions([FromQuery] int pageNumber, [FromQuery] int pageSize, [FromQuery] TransactionStatus? status, CancellationToken ct)
         {
-            var response = await _paymentService.GetAllVNPayPaymentTransaction(User, pageNumber, pageSize, status, ct);
+            var response = await _paymentService.GetAllPaymentTransaction(User, pageNumber, pageSize, status, ct);
             return StatusCode(response.StatusCode, response);
         }
     }

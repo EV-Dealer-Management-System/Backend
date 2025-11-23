@@ -57,5 +57,13 @@ namespace SWP391Web.API.Controllers
             var result = await _dealerConfigurationService.GenerateTimeSlotAsync(User, targetDate, ct);
             return StatusCode(result.StatusCode, result);
         }
+
+        [HttpGet]
+        [Route("get-default-configuration")]
+        public async Task<ActionResult<ResponseDTO>> GetDefaultConfiguration(CancellationToken ct)
+        {
+            var result = await _dealerConfigurationService.GetDefaultConfigurationAsync(ct);
+            return StatusCode(result.StatusCode, result);
+        }
     }
 }
