@@ -1722,7 +1722,7 @@ namespace SWP391Web.Application.Services
                     eContractList = eContractList.Where(ec => ec.Type == econtractType).OrderByDescending(ec => ec.CreatedAt);
                 }
 
-                if (econtractType != default && eContractStatus.Equals(EcontractType.CustomerOrderDepositFull) || eContractStatus.Equals(EcontractType.CustomerOrderPayFull) || eContractStatus.Equals(EcontractType.CustomerOrderDepositContract))
+                if (econtractType != default && eContractStatus.Equals(EcontractType.CustomerOrderDepositContract))
                 {
                     eContractList = eContractList.Where(ec => ec.Type == econtractType && (ec.Status == EContractStatus.Draft || ec.Status == EContractStatus.InProgress)).OrderByDescending(ec => ec.CreatedAt);
                 }
