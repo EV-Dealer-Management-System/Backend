@@ -19,6 +19,7 @@ namespace SWP391Web.Domain.Entities
         public int BreakTimeBetweenAppointments { get; set; }
         public decimal? MinDepositPercentage { get; set; }
         public decimal MaxDepositPercentage { get; set; }
+        public int DayCancelDeposit { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public ApplicationUser Manager { get; set; } = null!;
