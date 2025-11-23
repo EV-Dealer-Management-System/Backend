@@ -77,7 +77,7 @@ namespace SWP391Web.Application.Services
                 {
                     amount = order.DepositAmount;
                 }
-                else if (order.Status.Equals(OrderStatus.RemainingConfimmed) && order.DepositAmount is not null)
+                else if ((order.Status.Equals(OrderStatus.RemainingConfimmed) || order.Status.Equals(OrderStatus.RemainingPending)) && order.DepositAmount is not null)
                 {
                     amount = (order.TotalAmount - order.DepositAmount);
                     orderNo = orderNo + "|" + Guid.NewGuid().ToString()[..6];

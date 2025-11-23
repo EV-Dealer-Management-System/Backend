@@ -10,5 +10,7 @@ namespace SWP391Web.Infrastructure.IRepository
         Task<CustomerOrder?> GetByOrderNoAsync(int customerOrderNo);
         int GenerateOrderNumber();
         Task<CustomerOrder?> GetByEContractId(Guid eContractId, CancellationToken ct);
+        Task<List<CustomerOrder>?> GetAllCustomerOrderDeposit(CancellationToken ct);
+        Task<List<CustomerOrder>?> GetAllCustomerOrderPending(CancellationToken ct);
     }
 }

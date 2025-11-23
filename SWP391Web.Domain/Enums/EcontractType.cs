@@ -13,5 +13,6 @@ namespace SWP391Web.Domain.Enums
         CustomerOrderDepositContract = 3,
         CustomerOrderPayFull = 4,
         CustomerOrderDepositFull = 5,
+        CustomerOrderVinConfirm = 6
     }
 }

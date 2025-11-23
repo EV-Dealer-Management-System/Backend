@@ -196,6 +196,13 @@ namespace SWP391Web.Application.Services
                 }
                 else
                 {
+                    var orderDetails = await _unitOfWork.OrderDetailRepository.GetAllByCustomerOrderId(customerOrderId, ct);
+                    {
+                        if (orderDetails != null && orderDetails.Count > 0)
+                        {
+                            await RestoreVehicleStatus(orderDetails);
+                        }
+                    }
                     status = OrderStatus.Rejected;
                 }
 
@@ -694,6 +701,182 @@ namespace SWP391Web.Application.Services
                 };
             }
         }
+
+        public async Task<ResponseDTO> AutoCancelExpiredDepositOrders(CancellationToken ct)
+        {
+            try
+            {
+                var dealerConfigs = await _unitOfWork.DealerConfigurationRepository.GetByDefaultAsync(ct);
+                if (dealerConfigs is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 500,
+                        Message = "Default dealer configuration not found.",
+                    };
+                }
+                int dayCancel = dealerConfigs.DayCancelDeposit;     
+                const decimal PLATFORM_PERCENT = 0.3m;     
+                const decimal DEALER_PERCENT = 0.7m;     
+
+                var nowUtc = DateTime.UtcNow;
+                var depositOrders = await _unitOfWork.CustomerOrderRepository.GetAllCustomerOrderDeposit(ct);
+
+                if (depositOrders == null || !depositOrders.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = true,
+                        StatusCode = 200,
+                        Message = "No depositing orders to check.",
+                    };
+                }
+
+                int checkedCount = 0;
+                int cancelledCount = 0;
+
+                var affectedDealerIds = new HashSet<Guid>();
+
+                foreach (var order in depositOrders)
+                {
+                    checkedCount++;
+                    var cancelDays = dayCancel;
+
+                    var expiredAt = order.CreatedAt.AddDays(cancelDays);
+
+                    if (nowUtc <= expiredAt)
+                        continue;
+
+                    var depositAmount = order.DepositAmount ?? 0m;
+                    if (depositAmount <= 0)
+                        continue;
+
+                    var platformShare = Math.Round(depositAmount * PLATFORM_PERCENT, 0);
+                    var dealerShare = depositAmount - platformShare;
+
+                    order.Status = OrderStatus.Cancelled;
+                    _unitOfWork.CustomerOrderRepository.Update(order);
+
+                    var orderDetails = await _unitOfWork.OrderDetailRepository.GetAllByCustomerOrderId(order.Id, ct);
+                    if (orderDetails != null && orderDetails.Count > 0)
+                    {
+                        await RestoreVehicleStatus(orderDetails);
+                    }
+
+                    cancelledCount++;
+                    affectedDealerIds.Add(order.Quote.DealerId);
+                }
+
+                await _unitOfWork.SaveAsync();
+
+                foreach (var dealerId in affectedDealerIds)
+                {
+                    await UpdateStatusRealTime(dealerId);
+                }
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = $"Cron checked {checkedCount} deposit orders, cancelled {cancelledCount} expired orders.",
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error when cancelling expired deposit orders: {ex.Message}",
+                };
+            }
+        }
+
+        public async Task<ResponseDTO> AutoCancelExpiredPendingOrders(CancellationToken ct)
+        {
+            try
+            {
+                var dealerConfigs = await _unitOfWork.DealerConfigurationRepository.GetByDefaultAsync(ct);
+                if (dealerConfigs is null)
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = false,
+                        StatusCode = 500,
+                        Message = "Default dealer configuration not found."
+                    };
+                }
+
+                int dayCancel = dealerConfigs.DayCancelDeposit;
+
+                var nowUtc = DateTime.UtcNow;
+
+                var pendingOrders = await _unitOfWork.CustomerOrderRepository.GetAllCustomerOrderPending(ct);
+
+                if (pendingOrders == null || !pendingOrders.Any())
+                {
+                    return new ResponseDTO
+                    {
+                        IsSuccess = true,
+                        StatusCode = 200,
+                        Message = "No pending orders to check."
+                    };
+                }
+
+                int checkedCount = 0;
+                int cancelledCount = 0;
+
+                var affectedDealerIds = new HashSet<Guid>();
+
+                foreach (var order in pendingOrders)
+                {
+                    checkedCount++;
+
+                    var expiredAt = order.CreatedAt.AddDays(dayCancel);
+
+                    if (nowUtc <= expiredAt)
+                        continue;
+
+                    order.Status = OrderStatus.Cancelled;
+                    _unitOfWork.CustomerOrderRepository.Update(order);
+
+                    var orderDetails = await _unitOfWork.OrderDetailRepository.GetAllByCustomerOrderId(order.Id, ct);
+                    if (orderDetails != null && orderDetails.Count > 0)
+                    {
+                        await RestoreVehicleStatus(orderDetails);
+                    }
+
+                    cancelledCount++;
+                    affectedDealerIds.Add(order.Quote.DealerId);
+                }
+
+                await _unitOfWork.SaveAsync();
+
+                foreach (var dealerId in affectedDealerIds)
+                {
+                    await UpdateStatusRealTime(dealerId);
+                }
+
+                return new ResponseDTO
+                {
+                    IsSuccess = true,
+                    StatusCode = 200,
+                    Message = $"Cron checked {checkedCount} pending orders, cancelled {cancelledCount} expired orders."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDTO
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    Message = $"Error when cancelling expired pending orders: {ex.Message}"
+                };
+            }
+        }
+
+
 
         private async Task<ResponseDTO> UpdateStatusRealTime(Guid dealerId)
         {
