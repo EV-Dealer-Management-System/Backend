@@ -335,7 +335,8 @@ namespace SWP391Web.Application.Services
                         var availableVehicles = await _unitOfWork.ElectricVehicleRepository
                             .GetAvailableVehicleByDealerAsync(q.DealerId, dt.VersionId, dt.ColorId);
 
-                        if (!availableVehicles.Any())
+                        int stock = availableVehicles.Count();
+                        if (stock < dt.Quantity)
                         {
                             isShow = false;
                             break;
