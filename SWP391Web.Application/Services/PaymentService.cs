@@ -73,11 +73,11 @@ namespace SWP391Web.Application.Services
                 decimal? amount;
                 var orderNo = order.OrderNo.ToString();
 
-                if (order.Status.Equals(OrderStatus.DepositPending) && order.DepositAmount is not null)
+                if (order.Status.Equals(OrderStatus.Confirmed) && order.DepositAmount is not null)
                 {
                     amount = order.DepositAmount;
                 }
-                else if (order.Status.Equals(OrderStatus.Depositing) && order.DepositAmount is not null)
+                else if (order.Status.Equals(OrderStatus.RemainingConfimmed) && order.DepositAmount is not null)
                 {
                     amount = (order.TotalAmount - order.DepositAmount);
                     orderNo = orderNo + "|" + Guid.NewGuid().ToString()[..6];
@@ -238,116 +238,108 @@ namespace SWP391Web.Application.Services
 
                 if (ipnDTO.vnp_ResponseCode == "00" && ipnDTO.vnp_TransactionStatus == "00")
                 {
-                    if (!ipnDTO.vnp_OrderInfo.Equals("VNPay_Mobile"))
+                    var orderNo = ipnDTO.vnp_TxnRef;
+                    if (orderNo.Contains("|"))
                     {
-                        var orderNo = ipnDTO.vnp_TxnRef;
-                        if (orderNo.Contains("|"))
+                        orderNo = orderNo[..^7];
+                    }
+                    var order = await _unitOfWork.CustomerOrderRepository.GetByOrderNoAsync(int.Parse(orderNo));
+                    if (order is null)
+                    {
+                        return new ResponseDTO
                         {
-                            orderNo = orderNo[..^7];
-                        }
-                        var order = await _unitOfWork.CustomerOrderRepository.GetByOrderNoAsync(int.Parse(orderNo));
-                        if (order is null)
-                        {
-                            return new ResponseDTO
+                            IsSuccess = false,
+                            Message = "Order not found.",
+                            StatusCode = 404,
+                            Result = new
                             {
-                                IsSuccess = false,
-                                Message = "Order not found.",
-                                StatusCode = 404,
-                                Result = new
-                                {
-                                    RspCode = "01",
-                                    Message = "Order not found"
-                                }
-                            };
-                        }
+                                RspCode = "01",
+                                Message = "Order not found"
+                            }
+                        };
+                    }
 
-                        if (order.Status.Equals(OrderStatus.Completed))
+                    if (order.Status.Equals(OrderStatus.Completed))
+                    {
+                        return new ResponseDTO
+                        {
+                            StatusCode = 200,
+                            Message = "Already processed",
+                            Result = new
+                            {
+                                RspCode = "00",
+                                Message = "Confirm success"
+                            }
+                        };
+                    }
+
+                    var paidAmount = decimal.Parse(ipnDTO.vnp_Amount) / 100;
+
+                    var existed = await _unitOfWork.TransactionRepository.IsExistTransactionAsync("VNPay", ipnDTO.vnp_TxnRef, ct);
+                    if (!existed)
+                    {
+                        await _unitOfWork.TransactionRepository.AddAsync(new Transaction
+                        {
+                            CustomerOrderId = order.Id,
+                            Amount = paidAmount,
+                            Provider = "VNPay",
+                            OrderRef = ipnDTO.vnp_TxnRef,
+                            Currency = "VND",
+                            Status = TransactionStatus.Success,
+                            CreatedAt = DateTime.UtcNow
+                        }, ct);
+                        await _unitOfWork.SaveAsync();
+                    }
+
+                    // Sau đó mới cập nhật Order + tạo eContract
+                    await HandleVNPayCustomerOrder(order, paidAmount, ct);
+
+                    var orderInfo = ipnDTO.vnp_OrderInfo ?? string.Empty;
+
+                    if (orderInfo.StartsWith("DEALERPAY|", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var parts = orderInfo.Split('|', StringSplitOptions.RemoveEmptyEntries);
+
+                        if (parts.Length < 2)
                         {
                             return new ResponseDTO
                             {
                                 StatusCode = 200,
-                                Message = "Already processed",
+                                Message = "Invalid DEALERPAY format",
                                 Result = new
                                 {
                                     RspCode = "00",
-                                    Message = "Confirm success"
+                                    Message = "Confirm success (but format invalid)"
                                 }
                             };
                         }
 
-                        var paidAmount = decimal.Parse(ipnDTO.vnp_Amount) / 100;
-
-                        var existed = await _unitOfWork.TransactionRepository.IsExistTransactionAsync("VNPay", ipnDTO.vnp_TxnRef, ct);
-                        if (!existed)
-                        {
-                            await _unitOfWork.TransactionRepository.AddAsync(new Transaction
-                            {
-                                CustomerOrderId = order.Id,
-                                Amount = paidAmount,
-                                Provider = "VNPay",
-                                OrderRef = ipnDTO.vnp_TxnRef,
-                                Currency = "VND",
-                                Status = TransactionStatus.Success,
-                                CreatedAt = DateTime.UtcNow
-                            }, ct);
-                            await _unitOfWork.SaveAsync();
-                        }
-
-                        // Sau đó mới cập nhật Order + tạo eContract
-                        await HandleVNPayCustomerOrder(order, paidAmount, ct);
-
-                        var orderInfo = ipnDTO.vnp_OrderInfo ?? string.Empty;
-
-                        if (orderInfo.StartsWith("DEALERPAY|", StringComparison.OrdinalIgnoreCase))
-                        {
-                            var parts = orderInfo.Split('|', StringSplitOptions.RemoveEmptyEntries);
-
-                            if (parts.Length < 2)
-                            {
-                                return new ResponseDTO
-                                {
-                                    StatusCode = 200,
-                                    Message = "Invalid DEALERPAY format",
-                                    Result = new
-                                    {
-                                        RspCode = "00",
-                                        Message = "Confirm success (but format invalid)"
-                                    }
-                                };
-                            }
-
-                            await HandleRecordCommission(parts, ipnDTO.vnp_TxnRef, paidAmount, ct);
-                        }
-
-                        if (order.Status.Equals(OrderStatus.Completed))
-                        {
-                            var dealerId = order.Quote.DealerId;
-
-                            var effectivePolicy = await _dealerTierService.GetEffectivePolicyAsync(dealerId, ct);
-                            if (effectivePolicy is null)
-                            {
-                                return new ResponseDTO
-                                {
-                                    IsSuccess = false,
-                                    Message = "Cannot find effective dealer tier policy",
-                                    StatusCode = 404
-                                };
-                            }
-                            var commissionRate = effectivePolicy.CommissionPercent;
-                            var commissionAmount = order.TotalAmount * (commissionRate / 100);
-
-                            await _dealerDebtService.AddCommissionForDealerAsync(dealerId, new RecordCommissionDTO
-                            {
-                                Amount = commissionAmount!.Value,
-                                ReferenceNo = $"COMMISSION-{order.OrderNo}",
-                                AtUtc = DateTime.UtcNow
-                            }, ct);
-                        }
+                        await HandleRecordCommission(parts, ipnDTO.vnp_TxnRef, paidAmount, ct);
                     }
-                    else if (ipnDTO.vnp_OrderInfo.Equals("VNPay_Mobile"))
+
+                    if (order.Status.Equals(OrderStatus.Completed))
                     {
-                        var orderNo = ipnDTO.vnp_TxnRef;
-                        await HandleMobileTransaction(long.Parse(ipnDTO.vnp_Amount) / 100, orderNo, ct);
+                        var dealerId = order.Quote.DealerId;
+
+                        var effectivePolicy = await _dealerTierService.GetEffectivePolicyAsync(dealerId, ct);
+                        if (effectivePolicy is null)
+                        {
+                            return new ResponseDTO
+                            {
+                                IsSuccess = false,
+                                Message = "Cannot find effective dealer tier policy",
+                                StatusCode = 404
+                            };
+                        }
+                        var commissionRate = effectivePolicy.CommissionPercent;
+                        var commissionAmount = order.TotalAmount * (commissionRate / 100);
+
+                        await _dealerDebtService.AddCommissionForDealerAsync(dealerId, new RecordCommissionDTO
+                        {
+                            Amount = commissionAmount!.Value,
+                            ReferenceNo = $"COMMISSION-{order.OrderNo}",
+                            AtUtc = DateTime.UtcNow
+                        }, ct);
                     }
                     else
                     {
@@ -505,118 +497,6 @@ namespace SWP391Web.Application.Services
             await _unitOfWork.NotificationRepository.AddAsync(notification, ct);
 
             await _hubContext.Clients.Group($"Dealer_{dealerId}_{StaticUserRole.DealerManager}").SendAsync("NotificationChanged");
-        }
-
-        public async Task<ResponseDTO> CreateVNPayLinkMobile(long amount, CancellationToken ct)
-        {
-            try
-            {
-                amount = amount * 100;
-                var createDate = ToGmt7(DateTime.UtcNow);
-                var expireDate = ToGmt7(DateTime.UtcNow.AddMinutes(15));
-                var clientIp = ResolveClientIp();
-                var orderNo = Guid.NewGuid().ToString();
-                var data = new SortedDictionary<string, string>(StringComparer.Ordinal)
-                {
-                    ["vnp_Version"] = "2.1.0",
-                    ["vnp_Command"] = "pay",
-                    ["vnp_TmnCode"] = _tmnCode,
-                    ["vnp_Amount"] = amount.ToString()!,
-                    ["vnp_CreateDate"] = createDate,
-                    ["vnp_CurrCode"] = "VND",
-                    ["vnp_IpAddr"] = clientIp,
-                    ["vnp_Locale"] = "vn",
-                    ["vnp_OrderInfo"] = "VNPay_Mobile",
-                    ["vnp_OrderType"] = "240000",
-                    ["vnp_ReturnUrl"] = _returnUrl,
-                    ["vnp_ExpireDate"] = expireDate,
-                    ["vnp_TxnRef"] = orderNo
-                };
-
-                string FormEncode(string enUrl) => WebUtility.UrlEncode(enUrl).Replace("%20", "+");
-                var signData = string.Join("&", data.Select(kvp => $"{kvp.Key}={FormEncode(kvp.Value)}"));
-                var secureHash = HmacSha512(_hashSecret, signData);
-
-                var queryString = signData + $"&vnp_SecureHashType=HMACSHA512&vnp_SecureHash={secureHash}";
-                var paymentUrl = _baseUrl + "?" + queryString;
-
-                return new ResponseDTO()
-                {
-                    Message = "VNPay link created successfully",
-                    Result = paymentUrl,
-                    StatusCode = 200
-                };
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO()
-                {
-                    IsSuccess = false,
-                    Message = $"Error to create a vnpay link: {ex.Message}",
-                    StatusCode = 500
-                };
-            }
-        }
-
-        private async Task HandleMobileTransaction(long amount, string orderNo, CancellationToken ct)
-        {
-            var transaction = new Transaction
-            {
-                CustomerOrderId = null,
-                Amount = amount,
-                Provider = "VNPay_Mobile",
-                OrderRef = orderNo,
-                Currency = "VND",
-                Status = TransactionStatus.Success,
-                CreatedAt = DateTime.UtcNow
-            };
-            await _unitOfWork.TransactionRepository.AddAsync(transaction, ct);
-            await _unitOfWork.SaveAsync();
-        }
-
-        public async Task<ResponseDTO> GetAllMobile(int pageNumber, int pageSize, CancellationToken ct)
-        {
-            try
-            {
-                Expression<Func<Transaction, bool>> filter = t => t.Provider == "VNPay_Mobile";
-                (IReadOnlyList<Transaction> items, int total) result;
-                result = await _unitOfWork.TransactionRepository.GetPagedAsync(
-                    filter: filter,
-                    includes: null,
-                    orderBy: o => o.CreatedAt,
-                    ascending: false,
-                    pageNumber: pageNumber,
-                    pageSize: pageSize, ct);
-
-                var getTransactionList = _mapper.Map<List<Transaction>>(result.items);
-
-                return new ResponseDTO
-                {
-                    IsSuccess = true,
-                    Message = "Get VNPay Mobile transactions successfully",
-                    StatusCode = 200,
-                    Result = new
-                    {
-                        Data = getTransactionList,
-                        Pagination = new
-                        {
-                            PageNumber = pageNumber,
-                            PageSize = pageSize,
-                            TotalItems = result.total,
-                            TotalPages = (int)Math.Ceiling((double)result.total / pageSize)
-                        }
-                    }
-                };
-            }
-            catch (Exception ex)
-            {
-                return new ResponseDTO()
-                {
-                    IsSuccess = false,
-                    Message = $"Error to get VNPay Mobile transactions: {ex.Message}",
-                    StatusCode = 500
-                };
-            }
         }
 
         public async Task<ResponseDTO> GetAllVNPayPaymentTransaction(ClaimsPrincipal userClaim, int pageNumber, int pageSize, TransactionStatus? status, CancellationToken ct)

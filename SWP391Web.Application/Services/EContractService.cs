@@ -1050,7 +1050,7 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public static (string pos, int pageSign) GetVnptEContractPosition(byte[] pdfBytes, AnchorBox anchor, double width = 170, double height = 90, 
+        public static (string pos, int pageSign) GetVnptEContractPosition(byte[] pdfBytes, AnchorBox anchor, double width = 170, double height = 90,
             double offsetY = 36, double margin = 18,
             double xAdjust = 0)
         {
@@ -1658,11 +1658,49 @@ namespace SWP391Web.Application.Services
             }
         }
 
-        public async Task<ResponseDTO<EContract>> GetAllEContractList(int? pageNumber, int? pageSize, EContractStatus eContractStatus = default, EcontractType econtractType = default)
+        public async Task<ResponseDTO<EContract>> GetAllEContractList(ClaimsPrincipal userClaim, int? pageNumber, int? pageSize, EContractStatus eContractStatus = default, 
+            EcontractType econtractType = default, CancellationToken ct = default)
         {
             try
             {
+                var role = userClaim.FindFirst(ClaimTypes.Role)?.Value;
+                if (role is null)
+                {
+                    return new ResponseDTO<EContract>
+                    {
+                        IsSuccess = false,
+                        StatusCode = 401,
+                        Message = "Cannot find user role"
+                    };
+                }
+
                 var eContractList = await _unitOfWork.EContractRepository.GetAllAsync(includes: e => e.Include(inc => inc.Owner));
+
+                if (role.Equals(StaticUserRole.DealerManager) || role.Equals(StaticUserRole.DealerStaff))
+                {
+                    var userId = userClaim.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    if (userId is null)
+                    {
+                        return new ResponseDTO<EContract>
+                        {
+                            IsSuccess = false,
+                            StatusCode = 401,
+                            Message = "Cannot find user ID"
+                        };
+                    }
+
+                    var dealer = await _unitOfWork.DealerRepository.GetDealerByManagerOrStaffAsync(userId, ct);
+                    if (dealer is null)
+                    {
+                        return new ResponseDTO<EContract>
+                        {
+                            IsSuccess = false,
+                            StatusCode = 404,
+                            Message = "Cannot find dealer for the user"
+                        };
+                    }
+                    eContractList = eContractList.Where(ec => ec.OwnerBy == dealer.ManagerId);
+                }
 
                 if (eContractStatus != default)
                 {

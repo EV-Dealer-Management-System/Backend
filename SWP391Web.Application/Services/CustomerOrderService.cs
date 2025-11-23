@@ -23,13 +23,13 @@ namespace SWP391Web.Application.Services
         public readonly IUnitOfWork _unitOfWork;
         public readonly IMapper _mapper;
         public readonly IPaymentService _paymentService;
-        private readonly IDepositSettingService _depositSetting;
+        private readonly IDealerConfigurationService _depositSetting;
         private readonly IDealerDebtService _dealerDebtService;
         private readonly IDealerDebtTransactionService _dealerDebtTransactionService;
         private readonly IEContractService _eContractService;
         private readonly ILogService _logService;
-        public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService, IDepositSettingService depositSetting,
-            IDealerDebtService dealerDebtService, IDealerDebtTransactionService dealerDebtTransactionService, IEContractService eContractService,ILogService logService)
+        public CustomerOrderService(IUnitOfWork unitOfWork, IMapper mapper, IPaymentService paymentService, IDealerConfigurationService depositSetting,
+            IDealerDebtService dealerDebtService, IDealerDebtTransactionService dealerDebtTransactionService, IEContractService eContractService, ILogService logService)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
@@ -96,7 +96,7 @@ namespace SWP391Web.Application.Services
 
                 if (!createCustomerOrderDTO.IsPayFull)
                 {
-                    var depositRate = await _depositSetting.GetDepositSetting(user, ct);
+                    var depositRate = await _depositSetting.GetCurrentConfigurationAsync(user, ct);
                     deposit = amount * (depositRate.Data!.MaxDepositPercentage / 100);
                 }
 
@@ -177,12 +177,12 @@ namespace SWP391Web.Application.Services
                 }
 
                 var status = customerOrder.Status;
-                if (status != OrderStatus.ConfirmPending || status != OrderStatus.RemainingPending)
+                if (status != OrderStatus.ConfirmPending && status != OrderStatus.RemainingPending)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Only orders with ConfirmPending status can be confirmed by customer.",
+                        Message = "Only orders with ConfirmPending or RemainingPending status can be confirmed by customer.",
                         StatusCode = 400,
                     };
                 }
@@ -200,15 +200,7 @@ namespace SWP391Web.Application.Services
                     status = OrderStatus.Rejected;
                 }
 
-                if (customerOrder.DepositAmount is not null)
-                {
-                    customerOrder.Status = OrderStatus.DepositPending;
-                }
-                else
-                {
-                    customerOrder.Status = OrderStatus.FullPending;
-                }
-
+                customerOrder.Status = status;
                 _unitOfWork.CustomerOrderRepository.Update(customerOrder);
                 await _unitOfWork.SaveAsync();
                 return new ResponseDTO
@@ -268,12 +260,12 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if (customerOrder.Status != OrderStatus.FullPending && customerOrder.Status != OrderStatus.DepositPending)
+                if (customerOrder.Status != OrderStatus.Confirmed && customerOrder.Status != OrderStatus.RemainingConfimmed)
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Only orders with FullPending or DepositPending status can confirm cash receipt.",
+                        Message = "Only orders with Confirmed or RemainingConfimmed status can confirm cash receipt.",
                         StatusCode = 400,
                     };
                 }
@@ -617,20 +609,20 @@ namespace SWP391Web.Application.Services
                     };
                 }
 
-                if (!customerOrder.Status.Equals(OrderStatus.Depositing))
+                if (!customerOrder.Status.Equals(OrderStatus.RemainingConfimmed) && !customerOrder.Status.Equals(OrderStatus.Depositing))
                 {
                     return new ResponseDTO
                     {
                         IsSuccess = false,
-                        Message = "Only orders with Depositing status can pay deposit.",
+                        Message = "Only orders with RemainingConfimmed or Depositing status can pay deposit.",
                         StatusCode = 400,
                     };
                 }
 
                 if (isCash is not null && isCash.Value)
                 {
-                    await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
-
+                    customerOrder.Status = OrderStatus.Completed;
+                    _unitOfWork.CustomerOrderRepository.Update(customerOrder);
                     await HandleOrderDetail(customerOrder, ct);
 
                     var amount = customerOrder.TotalAmount - customerOrder.DepositAmount;
@@ -641,7 +633,7 @@ namespace SWP391Web.Application.Services
                         Status = TransactionStatus.Success,
                         OrderRef = customerOrder.OrderNo.ToString(),
                         Currency = "VND",
-                        Note = $"Pya remain deposit for order {customerOrder.OrderNo}",
+                        Note = $"Pay remain deposit for order {customerOrder.OrderNo}",
                         Provider = "Cash",
                     };
                     await _unitOfWork.SaveAsync();
@@ -667,6 +659,9 @@ namespace SWP391Web.Application.Services
                 else if (isCash is null)
                 {
                     await _eContractService.CreatePayFullConfirmationEContract(customerOrder.Id, ct);
+                    customerOrder.Status = OrderStatus.RemainingPending;
+                    _unitOfWork.CustomerOrderRepository.Update(customerOrder);
+                    await _unitOfWork.SaveAsync(ct);
                     return new ResponseDTO
                     {
                         IsSuccess = true,

@@ -10,6 +10,7 @@ using SWP391Web.Application.DTO.Customer;
 using SWP391Web.Application.DTO.CustomerFeedback;
 using SWP391Web.Application.DTO.CustomerOrder;
 using SWP391Web.Application.DTO.Dealer;
+using SWP391Web.Application.DTO.DealerConfiguration;
 using SWP391Web.Application.DTO.DealerDebt;
 using SWP391Web.Application.DTO.DealerFeedBackDTO;
 using SWP391Web.Application.DTO.DepositSetting;
@@ -162,7 +163,11 @@ namespace SWP391Web.Application.Mappings
                 .ForMember(dest => dest.ManagerEmail, opt => opt.MapFrom(src => src.Manager.Email))
                 .ForMember(dest => dest.Level, opt => opt.MapFrom(src => src.DealerTier.Level)).ReverseMap();
 
-            CreateMap<AppointmentSetting, GetAppointSettingDTO>().ReverseMap();
+            CreateMap<DealerConfiguration, GetAppointSettingDTO>().ReverseMap();
+
+            CreateMap<DealerConfiguration, GetDealerConfigurationDTO>()
+                .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager.FullName))
+                .ForMember(dest => dest.DealerName, opt => opt.MapFrom(src => src.Dealer.Name)).ReverseMap();
 
             CreateMap<Appointment, GetCreateAppointmentDTO>().ReverseMap();
 
@@ -189,7 +194,7 @@ namespace SWP391Web.Application.Mappings
                 }))
                 .ReverseMap();
 
-            CreateMap<DepositSetting, GetDepositSettingDTO>()
+            CreateMap<DealerConfiguration, GetDepositSettingDTO>()
                 .ForMember(dest => dest.ManagerName, opt => opt.MapFrom(src => src.Manager.FullName))
                 .ForMember(dest => dest.DealerName, opt => opt.MapFrom(src => src.Dealer.Name)).ReverseMap();
 

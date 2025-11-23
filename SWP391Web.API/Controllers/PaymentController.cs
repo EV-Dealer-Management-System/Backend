@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SWP391Web.Application.DTO.Auth;
 using SWP391Web.Application.DTO.Payment;
 using SWP391Web.Application.IServices;
+using SWP391Web.Domain.Enums;
 
 namespace SWP391Web.API.Controllers
 {
@@ -39,19 +40,11 @@ namespace SWP391Web.API.Controllers
         }
 
         [HttpPost]
-        [Route("create-vnpay-mobile/{amount:long}")]
-        public async Task<ActionResult<ResponseDTO>> CreateVNPayLinkMobile(long amount, CancellationToken ct)
+        [Route("get-all-transactions")]
+        public async Task<ActionResult<ResponseDTO>> GetAllTransactions([FromQuery] int pageNumber, [FromQuery] int pageSize, [FromQuery] TransactionStatus? status, CancellationToken ct)
         {
-            var response = await _paymentService.CreateVNPayLinkMobile(amount, ct);
+            var response = await _paymentService.GetAllVNPayPaymentTransaction(User, pageNumber, pageSize, status, ct);
             return StatusCode(response.StatusCode, response);
-        }
-
-        [HttpGet]
-        [Route("get-all-transactions-mobile")]
-        public async Task<ActionResult<ResponseDTO>> GetAllTransactionsMobile(int pageNumber = 1, int pageSize = 10, CancellationToken ct = default)
-        {
-            var respones = await _paymentService.GetAllMobile(pageNumber, pageSize, ct);
-            return StatusCode(respones.StatusCode, respones);
         }
     }
 }
